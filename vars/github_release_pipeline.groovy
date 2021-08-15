@@ -31,14 +31,15 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
     String targetUrl
     String description
     def buildsListParsed = parseResponse(buildsList.content)
+    def buildInfoParsed
     for (build in buildsListParsed['builds']) {
         String buildUrl = build['url']
         def buildInfo = httpRequest(
-            url: "${buildUrl}/api/json?tree=result,description",
+            url: "${buildUrl}/api/json?tree=result,description,number",
             authentication: 'jenkinsCredentials',
             httpMode: 'GET'
         )
-        def buildInfoParsed = parseResponse(buildInfo.content)
+        buildInfoParsed = parseResponse(buildInfo.content)
         if (buildInfoParsed['result'] == 'SUCCESS' || buildInfoParsed['result'] == 'UNSTABLE') {
             println("[INFO] Success build was found: ${buildUrl}")
             targetUrl = buildUrl
@@ -117,13 +118,6 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
 
             def parentCommitSha = parentCommitParsed['parents'][0]['sha']
 
-            //get list of artifacts
-            def fileNames = httpRequest(
-                url: "${targetUrl}/api/json?tree=artifacts[fileName]",
-                authentication: 'jenkinsCredentials',
-                httpMode: 'GET'
-            )
-
             def date = new Date()
             def dateFormat = new SimpleDateFormat("MM/dd/yyyy")
             def formattedDate = dateFormat.format(date)
@@ -146,6 +140,13 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
             )
             def releaseInfoParsed = parseResponse(releaseInfo.content)
 
+            // get list of artifacts from Jenkins and attach them to Github release
+            def fileNames = httpRequest(
+                url: "${targetUrl}/api/json?tree=artifacts[fileName]",
+                authentication: 'jenkinsCredentials',
+                httpMode: 'GET'
+            )
+
             def fileNamesParsed = parseResponse(fileNames.content)
             for (fileName in fileNamesParsed['artifacts']) {
                 for (extension in possibleArtifactsExtensions) {
@@ -163,6 +164,39 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
                         }
                     }
                 }
+            }
+
+            // get list of artifacts from NAS and attach them to Github release
+            try {
+                String nasArtifactsPath = "/volume1/web/${jobName}/${branch}/${buildInfoParsed.number}/Artifacts/"
+
+                String[] nasFileNames
+
+                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                    nasFileNames = bat(returnStdout: true, script: "@bash.exe -c \"ssh" + ' %REMOTE_HOST%' + " ls ${nasArtifactsPath}\"").trim().split("\n")
+                }
+
+                println(nasFileNames)
+
+                for (fileName in nasFileNames) {
+                    for (extension in possibleArtifactsExtensions) {
+                        println(fileName)
+                        println(extension)
+                        if (fileName.endsWith(extension)) {
+                            downloadFiles("${nasArtifactsPath}/${fileName}", ".")                        
+
+                            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'radeonprorender', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD']]) {
+                                bat """
+                                    curl -X POST --retry 5 -H "Content-Type: application/octet-stream" --data-binary @${fileName} -u %GITHUB_USERNAME%:%GITHUB_PASSWORD% "${repositoryUploadUrl}/releases/${releaseInfoParsed.id}/assets?name=${fileName}"
+                                """
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                println("[ERROR] Failed to attach files from NAS for ${jobName} job")
+                println(e.toString())
+                println(e.getMessage())
             }
         }
     } else {
