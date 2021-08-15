@@ -107,9 +107,9 @@ def call(Map params) {
                             }
                         } else {
                             if (preZip) {
-                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace('(', '\\(').replace(')', '\\)').replace(" ", "?")}\" \"${remotePath.replace(" ", "?")}\" " + '%REMOTE_HOST%')
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace('(', '\\(').replace(')', '\\)').replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" " + '%REMOTE_HOST%')
                             } else {
-                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes.replace('(', '\\(').replace(')', '\\)').replace(" ", "?")} \"${remotePath.replace(" ", "?")}\" " + '%REMOTE_HOST%')
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes.replace('(', '\\(').replace(')', '\\)').replace(" ", "\\ ")} \"${remotePath.replace(" ", "\\ ")}\" " + '%REMOTE_HOST%')
                             }
                         }
                     }
@@ -142,7 +142,7 @@ def call(Map params) {
                         if (isUnix()) {
                             stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
                         } else {
-                            stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath.replace(" ", "?")}${zipName.replace(" ", "?")}\" \"${remotePath.replace(" ", "?")}\" true")
+                            stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath.replace(" ", "\\ ")}${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" true")
                         }
                     }
 
