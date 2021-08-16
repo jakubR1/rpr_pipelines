@@ -455,7 +455,7 @@ def executeBuildLinux(String osName, Map options) {
             """
             
             if (options.updateDeps) {
-                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
             }
         } else {
            sh """
