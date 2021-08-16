@@ -1,5 +1,7 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.BiFunction
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
@@ -8,7 +10,24 @@ import universe.*
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
+@Field final String CUSTOM_INSTALL_PATH = "C:\\Program Files\\testRPRViewer\\subdir"
+@Field final def installsPerformedMap
 
+
+@NonCPS
+def shouldInstallationPerform(def key, String installationType, Integer maxTries) {
+    def installationInfo = installsPerformedMap.get(key)[installationType]
+    return installationInfo['tries'] < maxTries && installationInfo['status'] != 'success'
+}
+
+@NonCPS
+def updateMap(def keyName, String installationType, String status) {
+    if (installationType == 'dirt') {
+        installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['dirt': ['tries': value['dirt']['tries'] + 1, 'status': status], 'custom_path': value['custom_path']] })
+    } else if (installationType == 'custom_path') {
+        installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['custom_path': ['tries': value['custom_path']['tries'] + 1, 'status': status], 'dirt': value['dirt']] })
+    }
+}
 
 def getViewerTool(String osName, Map options) {
     switch (osName) {
@@ -51,17 +70,42 @@ def getViewerTool(String osName, Map options) {
 
 
 def checkExistenceOfPlugin(String osName, Map options) {
-    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+    String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+    String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
 
-    return fileExists(uninstallerPath)
+    return fileExists(defaultUninstallerPath) || fileExists(customUninstallerPath)
+}
+
+def getUninstallerPath() {
+    String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+    String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
+
+    if (fileExists(defaultUninstallerPath)) {
+        return defaultUninstallerPath
+    } else if (fileExists(customUninstallerPath)) {
+        return customUninstallerPath
+    } else {
+        return null
+    }
 }
 
 
-def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true, String customPluginName = "") {
-    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
-
+def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false, String customPluginName = "") {
     String installerName = ""
-    String logPostfix = cleanInstall ? "clean" : "dirt"
+    String dirOption = ""
+    String logPostfix
+    
+
+    if (cleanInstall) {
+        if (customPathInstall) {
+            logPostfix = "custom_path"
+            dirOption = "/DIR=\"${CUSTOM_INSTALL_PATH}\""
+        } else {
+            logPostfix = "clean"
+        }
+    } else {
+        logPostfix = "dirt"
+    }
 
     if (customPluginName) {
         installerName = customPluginName
@@ -76,7 +120,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
             println "[INFO] Uninstalling Inventor Plugin"
             bat """
-                start "" /wait "${uninstallerPath}" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
+                start "" /wait "${getUninstallerPath()}" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
             """
         }
     } catch (e) {
@@ -87,7 +131,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         println "[INFO] Install Inventor Plugin"
 
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART ${dirOption} /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
@@ -95,8 +139,9 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
 }
 
 
-def buildRenderCache(String osName, String toolVersion, Map options, Boolean cleanInstall=true) {
+def buildRenderCache(String osName, String toolVersion, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
+    logPostfix = customPathInstall ? "custom_path" : logPostfix
 
     dir("scripts") {
         switch(osName) {
@@ -218,48 +263,96 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
-            println "Uninstall old plugin and install \"baseline\" plugin"
+        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
 
-            String baselinePluginPath = options["baselinePluginPath"]
+        if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
+            try {
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
+                    println "Uninstall old plugin and install \"baseline\" plugin"
 
-            // Download "baseline" plugin
-            timeout(time: "15", unit: "MINUTES") {
-                downloadFiles(baselinePluginPath, "${CIS_TOOLS}/../PluginsBinaries/".replace("C:", "/mnt/c").replace("\\", "/"))
+                    String baselinePluginPath = options["baselinePluginPath"]
+
+                    // Download "baseline" plugin
+                    timeout(time: "15", unit: "MINUTES") {
+                        downloadFiles(baselinePluginPath, "${CIS_TOOLS}/../PluginsBinaries/".replace("C:", "/mnt/c").replace("\\", "/"))
+                    }
+
+                    println "Install \"baseline\" plugin"
+
+                    timeout(time: "15", unit: "MINUTES") {
+                        installInventorPlugin(osName, options, false, false, baselinePluginPath.split("/")[-1])
+                    }
+
+                    println "Start \"dirt\" installation"
+
+                    timeout(time: "8", unit: "MINUTES") {
+                        installInventorPlugin(osName, options, false)
+                    }
+                }
+            
+
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
+                    timeout(time: "10", unit: "MINUTES") {
+                        try {
+                            buildRenderCache(osName, "2022", options, false)
+                        } catch (e) {
+                            throw e
+                        } finally {
+                            dir("scripts") {
+                                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_dirt_${options.currentTry}")
+                                archiveArtifacts artifacts: "${options.stageName}_dirt_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                            }
+                        }
+                        dir("scripts") {
+                            String cacheImgPath = "./${options.stageName}_dirt_${options.currentTry}/RESULT.jpg"
+                            if(!fileExists(cacheImgPath)){
+                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                updateMap("${asicName}-${osName}", 'dirt', 'failed')
+                throw e
             }
 
-            println "Install \"baseline\" plugin"
-
-            timeout(time: "15", unit: "MINUTES") {
-                installInventorPlugin(osName, options, false, baselinePluginPath.split("/")[-1])
-            }
-
-            println "Start \"dirt\" installation"
-
-            timeout(time: "8", unit: "MINUTES") {
-                installInventorPlugin(osName, options, false)
-            }
+            updateMap("${asicName}-${osName}", 'dirt', 'success')
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
-            timeout(time: "10", unit: "MINUTES") {
-                try {
-                    buildRenderCache(osName, "2022", options, false)
-                } catch (e) {
-                    throw e
-                } finally {
-                    dir("scripts") {
-                        utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_dirt_${options.currentTry}")
-                        archiveArtifacts artifacts: "${options.stageName}_dirt_${options.currentTry}/*.jpg", allowEmptyArchive: true
+        if (shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
+            try {
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CUSTOM_PATH) {
+                    timeout(time: "15", unit: "MINUTES") {
+                        installInventorPlugin(osName, options, true, true)
                     }
                 }
-                dir("scripts") {
-                    String cacheImgPath = "./${options.stageName}_dirt_${options.currentTry}/RESULT.jpg"
-                    if(!fileExists(cacheImgPath)){
-                        throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+            
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CUSTOM_PATH) {                        
+                    timeout(time: "10", unit: "MINUTES") {
+                        try {
+                            buildRenderCache(osName, "2022", options, true, true)
+                        } catch (e) {
+                            throw e
+                        } finally {
+                            dir("scripts") {
+                                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_custom_path_${options.currentTry}")
+                                archiveArtifacts artifacts: "${options.stageName}_custom_path_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                            }
+                        }
+                        dir("scripts") {
+                            String cacheImgPath = "./${options.stageName}_custom_path_${options.currentTry}/RESULT.jpg"
+                            if(!fileExists(cacheImgPath)){
+                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                            }
+                        }
                     }
                 }
+            } catch (e) {
+                updateMap("${asicName}-${osName}", 'custom_path', 'failed')
+                throw e
             }
+
+            updateMap("${asicName}-${osName}", 'custom_path', 'success')
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
@@ -794,9 +887,9 @@ def executePreBuild(Map options) {
                             options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                         }
                     }
+                    
+                    options.tests = tests
                 }
-
-                options.tests = tests
             } else {
                 options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
@@ -994,17 +1087,27 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+    installsPerformedMap = new ConcurrentHashMap()
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
 
             Boolean isPreBuilt = customBuildLinkWindows
 
+            Integer testStageTimeout
+
+            if (tests.contains("Material_Library") || testsPackage.contains("weekly")) {
+                testStageTimeout = 270
+            } else {
+                testStageTimeout = 195
+            }
+
             println """
                 Platforms: ${platforms}
                 Tests: ${tests}
                 Tests package: ${testsPackage}
                 Tests execution type: ${parallelExecutionTypeString}
+                Test stage timeout: ${testStageTimeout}
             """
             options << [projectBranch: projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_inventor.git",
@@ -1024,7 +1127,7 @@ def call(String projectBranch = "",
                         DEPLOY_FOLDER: "USDViewer",
                         testsPackage: testsPackage,
                         BUILD_TIMEOUT: 120,
-                        TEST_TIMEOUT: 195,
+                        TEST_TIMEOUT: testStageTimeout,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         NON_SPLITTED_PACKAGE_TIMEOUT: 180,
                         DEPLOY_TIMEOUT: 45,

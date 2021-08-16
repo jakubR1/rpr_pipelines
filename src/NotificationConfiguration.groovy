@@ -303,6 +303,27 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static INSTALL_PLUGIN_CUSTOM_PATH = [
+        "begin": ["message": "Installing the plugin (custom path install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout (custom path install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to uninstall old plugin (custom path install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Failed to uninstall old plugin"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to install the plugin (custom path install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
     def static INSTALL_HOUDINI = [
         "begin": ["message": "Installing Houdini."],
 
@@ -404,6 +425,27 @@ public class NotificationConfiguration {
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static BUILD_CACHE_CUSTOM_PATH = [
+        "begin": ["message": "Building cache (clean install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout (custom path install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "No output image after cache building (custom path install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to build cache (custom path install).", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]

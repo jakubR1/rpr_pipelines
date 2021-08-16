@@ -455,7 +455,7 @@ def executeBuildLinux(String osName, Map options) {
             """
             
             if (options.updateDeps) {
-                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
             }
         } else {
            sh """
@@ -1096,6 +1096,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:30,
+                        BUILDER_TAG:'BuilderHydra',
                         TESTER_TAG:tester_tag,
                         resX: resX,
                         resY: resY,

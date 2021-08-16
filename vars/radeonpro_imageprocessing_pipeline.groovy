@@ -18,6 +18,7 @@ def executeTestCommand(String osName, String libType, Boolean testPerformance)
             }
             break
         case 'OSX':
+        case 'MacOS_ARM':
             dir("unittest") {
                 sh "mkdir testSave"
                 if (testPerformance) {
@@ -302,6 +303,7 @@ def executeBuild(String osName, Map options)
                 executeBuildWindows(options.cmakeKeys, osName, options)
                 break
             case 'OSX':
+            case 'MacOS_ARM':
                 executeBuildUnix(options.cmakeKeys, osName, options, 'clang')
                 break
             case 'Ubuntu18-Clang':
@@ -402,6 +404,7 @@ def call(String projectBranch = "",
                             TESTER_TAG:tester_tag,
                             BUILD_TIMEOUT:'40',
                             TEST_TIMEOUT:'45',
+                            BUILDER_TAG:'BuilderRIF',
                             executeBuild:true,
                             executeTests:true,
                             PRJ_NAME:"RadeonProImageProcessor",
