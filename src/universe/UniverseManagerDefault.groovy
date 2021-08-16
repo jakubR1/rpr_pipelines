@@ -57,12 +57,13 @@ class UniverseManagerDefault extends UniverseManager {
         // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
         context.withCredentials([context.string(credentialsId: "prodUniverseFrontURL", variable: "PROD_UMS_FRONT_URL"),
             context.string(credentialsId: "devUniverseProdURL", variable: "DEV_UMS_FRONT_URL")]) {
+            boolean updBaselines = options.updateRefs.contains("Update")
             if (universeClientProd) {
-                universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options,
+                universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, updBaselines, options,
                         context.PROD_UMS_FRONT_URL, "prod")
             }
             if (universeClientDev) {
-                universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options,
+                universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, updBaselines, options,
                         context.DEV_UMS_FRONT_URL, "dev")
             }
         }
