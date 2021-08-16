@@ -206,6 +206,17 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static DOWNLOAD_PREFERENCES = [
+        "begin": ["message": "Downloading preferences."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download preferences.", 
+                "rethrow": ExceptionThrowType.NO
+            ]
+        ]
+    ]
+
     def static DOWNLOAD_TESTS_REPO = [
         "begin": ["message": "Downloading tests repository."],
 

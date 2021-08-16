@@ -255,6 +255,14 @@ def executeTests(String osName, String asicName, Map options) {
             downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
         }
 
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
+            timeout(time: "5", unit: "MINUTES") {
+                String prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Autodesk/Inventor 2022"
+                downloadFiles("/volume1/CIS/tools-preferences/Inventor/${osName}/2022/*", prefsDir, "", false)
+                bat "reg import \"${prefsDir.replace("/mnt/c", "C:").replace("/", "\\")}\\inventor_window.reg\""
+            }
+        }
+
         installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
 
         if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {

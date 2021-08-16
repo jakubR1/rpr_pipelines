@@ -139,7 +139,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
             uploadFiles('./BaikalNext/RprTest/ReferenceImages/', REF_PATH_PROFILE)
         } else {
             println "Execute Tests"
-            downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprTest/ReferenceImages/")
+            downloadFiles("${REF_PATH_PROFILE}/", "./BaikalNext/RprTest/ReferenceImages/")
             executeTestCommand(asicName, osName, options)
         }
     } catch (e) {
@@ -327,7 +327,7 @@ def executePerfTests(String osName, String asicName, Map options) {
             uploadFiles('./BaikalNext/RprPerfTest/Telemetry/', REF_PATH_PROFILE)
         } else {
             println "Execute Tests"
-            downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprPerfTest/References/")
+            downloadFiles("${REF_PATH_PROFILE}/", "./BaikalNext/RprPerfTest/References/")
             executePerfTestCommand(asicName, osName, options)
         }
     } catch (e) {

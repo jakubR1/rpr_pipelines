@@ -35,9 +35,9 @@ def call(Map params) {
                     print("Try to make unstash №${retries}")
                     withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                         if (isUnix()) {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '$REMOTE_HOST')
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath}\" . " + '$REMOTE_HOST')
                         } else {
-                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath.replace(" ", "?")}\" . " + '%REMOTE_HOST%')
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath}\" . " + '%REMOTE_HOST%')
                         }
                     }
 
