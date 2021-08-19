@@ -163,6 +163,7 @@ def closeGames(String osName, Map options, String gameName) {
     try {
         switch(osName) {
             case "Windows":
+            case "Android":
                 if (gameName == "All") {
                     bat """
                         taskkill /f /im \"borderlands3.exe\"
@@ -224,7 +225,7 @@ def closeGames(String osName, Map options, String gameName) {
 }
 
 
-def executeTestCommand(String osName, String asicName, Map options, String executionType) {
+def executeTestCommand(String osName, String asicName, Map options, String executionType = "") {
     String testsNames = options.tests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
@@ -244,7 +245,11 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         collectTraces = "True"
     }
 
-    def screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+    def screenResolution 
+
+    if (osName != "Android") {
+        screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+    }
 
     dir("scripts") {
         switch (osName) {
@@ -546,8 +551,11 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
             start /b appium 1>\"appium_${options.currentTry}.log\"  2>&1
         """
 
+        // Give Android emulator time to be loaded
+        sleep(30)
+
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            executeTestCommand(osName, asicName, options, "server")
+            executeTestCommand(osName, asicName, options)
         }
 
     } catch (e) {
@@ -557,21 +565,14 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
             currentBuild.result = "FAILURE"
         }
 
-        println "[ERROR] Failed during tests on server"
+        println "[ERROR] Failed during Android tests"
         println "Exception: ${e.toString()}"
         println "Exception message: ${e.getMessage()}"
         println "Exception cause: ${e.getCause()}"
         println "Exception stack trace: ${e.getStackTrace()}"
-
-        if (e instanceof ExpectedExceptionWrapper) {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()}", "${BUILD_URL}")
-            throw new ExpectedExceptionWrapper("${e.getMessage()}", e.getCause())
-        } else {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}", "${BUILD_URL}")
-            throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}", e)
-        }
     } finally {
-        // TODO: implement function to save android results
+        // TODO not a final saveResult function for Android autotests
+        saveResults("Windows", options, "", false, true)
 
         closeGames(osName, options, options.engine)
     }
@@ -583,33 +584,39 @@ def executeTests(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
-        options["clientInfo"] = new ConcurrentHashMap()
-        options["serverInfo"] = new ConcurrentHashMap()
+        if (osName == "Windows") {
+            options["clientInfo"] = new ConcurrentHashMap()
+            options["serverInfo"] = new ConcurrentHashMap()
 
-        println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
-        // create client and server threads and run them parallel
-        Map threads = [:]
+            println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
+            // create client and server threads and run them parallel
+            Map threads = [:]
 
-        threads["${options.stageName}-client"] = { 
-            node(getClientLabels(options)) {
-                timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
-                    ws("WS/${options.PRJ_NAME}_Test") {
-                        executeTestsClient(osName, asicName, options)
+            threads["${options.stageName}-client"] = { 
+                node(getClientLabels(options)) {
+                    timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                        ws("WS/${options.PRJ_NAME}_Test") {
+                            executeTestsClient(osName, asicName, options)
+                        }
                     }
                 }
             }
-        }
 
-        threads["${options.stageName}-server"] = { executeTestsServer(osName, asicName, options) }
+            threads["${options.stageName}-server"] = { executeTestsServer(osName, asicName, options) }
 
-        parallel threads
+            parallel threads
 
-        if (options["serverInfo"]["failed"]) {
-            def exception = options["serverInfo"]["exception"]
-            throw new ExpectedExceptionWrapper("Server side tests got an error: ${exception.getMessage()}", exception)
-        } else if (options["clientInfo"]["failed"]) {
-            def exception = options["clientInfo"]["exception"]
-            throw new ExpectedExceptionWrapper("Client side tests got an error: ${exception.getMessage()}", exception)
+            if (options["serverInfo"]["failed"]) {
+                def exception = options["serverInfo"]["exception"]
+                throw new ExpectedExceptionWrapper("Server side tests got an error: ${exception.getMessage()}", exception)
+            } else if (options["clientInfo"]["failed"]) {
+                def exception = options["clientInfo"]["exception"]
+                throw new ExpectedExceptionWrapper("Client side tests got an error: ${exception.getMessage()}", exception)
+            }
+        } else if (osName == "Android") {
+            executeTestsAndroid(osName, asicName, options)
+        } else {
+            println("Unsupported OS")
         }
     } catch (e) {
         if (e instanceof ExpectedExceptionWrapper) {
@@ -624,8 +631,6 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    utils.reboot(this, "Windows")
-
     options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
 
@@ -689,8 +694,6 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuildAndroid(Map options) {
-    utils.reboot(this, "Windows")
-
     options.androidBuildConfiguration.each() { androidBuildConf ->
 
         println "Current build configuration: ${androidBuildConf}."
@@ -732,6 +735,8 @@ def executeBuildAndroid(Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
+        utils.reboot(this, osName != "Android" ? osName : "Windows")
+
         dir("StreamingSDK") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
@@ -1155,6 +1160,10 @@ def call(String projectBranch = "",
             // Anroid tests required built Windows Streaming SDK to run server side
             if (platforms.contains("Android:") && !platforms.contains("Windows")) {
                 platforms = platforms + ";Windows"
+
+                winBuildConfiguration = "debug"
+                winVisualStudioVersion = "2019"
+                winTestingBuildName = "debug_vs2019"
             }
 
             gpusCount = 0
