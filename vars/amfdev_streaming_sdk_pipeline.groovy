@@ -17,20 +17,21 @@ String getClientLabels(Map options) {
 
 
 Boolean isIdleClient(Map options) {
-    // client is required only to test Windows artifacts
-    if (options["osName"] != "Windows") {
-        return true
-    }
+    if (options["osName"] == "Windows") {
+        // wait client machine
+        def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
 
-    def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
-
-    for (node in suitableNodes) {
-        if (utils.isNodeIdle(node)) {
-            return true
+        for (node in suitableNodes) {
+            if (utils.isNodeIdle(node)) {
+                return true
+            }
         }
-    }
 
-    return false
+        return false
+    } else if (options["osName"] == "Android") {
+        // wait when Windows artifact will be built
+        return options["finishedBuildStages"]["Windows"]
+    }
 }
 
 
@@ -1225,7 +1226,8 @@ def call(String projectBranch = "",
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
-                        storeOnNAS: storeOnNAS
+                        storeOnNAS: storeOnNAS,
+                        finishedBuildStages: new ConcurrentHashMap()
                         ]
         }
 
