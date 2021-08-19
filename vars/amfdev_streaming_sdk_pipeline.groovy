@@ -17,6 +17,11 @@ String getClientLabels(Map options) {
 
 
 Boolean isIdleClient(Map options) {
+    // client is required only to test Windows artifacts
+    if (options["osName"] != "Windows") {
+        return true
+    }
+
     def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
 
     for (node in suitableNodes) {
@@ -34,6 +39,11 @@ def prepareTool(String osName, Map options) {
         case "Windows":
             makeUnstash(name: "ToolWindows", unzip: false, storeOnNAS: options.storeOnNAS)
             unzip(zipFile: "${options.winTestingBuildName}.zip")
+            break
+        case "Android":
+            makeUnstash(name: "ToolAndroid", unzip: false, storeOnNAS: options.storeOnNAS)
+            unzip(zipFile: "android_${options.androidTestingBuildName}.zip")
+            utils.renameFile(this, "Windows", "app-arm-${options.androidTestingBuildName}.apk", "app-arm.apk")
             break
         case "OSX":
             println("Unsupported OS")
@@ -239,10 +249,15 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
                 break
+
+            case "Android":
+                bat """
+                    run_android.bat \"${testsPackageName}\" \"${testsNames}\"${options.testCaseRetries} \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                """
 
             case "OSX":
                 println "OSX isn't supported"
@@ -482,6 +497,86 @@ def executeTestsServer(String osName, String asicName, Map options) {
 }
 
 
+def executeTestsAndroid(String osName, String asicName, Map options) {
+    Boolean stashResults = true
+
+    try {
+
+        utils.reboot(this, osName)
+
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "10", unit: "MINUTES") {
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
+            }
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+            timeout(time: "5", unit: "MINUTES") {
+                dir("jobs_launcher/install"){
+                    bat """
+                        install_pylibs.bat
+                    """
+                }
+
+                dir("scripts"){
+                    bat """
+                        install_pylibs.bat
+                    """
+                }
+
+                dir("StreamingSDK") {
+                    prepareTool("Windows", options)
+                }
+                dir("StreamingSDKAndroid") {
+                    prepareTool("Android", options)
+                }
+            }
+        }
+
+        // Start Android emulator
+        // TODO remove hard coded name of emulator
+        bat """
+            start /b emulator.exe @Pixel_3a_API_30_x86 1>\"emulator_${options.currentTry}.log\" 2>&1
+        """
+
+        // Start Appium Server
+        bat """
+            start /b appium 1>\"appium_${options.currentTry}.log\"  2>&1
+        """
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+            executeTestCommand(osName, asicName, options, "server")
+        }
+
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries - 1) {
+            stashResults = false
+        } else {
+            currentBuild.result = "FAILURE"
+        }
+
+        println "[ERROR] Failed during tests on server"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+
+        if (e instanceof ExpectedExceptionWrapper) {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${e.getMessage()}", e.getCause())
+        } else {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}", e)
+        }
+    } finally {
+        // TODO: implement function to save android results
+
+        closeGames(osName, options, options.engine)
+    }
+}
+
+
 def executeTests(String osName, String asicName, Map options) {
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -617,6 +712,11 @@ def executeBuildAndroid(Map options) {
                 String BUILD_NAME = "StreamingSDK_Android_${androidBuildName}.zip"
 
                 zip archive: true, zipFile: BUILD_NAME, glob: "app-arm-${androidBuildConf}.apk"
+
+                if (options.androidTestingBuildName == androidBuildConf) {
+                    utils.moveFiles(this, "Windows", BUILD_NAME, "android_${options.androidTestingBuildName}.zip")
+                    makeStash(includes: "android_${options.androidTestingBuildName}.zip", name: "ToolAndroid", preZip: false, storeOnNAS: options.storeOnNAS)
+                }
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                 rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
@@ -1038,6 +1138,7 @@ def call(String projectBranch = "",
     Boolean serverCollectTraces = false,
     String games = "Valorant",
     String androidBuildConfiguration = "release,debug",
+    String androidTestingBuildName = "debug",
     Boolean storeOnNAS = false
     )
 {
@@ -1050,6 +1151,11 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+            // Anroid tests required built Windows Streaming SDK to run server side
+            if (platforms.contains("Android:") && !platforms.contains("Windows")) {
+                platforms = platforms + ";Windows"
+            }
+
             gpusCount = 0
             platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
@@ -1100,6 +1206,7 @@ def call(String projectBranch = "",
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
                         androidBuildConfiguration: androidBuildConfiguration,
+                        androidTestingBuildName: androidTestingBuildName,
                         gpusCount: gpusCount,
                         nodeRetry: nodeRetry,
                         platforms: platforms,
