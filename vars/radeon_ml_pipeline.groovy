@@ -236,8 +236,10 @@ def executeOSXBuildCommand(String osName, Map options, String buildType) {
         String ARTIFACT_NAME = "${osName}_${buildType}.tar"
         artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
         
-        sh("zip -r ${osName}_${buildType}.zip . -i 'libRadeonML*.dylib' -i 'test*' ")
-        archiveArtifacts "${osName}_${buildType}.zip"
+        dir(buildType) {
+            sh("zip ${osName}_${buildType}.zip libRadeonML*.dylib test*")
+            archiveArtifacts "${osName}_${buildType}.zip"
+        }
     }
 
     return artifactURL
