@@ -225,6 +225,21 @@ def closeGames(String osName, Map options, String gameName) {
 }
 
 
+def closeAndroidTools(Map options) {
+    try {
+        bat """
+            taskkill /f /im \"qemu-system-x86_64.exe\"
+            taskkill /f /im \"node.exe\"
+        """
+
+        sleep(10)
+    } catch (e) {
+        println("[ERROR] Failed to Android tools")
+        println(e)
+    }
+}
+
+
 def executeTestCommand(String osName, String asicName, Map options, String executionType = "") {
     String testsNames = options.tests
     String testsPackageName = options.testsPackage
@@ -262,8 +277,11 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
 
             case "Android":
                 bat """
-                    run_android.bat \"${testsPackageName}\" \"${testsNames}\"${options.testCaseRetries} \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    set CIS_OS=Windows 10(64bit) with Android emulator
+                    run_android.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
+
+                break
 
             case "OSX":
                 println "OSX isn't supported"
@@ -290,7 +308,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
             dir("Work") {
                 if (fileExists("Results/StreamingSDK/session_report.json")) {
 
-                    if (executionType == "client" or executionType == "android") {
+                    if (executionType == "client" || executionType == "android") {
                         def sessionReport = readJSON file: "Results/StreamingSDK/session_report.json"
 
                         if (sessionReport.summary.error > 0) {
@@ -545,7 +563,7 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
         // Start Android emulator
         // TODO remove hard coded name of emulator
         bat """
-            start /b emulator.exe @Pixel_3a_API_30_x86 1>\"emulator_${options.currentTry}.log\" 2>&1
+            start /b emulator.exe @Pixel 1>\"emulator_${options.currentTry}.log\" 2>&1
         """
 
         // Start Appium Server
@@ -573,8 +591,9 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
         println "Exception cause: ${e.getCause()}"
         println "Exception stack trace: ${e.getStackTrace()}"
     } finally {
-        // TODO not a final saveResult function for Android autotests
-        saveResults("Windows", options, "android", false, true)
+        closeAndroidTools(options)
+
+        saveResults("Windows", options, "android", stashResults, true)
 
         closeGames(osName, options, options.engine)
     }
@@ -917,23 +936,6 @@ def executePreBuild(Map options) {
 
 
 def executeDeploy(Map options, List platformList, List testResultList, String game) {
-    switch(osName) {
-        case "Windows":
-            executeDeployWindows(Map options, List platformList, List testResultList, String game)
-            break
-        case "Android":
-            executeDeployWindows(Map options, List platformList, List testResultList, String game)
-            break
-        case "OSX":
-            println("Unsupported OS")
-            break
-        default:
-            println("Unsupported OS")
-    }
-}
-
-
-def executeDeployWindows(Map options, List platformList, List testResultList, String game) {
     try {
 
         if (options["executeTests"] && testResultList) {
@@ -951,39 +953,52 @@ def executeDeployWindows(Map options, List platformList, List testResultList, St
                         List testNameParts = it.split("-") as List
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}_server_logs", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_server_logs
-                                    ${e.toString()}
-                                """
+                            if (it.contains("Android")) {
+                                try {
+                                    makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}
+                                        ${e.toString()}
+                                    """
 
-                                groupLost = true
-                            }
+                                    lostStashes << ("'${it}'".replace("testResult-", ""))
+                                }
+                            } else {
+                                try {
+                                    makeUnstash(name: "${it}_server_logs", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_server_logs
+                                        ${e.toString()}
+                                    """
 
-                            try {
-                                makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_client
-                                    ${e.toString()}
-                                """
+                                    groupLost = true
+                                }
 
-                                groupLost = true
-                            }
+                                try {
+                                    makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_client
+                                        ${e.toString()}
+                                    """
 
-                            try {
-                                makeUnstash(name: "${it}_server_traces", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_server_traces
-                                    ${e.toString()}
-                                """
-                            }
+                                    groupLost = true
+                                }
 
-                            if (groupLost) {
-                                lostStashes << ("'${it}'".replace("testResult-", ""))
+                                try {
+                                    makeUnstash(name: "${it}_server_traces", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_server_traces
+                                        ${e.toString()}
+                                    """
+                                }
+
+                                if (groupLost) {
+                                    lostStashes << ("'${it}'".replace("testResult-", ""))
+                                }
                             }
                         }
                     }
@@ -1015,168 +1030,6 @@ def executeDeployWindows(Map options, List platformList, List testResultList, St
                 }
             } catch (e) {
                 println "[ERROR] Can't unite server and client test results"
-            }
-
-            try {
-                dir("jobs_launcher") {
-                    bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
-                    """
-                }
-            } catch (e) {
-                println "[ERROR] Can't generate number of lost tests"
-            }
-
-            String branchName = env.BRANCH_NAME ?: options.projectBranch
-            try {
-                Boolean showGPUViewTraces = options.clientCollectTraces || options.serverCollectTraces
-
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
-                    dir("jobs_launcher") {
-                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
-                        dir("..\\summaryTestResults") {
-                            writeJSON file: "retry_info.json", json: JSONSerializer.toJSON(retryInfo, new JsonConfig()), pretty: 4
-                        }
-
-                        bat """
-                            build_reports.bat ..\\summaryTestResults "StreamingSDK" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(game)}\"
-                        """
-                    }
-                }
-            } catch (e) {
-                String errorMessage = utils.getReportFailReason(e.getMessage())
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                if (utils.isReportFailCritical(e.getMessage())) {
-                    options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                    println """
-                        [ERROR] Failed to build test report.
-                        ${e.toString()}
-                    """
-                    if (!options.testDataSaved) {
-                        try {
-                            // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
-                                "Test Report ${game}", "Summary Report, Compare Report", options.storeOnNAS, \
-                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
-                            options.testDataSaved = true 
-                        } catch (e1) {
-                            println """
-                                [WARNING] Failed to publish test data.
-                                ${e.toString()}
-                            """
-                        }
-                    }
-                    throw e
-                } else {
-                    currentBuild.result = "FAILURE"
-                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
-                }
-            }
-
-            try {
-                dir("jobs_launcher") {
-                    bat """
-                        get_status.bat ..\\summaryTestResults
-                    """
-                }
-            } catch (e) {
-                println """
-                    [ERROR] during slack status generation.
-                    ${e.toString()}
-                """
-            }
-
-            try {
-                dir("jobs_launcher") {
-                    archiveArtifacts "launcher.engine.log"
-                }
-            } catch(e) {
-                println """
-                    [ERROR] during archiving launcher.engine.log
-                    ${e.toString()}
-                """
-            }
-
-            Map summaryTestResults = [:]
-            try {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
-                summaryTestResults = [passed: summaryReport.passed, failed: summaryReport.failed, error: summaryReport.error]
-                if (summaryReport.error > 0) {
-                    println "[INFO] Some tests marked as error. Build result = FAILURE."
-                    currentBuild.result = "FAILURE"
-                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
-                } else if (summaryReport.failed > 0) {
-                    println "[INFO] Some tests marked as failed. Build result = UNSTABLE."
-                    currentBuild.result = "UNSTABLE"
-                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
-                }
-            } catch(e) {
-                println """
-                    [ERROR] CAN'T GET TESTS STATUS
-                    ${e.toString()}
-                """
-                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
-                currentBuild.result = "UNSTABLE"
-            }
-
-            try {
-                options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            } catch (e) {
-                println e.toString()
-                options.testsStatus = ""
-            }
-
-            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
-                    "Test Report ${game}", "Summary Report, Compare Report", options.storeOnNAS, \
-                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
-
-                if (summaryTestResults) {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
-                            "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
-                } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
-                            NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
-                }
-            }
-        }
-    } catch (e) {
-        println(e.toString())
-        throw e
-    }
-}
-
-
-def executeDeployAndroid(Map options, List platformList, List testResultList, String game) {
-    try {
-
-        if (options["executeTests"] && testResultList) {
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
-            }
-
-            List lostStashes = []
-            dir("summaryTestResults") {
-                unstashCrashInfo(options["nodeRetry"])
-                testResultList.each {
-                    if (it.endsWith(game)) {
-                        List testNameParts = it.split("-") as List
-                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_client
-                                    ${e.toString()}
-                                """
-
-                                lostStashes << ("'${it}'".replace("testResult-", ""))
-                            }
-                        }
-                    }
-                }
             }
 
             try {
