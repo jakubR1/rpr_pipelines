@@ -550,6 +550,11 @@ def executeBuildWindows(Map options) {
                     RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
+                //FIXME: remove after fix in project repo
+                bat """
+                    move LICENSE.txt RPRViewer\\LICENSE.txt
+                """
+
                 dir("RPRViewer") {
                     bat """
                         "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
@@ -1071,7 +1076,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 
-def call(String projectBranch = "",
+def call(String projectBranch = "origin/remove_inventor_ref",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800,NVIDIA_RTX2080TI',
          String updateRefs = 'No',

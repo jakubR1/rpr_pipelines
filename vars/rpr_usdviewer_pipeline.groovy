@@ -551,6 +551,11 @@ def executeBuildWindows(Map options) {
                         RPRViewer\\tools\\build_package_windows.bat >> ..\\${STAGE_NAME}.USDViewerPackage.log 2>&1
                     """
 
+                    //FIXME: remove after fix in project repo
+                    bat """
+                        move LICENSE.txt RPRViewer\\LICENSE.txt
+                    """
+
                     dir("RPRViewer") {
                         bat """
                             "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
