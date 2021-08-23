@@ -552,7 +552,7 @@ def executeBuildWindows(Map options) {
 
                 //FIXME: remove after fix in project repo
                 bat """
-                    move LICENSE.txt RPRViewer\\LICENSE.txt
+                    copy LICENSE.txt RPRViewer\\LICENSE.txt
                 """
 
                 dir("RPRViewer") {
