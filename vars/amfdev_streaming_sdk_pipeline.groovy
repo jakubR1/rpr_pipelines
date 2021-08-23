@@ -231,8 +231,6 @@ def closeAndroidTools(Map options) {
             taskkill /f /im \"qemu-system-x86_64.exe\"
             taskkill /f /im \"node.exe\"
         """
-
-        sleep(10)
     } catch (e) {
         println("[ERROR] Failed to Android tools")
         println(e)
