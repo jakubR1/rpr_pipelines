@@ -131,7 +131,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         println "[INFO] Install Inventor Plugin"
 
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART ${dirOption} /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log /ViewerSilent=True /ViewerNoRestart=True /ViewerLog=
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART ${dirOption} /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
@@ -146,7 +146,7 @@ def buildRenderCache(String osName, String toolVersion, Map options, Boolean cle
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_usd_cache.bat Inventor ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
+                bat "build_usd_cache.bat RPRViewer ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
                 break
             case "OSX":
                 println "OSX isn't supported"
@@ -202,7 +202,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                     case "Windows":
                         dir('scripts') {
                             bat """
-                                run.bat \"${testsPackageName}\" \"${testsNames}\" Inventor 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                                run.bat \"${testsPackageName}\" \"${testsNames}\" RPRViewer 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                             """
                         }
                         break
@@ -511,85 +511,72 @@ def executeTests(String osName, String asicName, Map options) {
 
 def executeBuildWindows(Map options) {
     withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
-        dir("RPRViewer") {
-            outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
+        outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
-            // vcvars64.bat sets VS/msbuild env
-            withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+        // vcvars64.bat sets VS/msbuild env
+        withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+            bat """
+                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
+
+                RPRViewer\\tools\\build_usd_windows.bat >> ${STAGE_NAME}.USDPixar.log 2>&1
+            """
+
+            bat """
+                RPRViewer\\tools\\build_hdrpr_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            """
+
+            bat """
+                RPRViewer\\tools\\build_compatibility_checker_windows.bat >> ${STAGE_NAME}.CompatibilityChecker.log 2>&1
+            """
+        }
+        String buildName = "RadeonProUSDViewer_Windows.zip"
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
+            // delete files before zipping
+            bat """
+                del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\cmake
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\include
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\lib\\cmake
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\lib\\pkgconfig
+                del RPRViewer\\binary\\windows\\inst\\bin\\*.lib
+                del RPRViewer\\binary\\windows\\inst\\bin\\*.pdb
+                del RPRViewer\\binary\\windows\\inst\\lib\\*.lib
+                del RPRViewer\\binary\\windows\\inst\\lib\\*.pdb
+                del RPRViewer\\binary\\windows\\inst\\plugin\\usd\\*.lib
+            """
+
+            withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 bat """
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
-
-                    RPRViewer\\tools\\build_usd_windows.bat >> ..\\${STAGE_NAME}.USDPixar.log 2>&1
+                    RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
-                bat """
-                    RPRViewer\\tools\\build_hdrpr_windows.bat >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
-                """
-
-                bat """
-                    RPRViewer\\tools\\build_compatibility_checker_windows.bat >> ..\\${STAGE_NAME}.CompatibilityChecker.log 2>&1
-                """
-            }
-            String buildName = "RadeonProUSDViewer_Windows.zip"
-            withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
-                // delete files before zipping
-                bat """
-                    del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
-                    rmdir /Q /S RPRViewer\\binary\\windows\\inst\\cmake
-                    rmdir /Q /S RPRViewer\\binary\\windows\\inst\\include
-                    rmdir /Q /S RPRViewer\\binary\\windows\\inst\\lib\\cmake
-                    rmdir /Q /S RPRViewer\\binary\\windows\\inst\\lib\\pkgconfig
-                    del RPRViewer\\binary\\windows\\inst\\bin\\*.lib
-                    del RPRViewer\\binary\\windows\\inst\\bin\\*.pdb
-                    del RPRViewer\\binary\\windows\\inst\\lib\\*.lib
-                    del RPRViewer\\binary\\windows\\inst\\lib\\*.pdb
-                    del RPRViewer\\binary\\windows\\inst\\plugin\\usd\\*.lib
-                """
-
-                withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
+                dir("RPRViewer") {
                     bat """
-                        RPRViewer\\tools\\build_package_windows.bat >> ..\\${STAGE_NAME}.USDViewerPackage.log 2>&1
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
 
-                    dir("RPRViewer") {
+                    makeStash(includes: "RPRViewer_Setup.exe", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+                    options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
+
+                    if (options.branch_postfix) {
                         bat """
-                            "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
-                            move RPRViewer_Setup.exe ..\\..\\RPRViewer_Setup.exe
+                            rename RPRViewer_Setup.exe RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe
                         """
                     }
+
+                    String ARTIFACT_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
+                    /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
+                    if (options.sendToUMS) {
+                        // WARNING! call sendToMinio in build stage only from parent directory
+                        options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
+                    }*/
+
+                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
         }
-
-        dir("tools") {
-            bat """
-                build_releases.cmd >> ..\\${STAGE_NAME}.BuildReleases.log 2>&1
-            """
-        }
-
-        bat """
-            "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" rprplugin_installer.iss >> ${STAGE_NAME}.RPRInventorPluginInstaller.log 2>&1
-        """
-
-        makeStash(includes: "RPRInventorPlugin_Setup.exe", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
-        options.pluginWinSha = sha1 "RPRInventorPlugin_Setup.exe"
-
-        if (options.branch_postfix) {
-            bat """
-                rename RPRInventorPlugin_Setup.exe RPRInventorPlugin_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe
-            """
-        }
-
-        String ARTIFACT_NAME = options.branch_postfix ? "RPRInventorPlugin_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRInventorPlugin_Setup.exe"
-        String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
-
-        /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
-        if (options.sendToUMS) {
-            // WARNING! call sendToMinio in build stage only from parent directory
-            options.universeManager.sendToMINIO(options, "Windows", "..", "RPRInventorPlugin_Setup.exe", false)
-        }*/
-
-        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
     }
 }
 
@@ -1129,7 +1116,7 @@ def call(String projectBranch = "",
                         enableNotifications: enableNotifications,
                         PRJ_NAME: 'USDViewer',
                         PRJ_ROOT: 'rpr-core',
-                        projectRepo: 'git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git',
+                        projectRepo: 'git@github.com:Radeon-Pro/RPRViewer.git',
                         BUILDER_TAG: 'BuilderUSDViewer',
                         isPreBuilt:isPreBuilt,
                         TESTER_TAG: tester_tag,
