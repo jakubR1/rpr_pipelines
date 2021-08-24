@@ -437,9 +437,9 @@ def executeTests(String osName, String asicName, Map options) {
             }
             if (stashResults) {
                 dir('Work') {
-                    if (fileExists("Results/Inventor/session_report.json")) {
+                    if (fileExists("Results/RPRViewer/session_report.json")) {
 
-                        def sessionReport = readJSON file: 'Results/Inventor/session_report.json'
+                        def sessionReport = readJSON file: 'Results/RPRViewer/session_report.json'
                         if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
                         }
