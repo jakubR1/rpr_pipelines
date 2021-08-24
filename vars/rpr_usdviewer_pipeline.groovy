@@ -764,7 +764,7 @@ def executePreBuild(Map options) {
         """
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-            options.pluginVersion = version_read("${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "')
+            options.pluginVersion = version_read("${env.WORKSPACE}\\RPRViewer\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "')
 
             if (false && options['incrementVersion']) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
