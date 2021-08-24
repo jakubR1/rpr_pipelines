@@ -131,7 +131,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         println "[INFO] Install Inventor Plugin"
 
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART ${dirOption} /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log /ViewerSilent=True /ViewerNoRestart=True /ViewerLog=
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART ${dirOption} /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log /ViewerSilent=True /ViewerNoRestart=True
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
