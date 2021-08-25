@@ -250,20 +250,11 @@ def executeBuildOSX(String osName, Map options) {
 
     GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact")
 
-    if (osName == "OSX") {
-        sh """
-            cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
-            cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
-        """
+    sh """
+        cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
+    """
 
-        options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
-    } else {
-        sh """
-            cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
-        """
-
-        options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
-    }
+    options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
 
     String releaseLink = executeOSXBuildCommand(osName, options, "Release")
     String debugLink = executeOSXBuildCommand(osName, options, "Debug")
