@@ -36,10 +36,10 @@ def getViewerTool(String osName, Map options) {
             if (options['isPreBuilt']) {
                 clearBinariesWin()
                 println "[INFO] PreBuilt plugin specified. Downloading and copying..."
-                downloadPlugin(osName, "RPRViewer_Setup", options, "", 600)
+                downloadPlugin(osName, "RPRInventorPlugin_Setup", options, "", 600)
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RPRViewer_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
+                    move RPRInventorPlugin_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
                 """
             } else {
                 if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}.exe")) {
@@ -52,7 +52,7 @@ def getViewerTool(String osName, Map options) {
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
+                        move RPRInventorPlugin_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
                     """
                 }
             }
