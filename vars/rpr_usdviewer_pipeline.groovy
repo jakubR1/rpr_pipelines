@@ -319,7 +319,8 @@ def executeTests(String osName, String asicName, Map options) {
             updateMap("${asicName}-${osName}", 'dirt', 'success')
         }
 
-        if (shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
+        //FIXME: resolve custom path installation for new installer
+        if (false && shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
             try {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CUSTOM_PATH) {
                     timeout(time: "15", unit: "MINUTES") {
