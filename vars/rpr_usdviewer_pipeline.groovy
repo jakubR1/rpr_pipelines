@@ -512,23 +512,11 @@ def executeTests(String osName, String asicName, Map options) {
 def executeBuildWindows(Map options) {
     withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
 
-        //FIXME: remove after submodule pr merge
-        dir("RadeonProRenderInventorPlugin") {
-            bat """
-                git checkout --recurse-submodules -f build_improve
-            """
-        }
-
         dir("RPRViewer") {
             outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
             // vcvars64.bat sets VS/msbuild env
             withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
-
-                //FIXME: remove after submodule pr merge
-                bat """
-                    git checkout --recurse-submodules -f remove_inventor_ref
-                """
 
                 bat """
                     call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
