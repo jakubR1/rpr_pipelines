@@ -22,13 +22,13 @@ def call(Map params) {
         Boolean debug = params["debug"]
 
         if (storeOnNAS) {
-            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/".replace(" ", "?")
+            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
 
             int times = 3
             int retries = 0
             int status = 0
 
-            String zipName = "stash_${stashName}.zip".replace(" ", "?")
+            String zipName = "stash_${stashName}.zip"
 
             while (retries++ < times) {
                 try {

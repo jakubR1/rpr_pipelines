@@ -76,7 +76,7 @@ def checkExistenceOfBlenderAddon(String osName, String pluginName, String tool_v
                 sh """
                     echo import os >> getInstallerCommitHash.py
                     echo commit_hash = '"unknown"' >> getInstallerCommitHash.py
-                    echo init_path = r'"/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/${pluginName}/__init__.py"' >> getInstallerCommitHash.py
+                    echo init_path = r'"/Users/${env.USER}/Library/Application Support/Blender/${tool_version}/scripts/addons/${pluginName}/__init__.py"' >> getInstallerCommitHash.py
                     echo if os.path.exists'(init_path)': >> getInstallerCommitHash.py
                     echo '    'with open'(init_path)' as f: >> getInstallerCommitHash.py
                     echo '        'lines = f.readlines'()' >> getInstallerCommitHash.py
@@ -196,8 +196,8 @@ def uninstallBlenderAddon(String osName, String pluginName, String tool_version,
                     println "[ERROR] Failed to delete Blender Addon via python script."
                 } finally {
 
-                    if (fileExists("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/${pluginName}")) {
-                        dir("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons") {
+                    if (fileExists("/Users/${env.USER}/Library/Application Support/Blender/${tool_version}/scripts/addons/${pluginName}")) {
+                        dir("/Users/${env.USER}/Library/Application Support/Blender/${tool_version}/scripts/addons") {
                             sh """
                                 rm -fdr ${pluginName}
                             """

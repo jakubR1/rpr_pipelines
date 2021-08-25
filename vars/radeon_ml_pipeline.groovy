@@ -235,9 +235,12 @@ def executeOSXBuildCommand(String osName, Map options, String buildType) {
     dir("build-${buildType}") {
         String ARTIFACT_NAME = "${osName}_${buildType}.tar"
         artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+        
+        dir(buildType) {
+            sh("zip ${osName}_${buildType}.zip libRadeonML*.dylib test*")
+            archiveArtifacts "${osName}_${buildType}.zip"
+        }
     }
-
-    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${osName}_${buildType}.zip"
 
     return artifactURL
 }
@@ -247,13 +250,21 @@ def executeBuildOSX(String osName, Map options) {
 
     GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact")
 
-    sh """
-        cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
-        cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
-    """
+    if (osName == "OSX") {
+        sh """
+            cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
+            cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
+        """
 
-    options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
-    
+        options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
+    } else {
+        sh """
+            cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
+        """
+
+        options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
+    }
+
     String releaseLink = executeOSXBuildCommand(osName, options, "Release")
     String debugLink = executeOSXBuildCommand(osName, options, "Debug")
 
@@ -361,9 +372,9 @@ def executeBuild(String osName, Map options) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
         
-        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/*", "../RML_thirdparty/MIOpen")
-        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
-        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/", "../RML_thirdparty/tensorflow")
+        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/", "./DirectML")
 
         outputEnvironmentInfo(osName, "${STAGE_NAME}_Release")
         outputEnvironmentInfo(osName, "${STAGE_NAME}_Debug")

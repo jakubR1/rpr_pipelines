@@ -17,19 +17,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
 
                 if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
-                        println "[INFO] The plugin ${options['pluginWinSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesWin()
+                    removeInstaller(osName: osName, options: options, extension: "zip")
 
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+                    clearBinariesWin()
 
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
-                        """
-                    }
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
+                    """
                 } else {
                     clearBinariesWin()
 
@@ -43,19 +41,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 }
 
             } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesWin()
+                removeInstaller(osName: osName, options: options, extension: "zip")
 
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+                clearBinariesWin()
 
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
-                    """
-                }
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
+                """
             }
 
             break
@@ -67,19 +63,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
 
                 if (options['pluginUbuntuSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
-                        println "[INFO] The plugin ${options['pluginUbuntuSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesUnix()
+                    removeInstaller(osName: osName, options: options, extension: "zip")
 
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+                    clearBinariesUnix()
 
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                        """
-                    }
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
                 } else {
                     clearBinariesUnix()
 
@@ -93,19 +87,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 }
 
             } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesUnix()
+                removeInstaller(osName: osName, options: options, extension: "zip")
 
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
-                   
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
-                    """
-                }
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
+               
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
+                """
             }
     }
 }
@@ -455,7 +447,7 @@ def executeBuildLinux(String osName, Map options) {
             """
             
             if (options.updateDeps) {
-                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
             }
         } else {
            sh """
@@ -1096,6 +1088,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:30,
+                        BUILDER_TAG:'BuilderHydra',
                         TESTER_TAG:tester_tag,
                         resX: resX,
                         resY: resY,
