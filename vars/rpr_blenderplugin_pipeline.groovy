@@ -719,11 +719,11 @@ def executePreBuild(Map options)
 
                 if (options['incrementVersion']) {
                     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-                        /*GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        GithubNotificator githubNotificator = new GithubNotificator(this, options)
                         githubNotificator.init(options)
                         options["githubNotificator"] = githubNotificator
                         githubNotificator.initPreBuild("${BUILD_URL}")
-                        options.projectBranchName = githubNotificator.branchName*/
+                        options.projectBranchName = githubNotificator.branchName
                     }
                     
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -897,9 +897,9 @@ def executePreBuild(Map options)
             options.tests = tests
         }
 
-        /*if (env.BRANCH_NAME && options.githubNotificator) {
+        if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
-        }*/
+        }
 
         options.testsList = options.tests
 
