@@ -738,7 +738,7 @@ def executePreBuild(Map options) {
     if (!options['isPreBuilt']) {
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, submoduleDepth: 1)
         }
 
         options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
