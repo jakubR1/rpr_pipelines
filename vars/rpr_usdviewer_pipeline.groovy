@@ -265,7 +265,8 @@ def executeTests(String osName, String asicName, Map options) {
 
         installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
 
-        if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
+        //FIXME: resolve dirt installation for new installer
+        if (false && shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
             try {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
                     println "Uninstall old plugin and install \"baseline\" plugin"
