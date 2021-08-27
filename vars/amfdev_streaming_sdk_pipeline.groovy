@@ -321,15 +321,6 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
 
                         println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
                         makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-
-                        // reallocate node if there are still attempts
-                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
-                            if (sessionReport.summary.total != sessionReport.summary.skipped) {
-                                collectCrashInfo(osName, options, options.currentTry)
-                                String errorMessage = (options.currentTry < options.nodeReallocateTries) ? "All tests were marked as error. The test group will be restarted." : "All tests were marked as error."
-                                throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
-                            }
-                        }
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
@@ -556,6 +547,19 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
                     prepareTool("Android", options)
                 }
             }
+        }
+
+        // duct tape for emulator (during loading client can crash)
+        if (options.engine == "Borderlands3") {
+            try {
+                bat """
+                    \"C:\\JN\\Borderlands3.exe - Shortcut.lnk\"
+                """
+            } catch (e) {
+                // it can return 1 even if game launched
+            }
+
+            sleep(150)
         }
 
         // Start Android emulator
