@@ -868,7 +868,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String parallelExecutionTypeString = "TakeOneNodePerGPU",
         Boolean enableNotifications = true,
         Boolean forceBuild = false,
-        Boolean sendToUMS = true || updateRefs.contains('Update')) {
+        Boolean sendToUMS = false) {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
