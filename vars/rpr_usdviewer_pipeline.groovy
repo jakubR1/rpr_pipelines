@@ -263,7 +263,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
+        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active']])
 
         if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
             try {
@@ -317,42 +317,6 @@ def executeTests(String osName, String asicName, Map options) {
             }
 
             updateMap("${asicName}-${osName}", 'dirt', 'success')
-        }
-
-        if (shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
-            try {
-                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CUSTOM_PATH) {
-                    timeout(time: "15", unit: "MINUTES") {
-                        installInventorPlugin(osName, options, true, true)
-                    }
-                }
-            
-                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CUSTOM_PATH) {                        
-                    timeout(time: "10", unit: "MINUTES") {
-                        try {
-                            buildRenderCache(osName, "2022", options, true, true)
-                        } catch (e) {
-                            throw e
-                        } finally {
-                            dir("scripts") {
-                                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_custom_path_${options.currentTry}")
-                                archiveArtifacts artifacts: "${options.stageName}_custom_path_${options.currentTry}/*.jpg", allowEmptyArchive: true
-                            }
-                        }
-                        dir("scripts") {
-                            String cacheImgPath = "./${options.stageName}_custom_path_${options.currentTry}/RESULT.jpg"
-                            if(!fileExists(cacheImgPath)){
-                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                updateMap("${asicName}-${osName}", 'custom_path', 'failed')
-                throw e
-            }
-
-            updateMap("${asicName}-${osName}", 'custom_path', 'success')
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
