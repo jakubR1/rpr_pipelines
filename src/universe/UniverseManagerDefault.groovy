@@ -22,33 +22,35 @@ class UniverseManagerDefault extends UniverseManager {
     }
 
     def init() {
-        context.withCredentials([context.string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL"),
-            context.string(credentialsId: "devUniverseURL", variable: "DEV_UMS_URL"),
-            context.string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
+        context.node("Windows") {
+            context.withCredentials([context.string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL"),
+                context.string(credentialsId: "devUniverseURL", variable: "DEV_UMS_URL"),
+                context.string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
 
-            universeURLProd = "${context.PROD_UMS_URL}"
-            imageServiceURL = "${context.IS_URL}"
-            universeClientProd = new UniverseClient(context, universeURLProd, env, imageServiceURL, productName)
+                universeURLProd = "${context.PROD_UMS_URL}"
+                imageServiceURL = "${context.IS_URL}"
+                universeClientProd = new UniverseClient(context, universeURLProd, env, imageServiceURL, productName)
 
-            universeURLDev = "${context.DEV_UMS_URL}"
-            universeClientDev = new UniverseClient(context, universeURLDev, env, imageServiceURL, productName)
+                universeURLDev = "${context.DEV_UMS_URL}"
+                universeClientDev = new UniverseClient(context, universeURLDev, env, imageServiceURL, productName)
 
-            try {
-                universeClientProd.tokenSetup()
-            } catch (e) {
-                context.println("[ERROR] Failed to setup token for Prod UMS.")
-                universeClientProd = null
-                context.println(e.toString());
-                context.println(e.getMessage());
-            }
+                try {
+                    universeClientProd.tokenSetup()
+                } catch (e) {
+                    context.println("[ERROR] Failed to setup token for Prod UMS.")
+                    universeClientProd = null
+                    context.println(e.toString());
+                    context.println(e.getMessage());
+                }
 
-            try {
-                universeClientDev.tokenSetup()
-            } catch (e) {
-                context.println("[ERROR] Failed to setup token for Dev UMS.")
-                universeClientDev = null
-                context.println(e.toString());
-                context.println(e.getMessage());
+                try {
+                    universeClientDev.tokenSetup()
+                } catch (e) {
+                    context.println("[ERROR] Failed to setup token for Dev UMS.")
+                    universeClientDev = null
+                    context.println(e.toString());
+                    context.println(e.getMessage());
+                }
             }
         }
     }

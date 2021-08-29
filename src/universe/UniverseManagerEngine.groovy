@@ -21,33 +21,35 @@ class UniverseManagerEngine extends UniverseManager  {
     }
 
     def init() {
-        context.withCredentials([context.string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL"),
-            context.string(credentialsId: "devUniverseURL", variable: "DEV_UMS_URL"),
-            context.string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
+        context.node("Windows") {
+            context.withCredentials([context.string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL"),
+                context.string(credentialsId: "devUniverseURL", variable: "DEV_UMS_URL"),
+                context.string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
 
-            universeURLProd = "${context.PROD_UMS_URL}"
-            imageServiceURL = "${context.IS_URL}"
-            universeClientParentProd = new UniverseClient(context, universeURLProd, env, productName)
+                universeURLProd = "${context.PROD_UMS_URL}"
+                imageServiceURL = "${context.IS_URL}"
+                universeClientParentProd = new UniverseClient(context, universeURLProd, env, productName)
 
-            universeURLDev = "${context.DEV_UMS_URL}"
-            universeClientParentDev = new UniverseClient(context, universeURLDev, env, productName)
+                universeURLDev = "${context.DEV_UMS_URL}"
+                universeClientParentDev = new UniverseClient(context, universeURLDev, env, productName)
 
-            try {
-                universeClientParentProd.tokenSetup()
-            } catch (e) {
-                context.println("[ERROR] Failed to setup token for Prod UMS.")
-                universeClientParentProd = null
-                context.println(e.toString());
-                context.println(e.getMessage());
-            }
+                try {
+                    universeClientParentProd.tokenSetup()
+                } catch (e) {
+                    context.println("[ERROR] Failed to setup token for Prod UMS.")
+                    universeClientParentProd = null
+                    context.println(e.toString());
+                    context.println(e.getMessage());
+                }
 
-            try {
-                universeClientParentDev.tokenSetup()
-            } catch (e) {
-                context.println("[ERROR] Failed to setup token for Dev UMS.")
-                universeClientParentDev = null
-                context.println(e.toString());
-                context.println(e.getMessage());
+                try {
+                    universeClientParentDev.tokenSetup()
+                } catch (e) {
+                    context.println("[ERROR] Failed to setup token for Dev UMS.")
+                    universeClientParentDev = null
+                    context.println(e.toString());
+                    context.println(e.getMessage());
+                }
             }
         }
     }
