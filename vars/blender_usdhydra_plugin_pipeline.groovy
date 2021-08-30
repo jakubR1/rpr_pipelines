@@ -528,6 +528,13 @@ def executeBuild(String osName, Map options) {
     }
 }
 
+def getReportBuildArgs(String engineName, Map options) {
+    if (options["isPreBuilt"]) {
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\""""
+    } else {
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\""""
+    }
+}
 
 def executePreBuild(Map options)
 {
@@ -834,15 +841,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         try {
-                            if (options['isPreBuilt']) {
-                                bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                """
-                            } else {
-                                bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                """
-                            }
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
                             GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")

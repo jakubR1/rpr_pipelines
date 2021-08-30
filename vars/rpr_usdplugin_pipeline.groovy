@@ -584,6 +584,10 @@ def executeBuild(String osName, Map options) {
     }
 }
 
+def getReportBuildArgs(Map options, String title = "USD") {
+    return """${title} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
+}
+
 def executePreBuild(Map options) {
     // manual job
     if (options.forceBuild) {
@@ -756,13 +760,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         if (options.buildType == "Houdini") {
                             def python3 = options.houdini_python3 ? "py3" : "py2.7"
                             def tool = "Houdini ${options.houdiniVersion} ${python3}"
-                            bat """
-                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                            """
+
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options, utils.escapeCharsByUnicode(tool))}"
                         } else {
-                            bat """
-                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                            """
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
                         }
                         bat "get_status.bat ..\\summaryTestResults"
                     }
