@@ -549,19 +549,6 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
             }
         }
 
-        // duct tape for emulator (during loading client can crash)
-        if (options.engine == "Borderlands3") {
-            try {
-                bat """
-                    \"C:\\JN\\Borderlands3.exe - Shortcut.lnk\"
-                """
-            } catch (e) {
-                // it can return 1 even if game launched
-            }
-
-            sleep(150)
-        }
-
         // Start Android emulator
         // TODO remove hard coded name of emulator
         bat """
