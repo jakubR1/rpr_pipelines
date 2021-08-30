@@ -274,6 +274,10 @@ def executeTests(String osName, String asicName, Map options) {
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
                         }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
                     }
                 }
             } else {
@@ -693,6 +697,11 @@ def executePreBuild(Map options) {
             options.universeManager.createBuilds(options)
         }
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -770,7 +779,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                             options.testDataSaved = true
                         } catch(e1) {
                             println """
@@ -829,8 +841,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", \
-                    "Test Report", "Summary  Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
@@ -912,7 +926,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType: parallelExecutionType,
                         sendToUMS: sendToUMS,
                         universePlatforms: convertPlatforms(platforms),
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

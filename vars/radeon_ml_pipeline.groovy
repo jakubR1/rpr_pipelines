@@ -96,7 +96,8 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
             throw e
         } finally {
             archiveArtifacts "*.log"
-            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}")
+            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}", options.storeOnNAS, \
+                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": false])
         }
     }
 }
@@ -540,7 +541,8 @@ def call(String projectBranch = "",
                     retriesForTestStage:1,
                     gitlabURL:gitlabURL,
                     gitlabURLSSH:gitlabURLSSH,
-                    storeOnNAS:true
+                    storeOnNAS:true,
+                    flexibleUpdates: true
                     ]
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage, options)

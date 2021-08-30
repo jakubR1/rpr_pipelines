@@ -354,6 +354,10 @@ def executeTests(String osName, String asicName, Map options) {
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
                         }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
                     }
                 }
             } else {
@@ -749,6 +753,11 @@ def executePreBuild(Map options)
 
         println "timeouts: ${options.timeouts}"
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -856,7 +865,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                            "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                            ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -922,7 +934,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -1107,7 +1121,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
-                        storeOnNAS:true
+                        storeOnNAS:true,
+                        flexibleUpdates: true
                         ]
         }
 
