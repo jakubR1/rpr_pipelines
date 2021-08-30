@@ -263,10 +263,9 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
+        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active']])
 
-        //FIXME: resolve dirt installation for new installer
-        if (false && shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
+        if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
             try {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
                     println "Uninstall old plugin and install \"baseline\" plugin"
@@ -318,43 +317,6 @@ def executeTests(String osName, String asicName, Map options) {
             }
 
             updateMap("${asicName}-${osName}", 'dirt', 'success')
-        }
-
-        //FIXME: resolve custom path installation for new installer
-        if (false && shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
-            try {
-                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CUSTOM_PATH) {
-                    timeout(time: "15", unit: "MINUTES") {
-                        installInventorPlugin(osName, options, true, true)
-                    }
-                }
-            
-                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CUSTOM_PATH) {                        
-                    timeout(time: "10", unit: "MINUTES") {
-                        try {
-                            buildRenderCache(osName, "2022", options, true, true)
-                        } catch (e) {
-                            throw e
-                        } finally {
-                            dir("scripts") {
-                                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_custom_path_${options.currentTry}")
-                                archiveArtifacts artifacts: "${options.stageName}_custom_path_${options.currentTry}/*.jpg", allowEmptyArchive: true
-                            }
-                        }
-                        dir("scripts") {
-                            String cacheImgPath = "./${options.stageName}_custom_path_${options.currentTry}/RESULT.jpg"
-                            if(!fileExists(cacheImgPath)){
-                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                updateMap("${asicName}-${osName}", 'custom_path', 'failed')
-                throw e
-            }
-
-            updateMap("${asicName}-${osName}", 'custom_path', 'success')
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
@@ -555,7 +517,7 @@ def executeBuildWindows(Map options) {
                         RPRViewer\\tools\\build_package_windows.bat >> ..\\${STAGE_NAME}.USDViewerPackage.log 2>&1
                     """
 
-                    //FIXME: remove after fix in project repo
+                    //TODO: remove after fix
                     bat """
                         copy LICENSE.txt RPRViewer\\LICENSE.txt
                     """
@@ -754,9 +716,9 @@ def executePreBuild(Map options) {
         """
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-            options.pluginVersion = version_read("${env.WORKSPACE}\\RPRViewer\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "')
+            options.pluginVersion = version_read("${env.WORKSPACE}\\rprplugin_installer.iss", 'AppVersion=')
 
-            if (false && options['incrementVersion']) {
+            if (options['incrementVersion']) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
                     GithubNotificator githubNotificator = new GithubNotificator(this, options)
                     githubNotificator.init(options)
@@ -765,36 +727,22 @@ def executePreBuild(Map options) {
                     options.projectBranchName = githubNotificator.branchName
                 }
                 
-                if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+                if (env.BRANCH_NAME == "init" && options.commitAuthor != "radeonprorender") {
 
                     println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                     println "[INFO] Current build version: ${options.pluginVersion}"
 
-                    def new_plugin_version = version_inc(options.pluginVersion, 3)
+                    def new_plugin_version = version_inc(options.pluginVersion, 2)
                     println "[INFO] New build version: ${new_plugin_version}"
-                    version_write("${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "', new_plugin_version)
+                    version_write("${env.WORKSPACE}\\rprplugin_installer.iss", 'AppVersion=', new_plugin_version)
 
-                    options.pluginVersion = version_read("${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "')
+                    options.pluginVersion = version_read("${env.WORKSPACE}\\rprplugin_installer.iss", 'AppVersion=')
                     println "[INFO] Updated build version: ${options.pluginVersion}"
 
-                    options.installerVersion = version_read("${env.WORKSPACE}\\RPRViewer\\installer.iss", 'AppVersion=')
-                    println "[INFO] Current installer version: ${options.installerVersion}"
-
-                    // TODO: delete this code
-                    if (options.installerVersion == "1.0") {
-                        options.installerVersion = "1.0.0"
-                        println "[INFO] Updated installer version: ${options.installerVersion}"
-                    }
-
-                    def new_installer_version = version_inc(options.installerVersion, 3)
-                    println "[INFO] New installer version: ${new_installer_version}"
-                    version_write("${env.WORKSPACE}\\RPRViewer\\installer.iss", 'AppVersion=', new_installer_version)
-
                     bat """
-                        git add ${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py
-                        git add ${env.WORKSPACE}\\RPRViewer\\installer.iss
+                        git add ${env.WORKSPACE}\\rprplugin_installer.iss
                         git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                        git push origin HEAD:master
+                        git push origin HEAD:init
                     """
 
                     // Get commit's sha which have to be build

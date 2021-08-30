@@ -543,7 +543,7 @@ def executeBuildWindows(Map options) {
                     RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
-                //FIXME: remove after fix in project repo
+                //TODO: remove after fix
                 bat """
                     copy LICENSE.txt RPRViewer\\LICENSE.txt
                 """
