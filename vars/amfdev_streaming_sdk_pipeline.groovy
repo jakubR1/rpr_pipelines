@@ -945,7 +945,8 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
 
-            List lostStashes = []
+            List lostStashesWindows = []
+            List lostStashesAndroid = []
             dir("summaryTestResults") {
                 unstashCrashInfo(options["nodeRetry"])
                 testResultList.each {
@@ -964,7 +965,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                         ${e.toString()}
                                     """
 
-                                    lostStashes << ("'${it}'".replace("testResult-", ""))
+                                    lostStashesAndroid << ("'${it}'".replace("testResult-", ""))
                                 }
                             } else {
                                 try {
@@ -999,7 +1000,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 }
 
                                 if (groupLost) {
-                                    lostStashes << ("'${it}'".replace("testResult-", ""))
+                                    lostStashesWindows << ("'${it}'".replace("testResult-", ""))
                                 }
                             }
                         }
@@ -1035,9 +1036,23 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             }
 
             try {
+                dir("scripts") {
+                    python3("python prepare_test_cases.py --os_name \"Windows\"")
+                }
+
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashesWindows}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                    """
+                }
+
+                dir("scripts") {
+                    python3("python prepare_test_cases.py --os_name \"Android\"")
+                }
+
+                dir("jobs_launcher") {
+                    bat """
+                        count_lost_tests.bat \"${lostStashesAndroid}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -1051,9 +1066,25 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
-                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                        retryInfoList.each{ gpu ->
+                            gpu['Tries'].each{ group ->
+                                group.each{ groupKey, retries ->
+                                    if (groupKey.endsWith(game)) {
+                                        List testNameParts = groupKey.split("-") as List
+                                        String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                        group[parsedName] = retries
+                                    }
+                                    group.remove(groupKey)
+                                }
+                            }
+                            gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                        }
+
+                        def retryInfo = JsonOutput.toJson(retryInfoList)
                         dir("..\\summaryTestResults") {
-                            writeJSON file: "retry_info.json", json: JSONSerializer.toJSON(retryInfo, new JsonConfig()), pretty: 4
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
 
                         bat """
