@@ -166,7 +166,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
             }
         }
@@ -672,7 +672,7 @@ def executePreBuild(Map options) {
     options.groupsUMS = []
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_houdini') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             }
@@ -709,7 +709,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
             List lostStashes = []
             dir("summaryTestResults") {
@@ -897,6 +897,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             options << [projectRepo: projectRepo,
                         projectBranch: projectBranch,
                         usdBranch: usdBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_houdini.git",
                         testsBranch: testsBranch,
                         updateRefs: updateRefs,
                         enableNotifications: enableNotifications,
