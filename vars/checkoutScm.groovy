@@ -96,6 +96,17 @@ def checkoutGitScm(Map checkoutOptions) {
 
     if (checkoutOptions['useLFS']) checkoutExtensions.add([$class: 'GitLFSPull'])
 
+    // init sparse checkout
+    if (checkoutOptions['SparseCheckoutPaths']) {
+        def sparseCheckoutPaths = []
+
+        checkoutOptions['SparseCheckoutPaths'].each() { path ->
+            sparseCheckoutPaths.add([$class: 'SparseCheckoutPath', path: path])
+        }
+
+        checkoutExtensions.add([$class: 'SparseCheckoutPaths', sparseCheckoutPaths: sparseCheckoutPaths])
+    }
+
     // !branchName need for ignore merging testing repos (jobs_test_*) 
     if (!checkoutOptions['branchName'] && env.BRANCH_NAME && env.BRANCH_NAME.startsWith("PR-")) {
         checkout scm
