@@ -139,14 +139,15 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
 }
 
 
-def buildRenderCache(String osName, String toolVersion, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false) {
+def buildRenderCache(String osName, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
     logPostfix = customPathInstall ? "custom_path" : logPostfix
+    toolPath = customPathInstall ? CUSTOM_INSTALL_PATH : ""
 
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_usd_cache.bat RPRViewer ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
+                bat "build_usd_cache.bat RPRViewer "" ${toolPath} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
                 break
             case "OSX":
                 println "OSX isn't supported"
@@ -286,7 +287,7 @@ def executeTests(String osName, String asicName, Map options) {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
                     timeout(time: "10", unit: "MINUTES") {
                         try {
-                            buildRenderCache(osName, "2022", options, false)
+                            buildRenderCache(osName, options, false)
                         } catch (e) {
                             throw e
                         } finally {
@@ -322,7 +323,7 @@ def executeTests(String osName, String asicName, Map options) {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CUSTOM_PATH) {                        
                     timeout(time: "10", unit: "MINUTES") {
                         try {
-                            buildRenderCache(osName, "2022", options, true, true)
+                            buildRenderCache(osName, options, true, true)
                         } catch (e) {
                             throw e
                         } finally {
@@ -356,7 +357,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CLEAN) {                        
             timeout(time: "10", unit: "MINUTES") {
                 try {
-                    buildRenderCache(osName, "2022", options, true)
+                    buildRenderCache(osName, options, true)
                 } catch (e) {
                     throw e
                 } finally {
