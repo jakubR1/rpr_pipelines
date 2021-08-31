@@ -142,7 +142,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
 def buildRenderCache(String osName, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
     logPostfix = customPathInstall ? "custom_path" : logPostfix
-    toolPath = customPathInstall ? CUSTOM_INSTALL_PATH : ""
+    toolPath = customPathInstall ? "${CUSTOM_INSTALL_PATH}\\RPRViewer.exe" : ""
 
     dir("scripts") {
         switch(osName) {
