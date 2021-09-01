@@ -202,6 +202,8 @@ def executeTests(String osName, String asicName, Map options) {
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
             }
+
+            utils.reboot(this, osName)
         } catch (e) {
             // throw exception in finally block only if test stage was finished
             if (options.executeTestsFinished) {
@@ -598,7 +600,7 @@ def call(String projectBranch = "",
                         nodeRetry: nodeRetry,
                         platforms:platforms,
                         BUILD_TIMEOUT: 15,
-                        TEST_TIMEOUT: 30,
+                        TEST_TIMEOUT: 60,
                         DEPLOY_TIMEOUT: 15,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,

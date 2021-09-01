@@ -169,7 +169,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
          String projectBranch = "master",
          String platforms = 'Windows;Ubuntu18;CentOS7',
-         String updateBinaries = false,
+         Boolean updateBinaries = false,
          String PRJ_ROOT='rpr-ml',
          String PRJ_NAME='MIOpen'
          )
