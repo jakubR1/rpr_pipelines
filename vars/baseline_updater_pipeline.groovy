@@ -4,7 +4,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 
 
-@Field final String BASELINE_DIR_MAPPING = [
+@Field final Map BASELINE_DIR_MAPPING = [
     "blender": "rpr_blender_autotests",
     "maya": "rpr_maya_autotests",
     "max": "rpr_max_autotests",
