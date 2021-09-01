@@ -57,18 +57,34 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                                 pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                                 python -V >> ${STAGE_NAME}.ft.log 2>&1
                                 python run_tests.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
-                                rename ft-executor.log ${STAGE_NAME}.engine.log
+                                python execute_cases.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results >> ${STAGE_NAME}.ft.log 2>&1
+                                python process_cases.py -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                                rename ft.log ${STAGE_NAME}.execution.ft.log
+                                rename ft-process.log ${STAGE_NAME}.process.ft.log
                             """
                         }
                         break
+
+                    case 'MacOS_ARM':
+                        sh """
+                            export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
+                            python3.9 execute_cases.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results >> ${STAGE_NAME}.ft.log 2>&1
+                            python3.9-intel64 process_cases.py -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                            mv ft.log ${STAGE_NAME}.execute.ft.log
+                            mv ft-process.log ${STAGE_NAME}.process.ft.log
+                        """
+                        break
+
                     default:
                         sh """
                             export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
                             pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                             python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
                             env >> ${STAGE_NAME}.ft.log 2>&1
-                            python3.8 run_tests.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
-                            mv ft-executor.log ${STAGE_NAME}.engine.log
+                            python3.8 execute_cases.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results >> ${STAGE_NAME}.ft.log 2>&1
+                            python3.8 process_cases.py -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                            mv ft.log ${STAGE_NAME}.execute.ft.log
+                            mv ft-process.log ${STAGE_NAME}.process.ft.log
                         """
                 }
             }
@@ -80,7 +96,8 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
             throw e
         } finally {
             archiveArtifacts "*.log"
-            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}")
+            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}", options.storeOnNAS, \
+                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": false])
         }
     }
 }
@@ -250,20 +267,11 @@ def executeBuildOSX(String osName, Map options) {
 
     GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact")
 
-    if (osName == "OSX") {
-        sh """
-            cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
-            cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
-        """
+    sh """
+        cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
+    """
 
-        options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
-    } else {
-        sh """
-            cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
-        """
-
-        options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
-    }
+    options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
 
     String releaseLink = executeOSXBuildCommand(osName, options, "Release")
     String debugLink = executeOSXBuildCommand(osName, options, "Debug")
@@ -493,7 +501,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080TI;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080TI;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;MacOS_ARM:AppleM1',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
          Boolean executeFT = true) {
@@ -533,7 +541,8 @@ def call(String projectBranch = "",
                     retriesForTestStage:1,
                     gitlabURL:gitlabURL,
                     gitlabURLSSH:gitlabURLSSH,
-                    storeOnNAS:true
+                    storeOnNAS:true,
+                    flexibleUpdates: true
                     ]
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage, options)

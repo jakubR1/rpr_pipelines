@@ -366,7 +366,9 @@ def executeTests(String osName, String asicName, Map options)
         }
         println(e.toString())
         println(e.getMessage())
-        
+
+        utils.reboot(this, osName)
+
         if (e instanceof ExpectedExceptionWrapper) {
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
