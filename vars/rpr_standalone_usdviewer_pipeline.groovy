@@ -312,7 +312,6 @@ def executeTests(String osName, String asicName, Map options) {
             updateMap("${asicName}-${osName}", 'dirt', 'success')
         }
 
-        /* due to standalone rprviewer custom path cache building not supported yet
         if (shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
             try {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CUSTOM_PATH) {
@@ -347,7 +346,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
 
             updateMap("${asicName}-${osName}", 'custom_path', 'success')
-        }*/
+        }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
             timeout(time: "15", unit: "MINUTES") {
