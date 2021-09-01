@@ -48,7 +48,7 @@ def call(String jobName,
                 toolName = toolName.toLowerCase()
                 baselineDirName = BASELINE_DIR_MAPPING[toolName]
 
-                def resultPathParts = resultsPath.split()
+                def resultPathParts = resultPath.split("-")
                 String gpuName = resultPathParts[0]
                 String osName = resultPathParts[1]
 
@@ -56,19 +56,19 @@ def call(String jobName,
                 String reportName
 
                 if (engine) {
-                    reportName = "Test_Report_${ENGINE_REPORT_MAPPING[engine]}"
-                    machineConfiguration = "${gpuName}-${osName}-${}"
+                    reportName = "Test_Report_${ENGINE_REPORT_MAPPING[engine.toLowerCase()]}"
+
+                    String engineBaselineName = ENGINE_BASELINES_MAPPING[engine.toLowerCase()]
+                    machineConfiguration = engineBaselineName ? "${gpuName}-${osName}-${engineBaselineName}" : "${gpuName}-${osName}"
                 } else {
                     reportName = "Test_Report"
-
-                    String engineBaselineName = ENGINE_BASELINES_MAPPING[engine]
-                    machineConfiguration = engineBaselineName ? "${gpuName}-${osName}-${engineBaselineName}" : "${gpuName}-${osName}"
+                    machineConfiguration = "${gpuName}-${osName}"
                 }
 
                 String baselinesPath = "/Baselines/${baselineDirName}"
-                String remoteResultPath = "/volume1/${jobName}/${buildID}/${reportName}/${resultPath}"
+                String remoteResultPath = "/volume1/web/${jobName}/${buildID}/${reportName}/${resultPath}"
                 String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
-                String groupName = resultsPath.split("/")[-1]
+                String groupName = resultPath.split("/")[-1]
                 String reportComparePath = "results/${groupName}/report_compare.json"
 
                 dir("jobs_launcher") {
