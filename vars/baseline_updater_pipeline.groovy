@@ -9,16 +9,35 @@ import net.sf.json.JsonConfig
     "maya": "rpr_maya_autotests",
     "max": "rpr_max_autotests",
     "core": "rpr_core_autotests",
-    "usdblender": "usd_blender_autotests",
+    "blender_usd_hydra": "usd_blender_autotests",
     "inventor": "usd_inventor_autotests",
-    "usdplugin": "rpr_usdplugin_autotests",
-    "usdviewer": "rpr_usdviewer_autotests"
+    "USD": "rpr_usdplugin_autotests"
+]
+
+@Field final Map ENGINE_REPORT_MAPPING = [
+    "full": "Tahoe",
+    "full2": "Northstar",
+    "tahoe": "tahoe",
+    "northstar": "Northstar",
+    "hdrprplugin": "RPR",
+    "hdstormrendererplugin": "GL"
+]
+
+@Field final Map ENGINE_BASELINES_MAPPING = [
+    "full": "",
+    "full2": "NorthStar",
+    "tahoe": "",
+    "northstar": "NorthStar",
+    "hdrprplugin": "RPR",
+    "hdstormrendererplugin": "GL"
 ]
 
 
-def call(String resultsPath,
+def call(String jobName,
+    String buildID,
+    String resultPath,
     String caseName,
-    String machineConfiguration,
+    String engine,
     String toolName) {
 
     stage("UpdateBaselines") {
@@ -29,31 +48,48 @@ def call(String resultsPath,
                 toolName = toolName.toLowerCase()
                 baselineDirName = BASELINE_DIR_MAPPING[toolName]
 
+                def resultPathParts = resultsPath.split()
+                String gpuName = resultPathParts[0]
+                String osName = resultPathParts[1]
+
+                String machineConfiguration
+                String reportName
+
+                if (engine) {
+                    reportName = "Test_Report_${ENGINE_REPORT_MAPPING[engine]}"
+                    machineConfiguration = "${gpuName}-${osName}-${}"
+                } else {
+                    reportName = "Test_Report"
+
+                    String engineBaselineName = ENGINE_BASELINES_MAPPING[engine]
+                    machineConfiguration = engineBaselineName ? "${gpuName}-${osName}-${engineBaselineName}" : "${gpuName}-${osName}"
+                }
+
                 String baselinesPath = "/Baselines/${baselineDirName}"
-                String remoteResultsPath = "/volume1/${ResultsPath}"
-                String refPathProfile = "/volume1/${baselinesPath}/${MachineConfiguration}" 
-                String groupName = ResultsPath.split("/")[-1]
+                String remoteResultPath = "/volume1/${jobName}/${buildID}/${reportName}/${resultPath}"
+                String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
+                String groupName = resultsPath.split("/")[-1]
                 String reportComparePath = "results/${groupName}/report_compare.json"
 
                 dir("jobs_launcher") {
                     checkoutScm(branchName: 'master', repositoryUrl: 'git@github.com:luxteam/jobs_launcher.git')
                 }
 
-                if (CaseName) {
-                    downloadFiles(remoteResultsPath + "/report_compare.json", "results/${groupName}")
-                    downloadFiles(remoteResultsPath + "/Color/*${CaseName}*", "results/${groupName}/Color")
+                if (caseName) {
+                    downloadFiles(remoteResultPath + "/report_compare.json", "results/${groupName}")
+                    downloadFiles(remoteResultPath + "/Color/*${caseName}*", "results/${groupName}/Color")
 
                     def testCases = readJSON(file: reportComparePath)
         
                     for (testCase in testCases) {
-                        if (testCase["test_case"] == CaseName) {
+                        if (testCase["test_case"] == caseName) {
                             JSON serializedJson = JSONSerializer.toJSON([testCase], new JsonConfig());
                             writeJSON(file: reportComparePath, json: serializedJson, pretty: 4)
                             break
                         }
                     }
                 } else {
-                    downloadFiles(remoteResultsPath, "results")
+                    downloadFiles(remoteResultPath, "results")
                 }
 
                 python3("jobs_launcher\\common\\scripts\\generate_baselines.py --results_root results --baseline_root baselines")
