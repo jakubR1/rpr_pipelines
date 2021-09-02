@@ -142,7 +142,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
 def buildRenderCache(String osName, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
     logPostfix = customPathInstall ? "custom_path" : logPostfix
-    toolPath = customPathInstall ? "${CUSTOM_INSTALL_PATH}\\RPRViewer.exe" : ""
+    String toolPath = customPathInstall ? "${CUSTOM_INSTALL_PATH}\\RPRViewer.exe" : "C:\\Program Files\\RPRViewer\\RPRViewer.exe"
 
     dir("scripts") {
         switch(osName) {
@@ -252,8 +252,8 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_assets" : "/mnt/c/TestResources/usd_inventor_autotests_assets"
-            downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
+            String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_rprviewer_autotests_assets" : "/mnt/c/TestResources/usd_rprviewer_autotests_assets"
+            downloadFiles("/volume1/Assets/usd_rprviewer_autotests/", assetsDir)
         }
 
         installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
@@ -375,7 +375,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        String REF_PATH_PROFILE="/volume1/Baselines/usd_inventor_autotests/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/usd_rprviewer_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, "", options.currentTry)
@@ -401,7 +401,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
         } else {
             withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
-                String baselineDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_baselines" : "/mnt/c/TestResources/usd_inventor_autotests_baselines"
+                String baselineDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_rprviewer_autotests_baselines" : "/mnt/c/TestResources/usd_rprviewer_autotests_baselines"
                 println "[INFO] Downloading reference images for ${options.tests}"
                 options.tests.split(" ").each { downloadFiles("${REF_PATH_PROFILE}/${it.contains(".json") ? "" : it}", baselineDir) }
             }
