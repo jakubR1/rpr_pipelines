@@ -147,7 +147,9 @@ def buildRenderCache(String osName, Map options, Boolean cleanInstall=true, Bool
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_usd_cache.bat RPRViewer "" ${toolPath} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
+                bat """
+                    build_usd_cache.bat RPRViewer "" "${toolPath}" >> "..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log"  2>&1
+                """
                 break
             case "OSX":
                 println "OSX isn't supported"
