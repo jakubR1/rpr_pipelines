@@ -14,6 +14,16 @@ import net.sf.json.JsonConfig
     "USD": "rpr_usdplugin_autotests"
 ]
 
+@Field final Map PROJECT_MAPPING = [
+    "blender": "Blender",
+    "maya": "Maya",
+    "max": "Max",
+    "core": "Core",
+    "blender_usd_hydra": "Blender USD Hydra",
+    "inventor": "Inventor",
+    "USD": "Houdini"
+]
+
 @Field final Map ENGINE_REPORT_MAPPING = [
     "full": "Tahoe",
     "full2": "Northstar",
@@ -70,6 +80,14 @@ def call(String jobName,
                 String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
                 String groupName = resultPath.split("/")[-1]
                 String reportComparePath = "results/${groupName}/report_compare.json"
+
+                String platform = resultPath.split('-')[0]
+                currentBuild.description = "<b>Configuration:</b> ${PROJECT_MAPPING[toolName]} (${engine ? platform + '-' + ENGINE_REPORT_MAPPING[engine.toLowerCase()] : platform})<br/>"
+                if (caseName) {
+                    currentBuild.description += "<b>Group:</b> ${groupName} / <b>Case:</b> ${caseName}<br/>"
+                } else {
+                    currentBuild.description += "<b>Group:</b> ${groupName}<br/>"
+                }
 
                 dir("jobs_launcher") {
                     checkoutScm(branchName: 'master', repositoryUrl: 'git@github.com:luxteam/jobs_launcher.git')
