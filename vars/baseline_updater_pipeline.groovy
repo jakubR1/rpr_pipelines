@@ -58,14 +58,14 @@ def call(String jobName,
                 toolName = toolName.toLowerCase()
                 baselineDirName = BASELINE_DIR_MAPPING[toolName]
 
-                def resultPathParts = resultPath.split("-")
+                def resultPathParts = resultPath.split("/")[0].split("-")
                 String gpuName = resultPathParts[0]
                 String osName = resultPathParts[1]
 
                 String machineConfiguration
                 String reportName
 
-                if (engine && engine != "None") {
+                if (engine && engine != "None" && engine != "\"") {
                     reportName = "Test_Report_${ENGINE_REPORT_MAPPING[engine.toLowerCase()]}"
 
                     String engineBaselineName = ENGINE_BASELINES_MAPPING[engine.toLowerCase()]
