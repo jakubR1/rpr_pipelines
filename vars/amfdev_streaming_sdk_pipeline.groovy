@@ -766,7 +766,7 @@ def executePreBuild(Map options) {
                         }
                     }
                 }
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests)
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests, 75)
                 modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
                 if (options.isPackageSplitted) {
@@ -1082,7 +1082,7 @@ def call(String projectBranch = "",
                 Android build configuration: ${androidBuildConfiguration}"
             """
 
-            Integer testTimeout = (clientCollectTraces || serverCollectTraces) ? 600 : 420
+            Integer testTimeout = (clientCollectTraces || serverCollectTraces) ? 300 : 210
 
             println """
                 Test stage timeout: ${testTimeout}
@@ -1095,7 +1095,7 @@ def call(String projectBranch = "",
                         testsPackage:testsPackage,
                         tests:tests,
                         PRJ_NAME: "StreamingSDK",
-                        splitTestsExecution: false,
+                        splitTestsExecution: true,
                         winBuildConfiguration: winBuildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
