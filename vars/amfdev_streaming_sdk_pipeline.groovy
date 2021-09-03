@@ -685,6 +685,8 @@ def executePreBuild(Map options) {
         }
     }
 
+    Boolean collectTraces = (clientCollectTraces || serverCollectTraces)
+
     if ("StreamingSDK") {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
@@ -766,7 +768,13 @@ def executePreBuild(Map options) {
                         }
                     }
                 }
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests)
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests, collectTraces ? 90 : 70, 50)
+                options.engines.each { engine ->
+                    options.tests.each() {
+                        tests << "${it}-${engine}"
+                    }
+                }
+
                 modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
                 if (options.isPackageSplitted) {
@@ -775,27 +783,43 @@ def executePreBuild(Map options) {
                     options.testsPackage = modifiedPackageName
                     // check that package is splitted to parts or not
                     if (packageInfo["groups"] instanceof Map) {
-                        tests << "${modifiedPackageName}"
+                        options.engines.each { engine ->
+                            tests << "${modifiedPackageName}-${engine}"
+                        } 
                     } else {
                         // add group stub for each part of package
-                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
-                            tests << "${modifiedPackageName}".replace(".json", ".${i}.json")
-                            options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                        options.engines.each { engine ->
+                            for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                                tests << "${modifiedPackageName}-${engine}".replace(".json", ".${i}.json")
+                            }
                         }
                     }
                 }
 
                 options.tests = tests.join(" ")
+            } else if (options.tests) {
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List, collectTraces ? 90 : 70, 50)
+                options.engines.each { engine ->
+                    options.tests.each() {
+                        tests << "${it}-${engine}"
+                    }
+                }
+            } else {
+                options.executeTests = false
             }
+
+            options.tests = tests
         }
 
         // clear games list if there isn't any test group in build or games string is empty
         if (!options.tests || !options.games) {
+            options.tests = []
             options.engines = []
         }
 
-        // launch tests for each game separately
-        options.testsList = options.engines
+        options.testsList = options.tests
+
+        println "Groups: ${options.testsList}"
 
         if (!options.tests && options.testsPackage == "none") {
             options.executeTests = false
@@ -1082,12 +1106,6 @@ def call(String projectBranch = "",
                 Android build configuration: ${androidBuildConfiguration}"
             """
 
-            Integer testTimeout = (clientCollectTraces || serverCollectTraces) ? 600 : 420
-
-            println """
-                Test stage timeout: ${testTimeout}
-            """
-
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         testsBranch: testsBranch,
@@ -1095,7 +1113,7 @@ def call(String projectBranch = "",
                         testsPackage:testsPackage,
                         tests:tests,
                         PRJ_NAME: "StreamingSDK",
-                        splitTestsExecution: false,
+                        splitTestsExecution: true,
                         winBuildConfiguration: winBuildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
@@ -1106,7 +1124,7 @@ def call(String projectBranch = "",
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
                         // update timeouts dynamicly based on number of cases + traces are generated or not
-                        TEST_TIMEOUT: testTimeout,
+                        TEST_TIMEOUT: 240,
                         DEPLOY_TIMEOUT: 90,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
