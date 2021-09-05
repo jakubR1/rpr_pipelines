@@ -1,6 +1,7 @@
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import hudson.model.Result
 import groovy.json.JsonOutput
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 /**
  * self in methods params is a context of executable pipeline. Without it you can't call Jenkins methods.
