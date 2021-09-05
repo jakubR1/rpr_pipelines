@@ -214,16 +214,16 @@ def closeGames(String osName, Map options, String gameName) {
 
 
 def executeTestCommand(String osName, String asicName, Map options, String executionType) {
-    String testsNames = options.tests
+    String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
-        if (testsNames.contains(".json")) {
+        if (options.parsedTests.contains(".json")) {
             // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
-            testsPackageName = options.tests
+            testsPackageName = options.parsedTests
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
-            testsPackageName = ""
+            testsPackageName = "none"
         }
     }
 
@@ -487,6 +487,9 @@ def executeTests(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        options.parsedTests = options.tests.split("-")[0]
+        options.engine = options.tests.split("-")[1]
+
         options["clientInfo"] = new ConcurrentHashMap()
         options["serverInfo"] = new ConcurrentHashMap()
 
@@ -685,7 +688,7 @@ def executePreBuild(Map options) {
         }
     }
 
-    Boolean collectTraces = (clientCollectTraces || serverCollectTraces)
+    Boolean collectTraces = (options.clientCollectTraces || options.serverCollectTraces)
 
     if ("StreamingSDK") {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
