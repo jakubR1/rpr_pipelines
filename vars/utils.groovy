@@ -551,11 +551,15 @@ class utils {
                     self.println("[INFO] Node is available")
 
                     break
-                } catch (e1) {
+                } catch (FlowInterruptedException e) {
+                    throw e
+                } catch (Exception e) {
                     //do nothing
                 }
             }
-        } catch (e) {
+        } catch (FlowInterruptedException e) {
+            throw e
+        } catch (Exception e) {
             self.println("[ERROR] Failed to reboot machine")
             self.println(e.toString())
             self.println(e.getMessage())
