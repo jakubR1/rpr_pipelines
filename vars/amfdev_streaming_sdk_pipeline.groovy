@@ -214,16 +214,16 @@ def closeGames(String osName, Map options, String gameName) {
 
 
 def executeTestCommand(String osName, String asicName, Map options, String executionType) {
-    String testsNames = options.tests
+    String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
-        if (testsNames.contains(".json")) {
+        if (options.parsedTests.contains(".json")) {
             // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
-            testsPackageName = options.tests
+            testsPackageName = options.parsedTests
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
-            testsPackageName = ""
+            testsPackageName = "none"
         }
     }
 
@@ -487,6 +487,9 @@ def executeTests(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        options.parsedTests = options.tests.split("-")[0]
+        options.engine = options.tests.split("-")[1]
+
         options["clientInfo"] = new ConcurrentHashMap()
         options["serverInfo"] = new ConcurrentHashMap()
 
@@ -685,7 +688,7 @@ def executePreBuild(Map options) {
         }
     }
 
-    Boolean collectTraces = (clientCollectTraces || serverCollectTraces)
+    Boolean collectTraces = (options.clientCollectTraces || options.serverCollectTraces)
 
     if ("StreamingSDK") {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
@@ -734,6 +737,8 @@ def executePreBuild(Map options) {
             }
 
             if (options.testsPackage != "none") {
+                def tempTests = []
+
                 if (options.isPackageSplitted) {
                     println "[INFO] Tests package '${options.testsPackage}' can be splitted"
                 } else {
@@ -760,15 +765,15 @@ def executePreBuild(Map options) {
 
                 groupsFromPackage.each {
                     if (options.isPackageSplitted) {
-                        tests << it
+                        tempTests << it
                     } else {
-                        if (tests.contains(it)) {
+                        if (tempTests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it}"
                         }
                     }
                 }
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests, collectTraces ? 90 : 70, 50)
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests, collectTraces ? 90 : 70, 50)
                 options.engines.each { engine ->
                     options.tests.each() {
                         tests << "${it}-${engine}"
@@ -795,8 +800,6 @@ def executePreBuild(Map options) {
                         }
                     }
                 }
-
-                options.tests = tests.join(" ")
             } else if (options.tests) {
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List, collectTraces ? 90 : 70, 50)
                 options.engines.each { engine ->
