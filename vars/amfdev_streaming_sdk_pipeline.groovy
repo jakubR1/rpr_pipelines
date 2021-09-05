@@ -737,6 +737,8 @@ def executePreBuild(Map options) {
             }
 
             if (options.testsPackage != "none") {
+                def tempTests = []
+
                 if (options.isPackageSplitted) {
                     println "[INFO] Tests package '${options.testsPackage}' can be splitted"
                 } else {
@@ -763,15 +765,15 @@ def executePreBuild(Map options) {
 
                 groupsFromPackage.each {
                     if (options.isPackageSplitted) {
-                        tests << it
+                        tempTests << it
                     } else {
-                        if (tests.contains(it)) {
+                        if (tempTests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it}"
                         }
                     }
                 }
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests, collectTraces ? 90 : 70, 50)
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests, collectTraces ? 90 : 70, 50)
                 options.engines.each { engine ->
                     options.tests.each() {
                         tests << "${it}-${engine}"
@@ -798,8 +800,6 @@ def executePreBuild(Map options) {
                         }
                     }
                 }
-
-                options.tests = tests.join(" ")
             } else if (options.tests) {
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List, collectTraces ? 90 : 70, 50)
                 options.engines.each { engine ->
