@@ -25,26 +25,19 @@ def runCurl(String curlCommand, Integer tries=5, Integer oneTryTimeout=90) {
 }
 
 
-def call(String osName, String tool, Map options, String credentialsId = '', Integer oneTryTimeout = 90) {
+def call(String osName, Map options, String credentialsId = '', Integer oneTryTimeout = 90) {
     String customBuildLink = ""
-    String extension = ""
+    String extension = options["configuration"]["productExtensions"][osName]
 
     switch(osName) {
         case 'Windows':
             customBuildLink = options['customBuildLinkWindows']
-            if (tool.contains("RPRViewer")) {
-                extension = "exe"
-            } else {
-                extension = "msi"
-            }
             break
         case 'OSX':
             customBuildLink = options['customBuildLinkOSX']
-            extension = "dmg"
             break
         case 'Ubuntu':
             customBuildLink = options['customBuildLinkLinux']
-            extension = "run"
         case 'Ubuntu18':
             customBuildLink = options['customBuildLinkUbuntu18']
         // Ubuntu20
@@ -52,52 +45,48 @@ def call(String osName, String tool, Map options, String credentialsId = '', Int
             customBuildLink = options['customBuildLinkUbuntu20']
     }
 
-    if (tool.contains("Blender") || tool.startsWith("bin")) {
-        extension = "zip"
-    }
-
-    print "[INFO] Used specified pre built plugin for ${tool}."
+    print "[INFO] Used specified pre built plugin."
 
     if (customBuildLink.startsWith("https://builds.rpr")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o product_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     } else if (customBuildLink.startsWith("https://rpr.cis")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o product_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     } else if (customBuildLink.startsWith("/CIS/")) {
         downloadFiles("/volume1${customBuildLink}", ".")
         if (isUnix()) {
             sh """
-                mv ${customBuildLink.split("/")[-1]} ${tool}_${osName}.${extension}
+                mv ${customBuildLink.split("/")[-1]} product_${osName}.${extension}
             """
         } else {
             bat """
-                move ${customBuildLink.split("/")[-1]} ${tool}_${osName}.${extension}
+                move ${customBuildLink.split("/")[-1]} product_${osName}.${extension}
             """
         }
     } else if (customBuildLink.contains("cis.nas")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'reportsNAS', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD'],
             string(credentialsId: "nasIP", variable: "NAS_IP"), string(credentialsId: "nasDomain", variable: "NAS_DOMAIN")]) {
 
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink.replace(NAS_DOMAIN, NAS_IP).replace("https", "http")}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o product_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink.replace(NAS_DOMAIN, NAS_IP).replace("https", "http")}\"", 5, oneTryTimeout)
 
         }
     } else {
         if (credentialsId) {
             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+                runCurl("curl -L -o product_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
             }
         } else {
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o product_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     }
 
-    validatePlugin(osName, "${tool}_${osName}.${extension}", options)
+    validatePlugin(osName, "product_${osName}.${extension}", options)
 
     // We haven't any branch so we use sha1 for identifying plugin build
-    def pluginSha = sha1 "${tool}_${osName}.${extension}"
+    def pluginSha = sha1 "product_${osName}.${extension}"
     println "Downloaded plugin sha1: ${pluginSha}"
 
     switch(osName) {

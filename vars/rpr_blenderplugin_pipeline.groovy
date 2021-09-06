@@ -11,160 +11,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20Blender"
 
-
-def getBlenderAddonInstaller(String osName, Map options)
-{
-    switch(osName) {
-        case 'Windows':
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
-
-                if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
-                        println "[INFO] The plugin ${options['pluginWinSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesWin()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RadeonProRenderBlender", options)
-
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
-                        """
-                    }
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RadeonProRenderBlender", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
-                    """
-                }
-
-            } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
-                    """
-                }
-            }
-
-            break
-
-        case "OSX":
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginOSXSha: ${options['pluginOSXSha']}"
-
-                if (options['pluginOSXSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
-                        println "[INFO] The plugin ${options['pluginOSXSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesUnix()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RadeonProRenderBlender", options)
-
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                        """
-                    }
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RadeonProRenderBlender", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                    """
-                }
-
-            } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
-                   
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
-                    """
-                }
-            }
-
-            break
-
-        default:
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
-
-                if (options['pluginUbuntuSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
-                        println "[INFO] The plugin ${options['pluginUbuntuSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesUnix()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RadeonProRenderBlender", options)
-
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                        """
-                    }
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RadeonProRenderBlender", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                    """
-                }
-
-            } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
-                   
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
-                    """
-                }
-            }
-    }
-
-}
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows", "OSX", "Ubuntu18", "Ubuntu20"],
+    productExtensions: ["Windows": "zip", "OSX": "zip", "Ubuntu18": "zip", "Ubuntu20": "zip"]
+)
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
@@ -295,7 +145,7 @@ def executeTests(String osName, String asicName, Map options)
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "12", unit: "MINUTES") {
-                    getBlenderAddonInstaller(osName, options)
+                    getProduct(osName, options)
                     newPluginInstalled = installBlenderAddon(osName, 'rprblender', options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
@@ -1262,7 +1112,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            options << [projectRepo:projectRepo,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_blender.git",
                         testsBranch:testsBranch,
