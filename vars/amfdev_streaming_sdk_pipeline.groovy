@@ -225,7 +225,6 @@ def closeGames(String osName, Map options, String gameName) {
 }
 
 
-<<<<<<< HEAD
 def closeAndroidTools(Map options) {
     try {
         bat """
