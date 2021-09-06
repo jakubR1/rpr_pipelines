@@ -366,7 +366,9 @@ def executeTests(String osName, String asicName, Map options)
         }
         println(e.toString())
         println(e.getMessage())
-        
+
+        utils.reboot(this, osName)
+
         if (e instanceof ExpectedExceptionWrapper) {
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
@@ -1052,7 +1054,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaPlugin.git",
         String projectBranch = "",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;OSX:AMD_RXVEGA',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT',
         String updateRefs = 'No',
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,

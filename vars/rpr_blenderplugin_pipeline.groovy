@@ -305,7 +305,7 @@ def executeTests(String osName, String asicName, Map options)
                 if (newPluginInstalled) {                         
                     timeout(time: "12", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
-                        String cacheImgPath = "./Work/Results/Blender28/cache_building.jpg"
+                        String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
                             throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         } else {
@@ -425,10 +425,10 @@ def executeTests(String osName, String asicName, Map options)
             }
             if (stashResults) {
                 dir('Work') {
-                    if (fileExists("Results/Blender28/session_report.json")) {
+                    if (fileExists("Results/Blender/session_report.json")) {
 
                         def sessionReport = null
-                        sessionReport = readJSON file: 'Results/Blender28/session_report.json'
+                        sessionReport = readJSON file: 'Results/Blender/session_report.json'
 
                         if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
@@ -1136,7 +1136,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1156,7 +1156,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
     String enginesNames = "Northstar",
-    String tester_tag = "Blender2.8",
+    String tester_tag = "Blender",
     String toolVersion = "2.93",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
@@ -1272,7 +1272,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,
                         tests:tests,
-                        PRJ_NAME:"RadeonProRenderBlender2.8Plugin",
+                        PRJ_NAME:"RadeonProRenderBlenderPlugin",
                         PRJ_ROOT:"rpr-plugins",
                         toolVersion:toolVersion,
                         isPreBuilt:isPreBuilt,
