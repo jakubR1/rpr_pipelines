@@ -1,6 +1,7 @@
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import hudson.model.Result
 import groovy.json.JsonOutput
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 /**
  * self in methods params is a context of executable pipeline. Without it you can't call Jenkins methods.
@@ -551,11 +552,15 @@ class utils {
                     self.println("[INFO] Node is available")
 
                     break
-                } catch (e1) {
+                } catch (FlowInterruptedException e) {
+                    throw e
+                } catch (Exception e) {
                     //do nothing
                 }
             }
-        } catch (e) {
+        } catch (FlowInterruptedException e) {
+            throw e
+        } catch (Exception e) {
             self.println("[ERROR] Failed to reboot machine")
             self.println(e.toString())
             self.println(e.getMessage())
