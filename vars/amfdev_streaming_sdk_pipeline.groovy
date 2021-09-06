@@ -1051,7 +1051,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
             try {
                 dir("scripts") {
-                    python3("python prepare_test_cases.py --os_name \"Windows\"")
+                    python3("prepare_test_cases.py --os_name \"Windows\"")
                 }
 
                 dir("jobs_launcher") {
@@ -1061,7 +1061,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 }
 
                 dir("scripts") {
-                    python3("python prepare_test_cases.py --os_name \"Android\"")
+                    python3("prepare_test_cases.py --os_name \"Android\"")
                 }
 
                 dir("jobs_launcher") {
