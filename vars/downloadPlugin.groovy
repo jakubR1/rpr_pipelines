@@ -90,5 +90,5 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
     def pluginSha = sha1 "${tool}_${osName}.${extension}"
     println "Downloaded plugin sha1: ${pluginSha}"
 
-    options[getProduct.getShaKey(osName)] = pluginSha
+    options[getProduct.getIdentificatorKey(osName)] = pluginSha
 }
