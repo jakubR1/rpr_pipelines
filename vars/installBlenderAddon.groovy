@@ -254,18 +254,14 @@ def uninstallBlenderAddon(String osName, String pluginName, String tool_version,
 def installBlenderAddon(String osName, String pluginName, String tool_version, Map options)
 {
     // Installing Addon in Blender
+    String addonName = options[getProduct.getIdentificatorKey(osName)]
 
     switch(osName) {
         case "Windows":
-            if (options['isPreBuilt']) {
-                addon_name = "${options.pluginWinSha}"
-            } else {
-                addon_name = "${options.commitSHA}_Windows"
-            }
             bat """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addon_name}.zip" >> registerRPRinBlender.py
+                echo addon_path = "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addonName}.zip" >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install(filepath=addon_path) >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable(module="${pluginName}") >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref() >> registerRPRinBlender.py
@@ -275,15 +271,10 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             break
       
         case "OSX":
-            if (options['isPreBuilt']) {
-                addon_name = "${options.pluginOSXSha}"
-            } else {
-                addon_name = "${options.commitSHA}_OSX"
-            }
             sh """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
+                echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable'(module="${pluginName}")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
@@ -293,15 +284,10 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             break
 
         default:
-            if (options['isPreBuilt']) {
-                addon_name = "${options.pluginUbuntuSha}"
-            } else {
-                addon_name = "${options.commitSHA}_${osName}"
-            }
             sh """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
+                echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable'(module="${pluginName}")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py

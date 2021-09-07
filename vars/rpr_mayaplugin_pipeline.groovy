@@ -10,114 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20Maya"
 
-
-def getMayaPluginInstaller(String osName, Map options) {
-    switch (osName) {
-        case 'Windows':
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
-
-                if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.msi")) {
-                        println "[INFO] The plugin ${options['pluginWinSha']}.msi exists in the storage."
-                    } else {
-                        clearBinariesWin()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RadeonProRenderMaya", options)
-
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.msi"
-                        """
-                    }
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RadeonProRenderMaya", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
-                    """
-                }
-
-            } else {
-                if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['productCode']}.msi")) {
-                    println "[INFO] The plugin ${options['productCode']}.msi exists in the storage."
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['productCode']}.msi"
-                    """
-                }
-            }
-
-            break
-
-        case "OSX":
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginOSXSha: ${options['pluginOSXSha']}"
-
-                if (options['pluginOSXSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg")) {
-                        println "[INFO] The plugin ${options['pluginOSXSha']}.dmg exists in the storage."
-                    } else {
-                        clearBinariesUnix()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RadeonProRenderMaya", options)
-
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            mv RadeonProRender*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
-                        """
-                    }
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RadeonProRenderMaya", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv RadeonProRender*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
-                    """
-                }
-
-            } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg")) {
-                    println "[INFO] The plugin ${options.pluginOSXSha}.dmg exists in the storage."
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
-                   
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv RadeonProRender*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
-                    """
-                }
-            }
-
-            break
-
-        default:
-            echo "[WARNING] ${osName} is not supported"
-    }
-
-}
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows", "OSX"],
+    productExtensions: ["Windows": "msi", "OSX": "dmg"],
+    artifactNameBeginning: "RadeonProRender"
+)
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
@@ -255,7 +152,7 @@ def executeTests(String osName, String asicName, Map options)
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "15", unit: "MINUTES") {
-                    getMayaPluginInstaller(osName, options)
+                    getProduct(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, "Maya", options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
@@ -501,13 +398,11 @@ def executeBuildWindows(Map options)
         """
 
         // FIXME: hot fix for STVCIS-1215
-        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+        options[getProduct.getIdentificatorKey("Windows")] = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
 
         println "[INFO] Built MSI product code: ${options.productCode}"
 
-        //options.productCode = "unknown"
-        options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
-        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
+        makeStash(includes: 'RadeonProRenderMaya.msi', name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
     }
@@ -538,10 +433,10 @@ def executeBuildOSX(Map options)
             }
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
-            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: 'RadeonProRenderMaya.dmg', name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
 
             // TODO: detect ID of installed plugin
-            options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
+            options[getProduct.getIdentificatorKey("OSX")] = options.commitSHA
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
@@ -1165,7 +1060,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            options << [projectRepo:projectRepo,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_maya.git",
                         testsBranch:testsBranch,

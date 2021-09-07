@@ -53,8 +53,8 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
             throw new Exception("Missing identificator key for ${osName}")
         }
 
-        if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}_${osName}.${extension}")) {
-            println "[INFO] The plugin ${options[identificatorKey]}_${osName}.${extension} exists in the storage."
+        if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}")) {
+            println "[INFO] The plugin ${options[identificatorKey]}.${extension} exists in the storage."
         } else {
             if (isUnix()) {
                 clearBinariesUnix()
@@ -68,12 +68,12 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
             if (isUnix()) {
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv ${tool}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}_${osName}.${extension}"
+                    mv ${tool}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}"
                 """
             } else {
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move ${tool}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}_${osName}.${extension}"
+                    move ${tool}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
                 """
             }
         }

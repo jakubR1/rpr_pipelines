@@ -87,23 +87,19 @@ def uninstallPlugin(String osName, String tool, Map options){
 }
 
 def installPlugin(String osName, String tool, Map options){
+    String addonName = options[getProduct.getIdentificatorKey(osName)]
 
     switch(osName) {
         case 'Windows':
             dir("..\\..\\PluginsBinaries") {
-                if (options['isPreBuilt']) {
-                    addon_name = options.pluginWinSha
-                } else {
-                    addon_name = options.productCode
-                }
-                println "[INFO] MSI name: ${addon_name}.msi"
-                installMSI("${addon_name}.msi", options.stageName, options.currentTry)
+                println "[INFO] MSI name: ${addonName}.msi"
+                installMSI("${addonName}.msi", options.stageName, options.currentTry)
             }
             break
 
         case 'OSX':
             sh """
-                sudo $CIS_TOOLS/install${tool}Plugin ${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
+                sudo $CIS_TOOLS/install${tool}Plugin ${CIS_TOOLS}/../PluginsBinaries/${addonName}.dmg >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
             break
 
