@@ -373,7 +373,7 @@ def executeBuildWindows(Map options)
                 rename RadeonProRender*.zip RadeonProRenderBlender_Windows.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
@@ -414,7 +414,7 @@ def executeBuildOSX(Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_MacOS.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
