@@ -63,7 +63,7 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
             }
 
             println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-            makeUnstash(name: stashName, unzip: unzipArtifact, storeOnNAS: options.storeOnNAS)
+            makeUnstash(name: stashName, unzip: false, storeOnNAS: options.storeOnNAS)
 
             if (isUnix()) {
                 sh """
@@ -75,6 +75,10 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
                     move ${tool}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
                 """
+            }
+
+            if (unzipArtifact) {
+                unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: "rprSdk", quiet: true
             }
         }
     }

@@ -250,8 +250,9 @@ def executeBuildWindows(Map options) {
 
     withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/Build-Windows.log",
         configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        String ARTIFACT_NAME = "binCoreWin64.zip"
+
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
-            String ARTIFACT_NAME = "binCoreWin64.zip"
             bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
@@ -283,8 +284,9 @@ def executeBuildOSX(Map options) {
 
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/Build-OSX.log",
         configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        String ARTIFACT_NAME = "binCoreMacOS.zip"
+
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
-            String ARTIFACT_NAME = "binCoreMacOS.zip"
             sh(script: 'zip -r' + " \"${ARTIFACT_NAME}\" .")
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
@@ -306,8 +308,9 @@ def executeBuildLinux(String osName, Map options) {
     withNotifications(title: "${osName}", options: options, logUrl: "${BUILD_URL}/artifact/Build-${osName}.log",
         artifactUrl: "${BUILD_URL}/artifact/binCore${osName}.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         // no artifacts in repo for ubuntu20
+        String ARTIFACT_NAME = "binCore${osName}.zip"
+
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
-            String ARTIFACT_NAME = "binCore${osName}.zip"
             sh(script: 'zip -r' + " \"${ARTIFACT_NAME}\" .")
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
