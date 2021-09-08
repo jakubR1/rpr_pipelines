@@ -10,185 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20Core"
 
-
-def getCoreSDK(String osName, Map options) {
-    switch(osName) {
-        case 'Windows':
-
-            if (options['isPreBuilt']) {
-                println "[INFO] CoreSDKWinSha: ${options['pluginWinSha']}"
-
-                if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
-                        println "[INFO] The Core SDK ${options['pluginWinSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesWin()
-
-                        println "[INFO] The Core SDK does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "binWin64", options)
-
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            copy binWin64*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
-                        """
-                    }
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The Core SDK does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "binWin64", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        copy binWin64*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
-                    """
-                }
-
-                unzip zipFile: "binWin64_Windows.zip", dir: "rprSdk", quiet: true
-
-            } else {
-                if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
-
-                    clearBinariesWin()
-
-                    println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "WindowsSDK", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        copy binWin64.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
-                    """
-
-                } else {
-                    println "[INFO] The Core SDK ${options.pluginWinSha}.zip exists in the storage."
-                    bat """
-                        copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip" binWin64.zip
-                    """
-                }
-                unzip zipFile: "binWin64.zip", dir: "rprSdk", quiet: true
-            }
-
-            break
-
-        case "OSX":
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] CoreSDKOSXSha: ${options['pluginOSXSha']}"
-
-                if (options['pluginOSXSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
-                        println "[INFO] The Core SDK ${options['pluginOSXSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesUnix()
-
-                        println "[INFO] The Core SDK does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "binMacOS", options)
-
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            cp binMacOS*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                        """
-                    }
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The Core SDK does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "binMacOS", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        cp binMacOS*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                    """
-                }
-
-                unzip zipFile: "binMacOS_OSX.zip", dir: "rprSdk", quiet: true
-
-            } else {
-                if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
-
-                    clearBinariesUnix()
-
-                    println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "OSXSDK", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        cp binMacOS.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                    """
-
-                } else {
-                    println "[INFO] The Core SDK ${options.pluginOSXSha}.zip exists in the storage."
-                    sh """
-                        cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip" binMacOS.zip
-                    """
-                }
-
-                unzip zipFile: "binMacOS.zip", dir: "rprSdk", quiet: true
-            }
-
-            break
-
-        default:
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] CoreSDKUbuntuSha: ${options['pluginUbuntuSha']}"
-
-                if (options['pluginUbuntuSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
-                        println "[INFO] The Core SDK ${options['pluginUbuntuSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesUnix()
-
-                        println "[INFO] The Core SDK does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "bin${osName}", options)
-
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            cp bin${osName}*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                        """
-                    }
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The Core SDK does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "bin${osName}", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        cp bin${osName}*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                    """
-                }
-
-                unzip zipFile: "bin${osName}_${osName}.zip", dir: "rprSdk", quiet: true
-
-            } else {
-                if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
-
-                    clearBinariesUnix()
-
-                    println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "${osName}SDK", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        cp bin${osName}.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                    """
-
-                } else {
-
-                    println "[INFO] The Core SDK ${options.pluginUbuntuSha}.zip exists in the storage."
-                    sh """
-                        cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" bin${osName}.zip
-                    """
-                }
-
-                unzip zipFile: "bin${osName}.zip", dir: "rprSdk", quiet: true
-            }
-    }
-
-}
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows", "OSX", "Ubuntu18", "Ubuntu20"],
+    productExtensions: ["Windows": "zip", "OSX": "zip", "Ubuntu18": "zip", "Ubuntu20": "zip"],
+    artifactNameBeginning: "binCore"
+)
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
@@ -264,7 +90,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-            getCoreSDK(osName, options)
+            getProduct(osName, options, true)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
@@ -425,17 +251,16 @@ def executeBuildWindows(Map options) {
     withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/Build-Windows.log",
         configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
-            String ARTIFACT_NAME = "binWin64.zip"
+            String ARTIFACT_NAME = "binCoreWin64.zip"
             bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            makeStash(includes: ARTIFACT_NAME, name: 'WindowsSDK', preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginWinSha = sha1 ARTIFACT_NAME
+            makeStash(includes: ARTIFACT_NAME, name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
         }
 
         if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip", false)
+            options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", ARTIFACT_NAME, false)
         }
     }
 
@@ -459,17 +284,16 @@ def executeBuildOSX(Map options) {
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/Build-OSX.log",
         configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
-            String ARTIFACT_NAME = "binMacOS.zip"
+            String ARTIFACT_NAME = "binCoreMacOS.zip"
             sh(script: 'zip -r' + " \"${ARTIFACT_NAME}\" .")
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            makeStash(includes: ARTIFACT_NAME, name: 'OSXSDK', preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginOSXSha = sha1 ARTIFACT_NAME
+            makeStash(includes: ARTIFACT_NAME, name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
         }
 
         if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binMacOS.zip", false)
+            options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderSDK/RadeonProRender/binMacOS", ARTIFACT_NAME, false)
         }
     }
 
@@ -480,20 +304,19 @@ def executeBuildLinux(String osName, Map options) {
     String artifactURL
 
     withNotifications(title: "${osName}", options: options, logUrl: "${BUILD_URL}/artifact/Build-${osName}.log",
-        artifactUrl: "${BUILD_URL}/artifact/bin${osName}.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        artifactUrl: "${BUILD_URL}/artifact/binCore${osName}.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         // no artifacts in repo for ubuntu20
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
-            String ARTIFACT_NAME = "bin${osName}.zip"
+            String ARTIFACT_NAME = "binCore${osName}.zip"
             sh(script: 'zip -r' + " \"${ARTIFACT_NAME}\" .")
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            makeStash(includes: ARTIFACT_NAME, name: "${osName}SDK", preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginUbuntuSha = sha1 ARTIFACT_NAME
+            makeStash(includes: ARTIFACT_NAME, name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
         }
 
         if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, "${osName}", "../RadeonProRenderSDK/RadeonProRender/binUbuntu18", "bin${osName}.zip", false)
+            options.universeManager.sendToMINIO(options, "${osName}", "../RadeonProRenderSDK/RadeonProRender/binUbuntu18", ARTIFACT_NAME, false)
         }
     }
 
@@ -525,6 +348,8 @@ def executeBuild(String osName, Map options)
                     executeBuildLinux(osName, options)
             }
         }
+
+        options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
     } catch (e) {
         throw e
     } finally {
@@ -947,7 +772,8 @@ def call(String projectBranch = "",
                 prBranchName = prInfo[1]
             }
 
-            options << [projectBranch:projectBranch,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_core.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
