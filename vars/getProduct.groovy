@@ -7,7 +7,7 @@ def getStashName(String osName) {
 }
 
 
-def call(String osName, Map options, String unzipDestination = "") {
+def call(String osName, Map options, String unzipDestination = "", Boolean replaceInstaller = false) {
     if (!options["configuration"].supportedOS.contains(osName)) {
         throw new Exception("Unsupported OS")
     }
@@ -16,6 +16,10 @@ def call(String osName, Map options, String unzipDestination = "") {
     String stashName = getStashName(osName)
     String extension = options["configuration"]["productExtensions"][osName]
     String tool = options["configuration"]["artifactNameBeginning"]
+
+    if (replaceInstaller) {
+        removeInstaller(osName: osName, options: options, extension: extension)
+    }
 
     if (options["isPreBuilt"]) {
 

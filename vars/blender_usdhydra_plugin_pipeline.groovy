@@ -8,99 +8,12 @@ import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
 
 
-def getBlenderAddonInstaller(String osName, Map options) {
-    switch(osName) {
-        case 'Windows':
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows", "OSX", "Ubuntu20"],
+    productExtensions: ["Windows": "zip", "OSX": "zip", "Ubuntu20": "zip"],
+    artifactNameBeginning: "BlenderUSDHydraAddon"
+)
 
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
-
-                if (options['pluginWinSha']) {
-                    removeInstaller(osName: osName, options: options, extension: "zip")
-
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
-                    """
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
-                    """
-                }
-
-            } else {
-                removeInstaller(osName: osName, options: options, extension: "zip")
-
-                clearBinariesWin()
-
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                bat """
-                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
-                """
-            }
-
-            break
-            
-        default:
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
-
-                if (options['pluginUbuntuSha']) {
-                    removeInstaller(osName: osName, options: options, extension: "zip")
-
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                    """
-                } else {
-                    clearBinariesUnix()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
-
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                    """
-                }
-
-            } else {
-                removeInstaller(osName: osName, options: options, extension: "zip")
-
-                clearBinariesUnix()
-
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
-               
-                sh """
-                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
-                """
-            }
-    }
-}
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
     dir('scripts') {
@@ -200,7 +113,7 @@ def executeTests(String osName, String asicName, Map options) {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "12", unit: "MINUTES") {
-                    getBlenderAddonInstaller(osName, options)
+                    getProduct(osName, options, "", true)
                     newPluginInstalled = installBlenderAddon(osName, 'hdusd', options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
@@ -425,7 +338,7 @@ def executeBuildWindows(String osName, Map options) {
                 rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_Windows.zip
             """
 
-            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
@@ -485,7 +398,7 @@ def executeBuildLinux(String osName, Map options) {
                 mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
 
-            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
@@ -521,6 +434,8 @@ def executeBuild(String osName, Map options) {
                     
             }
         }
+
+        options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
     } catch (e) {
         throw e
     } finally {
@@ -985,7 +900,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String iter = '50',
     String threshold = '0.05',
     String customBuildLinkWindows = "",
-    String customBuildLinkLinux = "",
+    String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
     String enginesNames = "RPR,GL",
     String tester_tag = "Blender2.8",
@@ -1021,7 +936,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                 formattedEngines.add((it == "RPR") ? "HdRprPlugin" : "HdStormRendererPlugin")
             }
 
-            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu20
 
             if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
@@ -1043,7 +958,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                             }
                             break
                         default:
-                            if (customBuildLinkLinux) {
+                            if (customBuildLinkUbuntu20) {
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                     }
@@ -1079,7 +994,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                 prBranchName = prInfo[1]
             }
 
-            options << [projectRepo:projectRepo,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_usdblender.git",
                         testsBranch:testsBranch,
@@ -1109,7 +1025,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         iter: iter,
                         threshold: threshold,
                         customBuildLinkWindows: customBuildLinkWindows,
-                        customBuildLinkLinux: customBuildLinkLinux,
+                        customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
                         engines: formattedEngines,
                         enginesNames:enginesNames,
