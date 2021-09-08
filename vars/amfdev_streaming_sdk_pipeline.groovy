@@ -17,15 +17,21 @@ String getClientLabels(Map options) {
 
 
 Boolean isIdleClient(Map options) {
-    def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
+    if (options["osName"] == "Windows") {
+        // wait client machine
+        def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
 
-    for (node in suitableNodes) {
-        if (utils.isNodeIdle(node)) {
-            return true
+        for (node in suitableNodes) {
+            if (utils.isNodeIdle(node)) {
+                return true
+            }
         }
-    }
 
-    return false
+        return false
+    } else if (options["osName"] == "Android") {
+        // wait when Windows artifact will be built
+        return options["finishedBuildStages"]["Windows"]
+    }
 }
 
 
@@ -34,6 +40,11 @@ def prepareTool(String osName, Map options) {
         case "Windows":
             makeUnstash(name: "ToolWindows", unzip: false, storeOnNAS: options.storeOnNAS)
             unzip(zipFile: "${options.winTestingBuildName}.zip")
+            break
+        case "Android":
+            makeUnstash(name: "ToolAndroid", unzip: false, storeOnNAS: options.storeOnNAS)
+            unzip(zipFile: "android_${options.androidTestingBuildName}.zip")
+            utils.renameFile(this, "Windows", "app-arm-${options.androidTestingBuildName}.apk", "app-arm.apk")
             break
         case "OSX":
             println("Unsupported OS")
@@ -152,6 +163,7 @@ def closeGames(String osName, Map options, String gameName) {
     try {
         switch(osName) {
             case "Windows":
+            case "Android":
                 if (gameName == "All") {
                     bat """
                         taskkill /f /im \"borderlands3.exe\"
@@ -213,7 +225,20 @@ def closeGames(String osName, Map options, String gameName) {
 }
 
 
-def executeTestCommand(String osName, String asicName, Map options, String executionType) {
+def closeAndroidTools(Map options) {
+    try {
+        bat """
+            taskkill /f /im \"qemu-system-x86_64.exe\"
+            taskkill /f /im \"node.exe\"
+        """
+    } catch (e) {
+        println("[ERROR] Failed to Android tools")
+        println(e)
+    }
+}
+
+
+def executeTestCommand(String osName, String asicName, Map options, String executionType = "") {
     String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
@@ -233,13 +258,25 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         collectTraces = "True"
     }
 
-    def screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+    def screenResolution 
+
+    if (osName != "Android") {
+        screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+    }
 
     dir("scripts") {
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                """
+
+                break
+
+            case "Android":
+                bat """
+                    set CIS_OS=Windows 10(64bit) with Android emulator
+                    run_android.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
                 break
@@ -269,7 +306,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
             dir("Work") {
                 if (fileExists("Results/StreamingSDK/session_report.json")) {
 
-                    if (executionType == "client") {
+                    if (executionType == "client" || executionType == "android") {
                         def sessionReport = readJSON file: "Results/StreamingSDK/session_report.json"
 
                         if (sessionReport.summary.error > 0) {
@@ -280,17 +317,10 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        println "Stashing all test results to : ${options.testResultsName}_client"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        String stashPostfix = executionType == "client" ? "_client" : ""
 
-                        // reallocate node if there are still attempts
-                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
-                            if (sessionReport.summary.total != sessionReport.summary.skipped) {
-                                collectCrashInfo(osName, options, options.currentTry)
-                                String errorMessage = (options.currentTry < options.nodeReallocateTries) ? "All tests were marked as error. The test group will be restarted." : "All tests were marked as error."
-                                throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
-                            }
-                        }
+                        println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
+                        makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
@@ -482,6 +512,83 @@ def executeTestsServer(String osName, String asicName, Map options) {
 }
 
 
+def executeTestsAndroid(String osName, String asicName, Map options) {
+    Boolean stashResults = true
+
+    try {
+
+        utils.reboot(this, "Windows")
+
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "10", unit: "MINUTES") {
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
+            }
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+            timeout(time: "5", unit: "MINUTES") {
+                dir("jobs_launcher/install"){
+                    bat """
+                        install_pylibs.bat
+                    """
+                }
+
+                dir("scripts"){
+                    bat """
+                        install_pylibs.bat
+                    """
+                }
+
+                dir("StreamingSDK") {
+                    prepareTool("Windows", options)
+                }
+                dir("StreamingSDKAndroid") {
+                    prepareTool("Android", options)
+                }
+            }
+        }
+
+        // Start Android emulator
+        // TODO remove hard coded name of emulator
+        bat """
+            start /b emulator.exe @Pixel 1>\"emulator_${options.currentTry}.log\" 2>&1
+        """
+
+        // Start Appium Server
+        bat """
+            start /b appium 1>\"appium_${options.currentTry}.log\"  2>&1
+        """
+
+        // Give Android emulator time to be loaded
+        sleep(30)
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+            executeTestCommand(osName, asicName, options)
+        }
+
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries - 1) {
+            stashResults = false
+        } else {
+            currentBuild.result = "FAILURE"
+        }
+
+        println "[ERROR] Failed during Android tests"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+    } finally {
+        closeAndroidTools(options)
+
+        saveResults("Windows", options, "android", stashResults, true)
+
+        closeGames(osName, options, options.engine)
+    }
+}
+
+
 def executeTests(String osName, String asicName, Map options) {
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -490,33 +597,39 @@ def executeTests(String osName, String asicName, Map options) {
         options.parsedTests = options.tests.split("-")[0]
         options.engine = options.tests.split("-")[1]
 
-        options["clientInfo"] = new ConcurrentHashMap()
-        options["serverInfo"] = new ConcurrentHashMap()
+        if (osName == "Windows") {
+            options["clientInfo"] = new ConcurrentHashMap()
+            options["serverInfo"] = new ConcurrentHashMap()
 
-        println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
-        // create client and server threads and run them parallel
-        Map threads = [:]
+            println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
+            // create client and server threads and run them parallel
+            Map threads = [:]
 
-        threads["${options.stageName}-client"] = { 
-            node(getClientLabels(options)) {
-                timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
-                    ws("WS/${options.PRJ_NAME}_Test") {
-                        executeTestsClient(osName, asicName, options)
+            threads["${options.stageName}-client"] = { 
+                node(getClientLabels(options)) {
+                    timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                        ws("WS/${options.PRJ_NAME}_Test") {
+                            executeTestsClient(osName, asicName, options)
+                        }
                     }
                 }
             }
-        }
 
-        threads["${options.stageName}-server"] = { executeTestsServer(osName, asicName, options) }
+            threads["${options.stageName}-server"] = { executeTestsServer(osName, asicName, options) }
 
-        parallel threads
+            parallel threads
 
-        if (options["serverInfo"]["failed"]) {
-            def exception = options["serverInfo"]["exception"]
-            throw new ExpectedExceptionWrapper("Server side tests got an error: ${exception.getMessage()}", exception)
-        } else if (options["clientInfo"]["failed"]) {
-            def exception = options["clientInfo"]["exception"]
-            throw new ExpectedExceptionWrapper("Client side tests got an error: ${exception.getMessage()}", exception)
+            if (options["serverInfo"]["failed"]) {
+                def exception = options["serverInfo"]["exception"]
+                throw new ExpectedExceptionWrapper("Server side tests got an error: ${exception.getMessage()}", exception)
+            } else if (options["clientInfo"]["failed"]) {
+                def exception = options["clientInfo"]["exception"]
+                throw new ExpectedExceptionWrapper("Client side tests got an error: ${exception.getMessage()}", exception)
+            }
+        } else if (osName == "Android") {
+            executeTestsAndroid(osName, asicName, options)
+        } else {
+            println("Unsupported OS")
         }
     } catch (e) {
         if (e instanceof ExpectedExceptionWrapper) {
@@ -531,8 +644,6 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    utils.reboot(this, "Windows")
-
     options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
 
@@ -596,8 +707,6 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuildAndroid(Map options) {
-    utils.reboot(this, "Windows")
-
     options.androidBuildConfiguration.each() { androidBuildConf ->
 
         println "Current build configuration: ${androidBuildConf}."
@@ -621,6 +730,11 @@ def executeBuildAndroid(Map options) {
 
                 zip archive: true, zipFile: BUILD_NAME, glob: "app-arm-${androidBuildConf}.apk"
 
+                if (options.androidTestingBuildName == androidBuildConf) {
+                    utils.moveFiles(this, "Windows", BUILD_NAME, "android_${options.androidTestingBuildName}.zip")
+                    makeStash(includes: "android_${options.androidTestingBuildName}.zip", name: "ToolAndroid", preZip: false, storeOnNAS: options.storeOnNAS)
+                }
+
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                 rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
             }
@@ -634,6 +748,8 @@ def executeBuildAndroid(Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
+        utils.reboot(this, osName != "Android" ? osName : "Windows")
+
         dir("StreamingSDK") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
@@ -843,7 +959,8 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
 
-            List lostStashes = []
+            List lostStashesWindows = []
+            List lostStashesAndroid = []
             dir("summaryTestResults") {
                 unstashCrashInfo(options["nodeRetry"])
                 testResultList.each {
@@ -853,39 +970,52 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         List testNameParts = it.split("-") as List
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}_server_logs", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_server_logs
-                                    ${e.toString()}
-                                """
+                            if (it.contains("Android")) {
+                                try {
+                                    makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}
+                                        ${e.toString()}
+                                    """
 
-                                groupLost = true
-                            }
+                                    lostStashesAndroid << ("'${it}'".replace("testResult-", ""))
+                                }
+                            } else {
+                                try {
+                                    makeUnstash(name: "${it}_server_logs", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_server_logs
+                                        ${e.toString()}
+                                    """
 
-                            try {
-                                makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_client
-                                    ${e.toString()}
-                                """
+                                    groupLost = true
+                                }
 
-                                groupLost = true
-                            }
+                                try {
+                                    makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_client
+                                        ${e.toString()}
+                                    """
 
-                            try {
-                                makeUnstash(name: "${it}_server_traces", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_server_traces
-                                    ${e.toString()}
-                                """
-                            }
+                                    groupLost = true
+                                }
 
-                            if (groupLost) {
-                                lostStashes << ("'${it}'".replace("testResult-", ""))
+                                try {
+                                    makeUnstash(name: "${it}_server_traces", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_server_traces
+                                        ${e.toString()}
+                                    """
+                                }
+
+                                if (groupLost) {
+                                    lostStashesWindows << ("'${it}'".replace("testResult-", ""))
+                                }
                             }
                         }
                     }
@@ -920,9 +1050,23 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             }
 
             try {
+                dir("scripts") {
+                    python3("prepare_test_cases.py --os_name \"Windows\"")
+                }
+
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashesWindows}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                    """
+                }
+
+                dir("scripts") {
+                    python3("prepare_test_cases.py --os_name \"Android\"")
+                }
+
+                dir("jobs_launcher") {
+                    bat """
+                        count_lost_tests.bat \"${lostStashesAndroid}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -936,9 +1080,25 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
-                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                        retryInfoList.each{ gpu ->
+                            gpu['Tries'].each{ group ->
+                                group.each{ groupKey, retries ->
+                                    if (groupKey.endsWith(game)) {
+                                        List testNameParts = groupKey.split("-") as List
+                                        String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                        group[parsedName] = retries
+                                    }
+                                    group.remove(groupKey)
+                                }
+                            }
+                            gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                        }
+
+                        def retryInfo = JsonOutput.toJson(retryInfoList)
                         dir("..\\summaryTestResults") {
-                            writeJSON file: "retry_info.json", json: JSONSerializer.toJSON(retryInfo, new JsonConfig()), pretty: 4
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
 
                         bat """
@@ -1065,6 +1225,7 @@ def call(String projectBranch = "",
     Boolean serverCollectTraces = false,
     String games = "Valorant",
     String androidBuildConfiguration = "release,debug",
+    String androidTestingBuildName = "debug",
     Boolean storeOnNAS = false
     )
 {
@@ -1077,6 +1238,15 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+            // Anroid tests required built Windows Streaming SDK to run server side
+            if (platforms.contains("Android:") && !platforms.contains("Windows")) {
+                platforms = platforms + ";Windows"
+
+                winBuildConfiguration = "debug"
+                winVisualStudioVersion = "2019"
+                winTestingBuildName = "debug_vs2019"
+            }
+
             gpusCount = 0
             platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
@@ -1121,6 +1291,7 @@ def call(String projectBranch = "",
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
                         androidBuildConfiguration: androidBuildConfiguration,
+                        androidTestingBuildName: androidTestingBuildName,
                         gpusCount: gpusCount,
                         nodeRetry: nodeRetry,
                         platforms: platforms,
@@ -1139,7 +1310,8 @@ def call(String projectBranch = "",
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
-                        storeOnNAS: storeOnNAS
+                        storeOnNAS: storeOnNAS,
+                        finishedBuildStages: new ConcurrentHashMap()
                         ]
         }
 
