@@ -7,7 +7,7 @@ def getStashName(String osName) {
 }
 
 
-def call(String osName, Map options, Boolean unzipArtifact = false) {
+def call(String osName, Map options, String unzipDestination = "") {
     if (!options["configuration"].supportedOS.contains(osName)) {
         throw new Exception("Unsupported OS")
     }
@@ -23,6 +23,10 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
 
         if (options[identificatorKey] && fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}")) {
             println "[INFO] The product ${options[identificatorKey]}.${extension} exists in the storage."
+
+            if (unzipDestination) {
+                unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unzipDestination, quiet: true
+            }
         } else {
             println "[INFO] The product does not exist in the storage. Downloading and copying..."
 
@@ -46,6 +50,10 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
                     move ${tool}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
                 """
             }
+
+            if (unzipDestination) {
+                unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unzipDestination, quiet: true
+            }
         }
 
     } else {
@@ -55,6 +63,10 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
 
         if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}")) {
             println "[INFO] The plugin ${options[identificatorKey]}.${extension} exists in the storage."
+
+            if (unzipDestination) {
+                unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unzipDestination, quiet: true
+            }
         } else {
             if (isUnix()) {
                 clearBinariesUnix()
@@ -77,8 +89,8 @@ def call(String osName, Map options, Boolean unzipArtifact = false) {
                 """
             }
 
-            if (unzipArtifact) {
-                unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: "rprSdk", quiet: true
+            if (unzipDestination) {
+                unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unzipDestination, quiet: true
             }
         }
     }

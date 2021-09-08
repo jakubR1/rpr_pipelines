@@ -166,7 +166,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-            getProduct(osName, options, true)
+            getProduct(osName, options, "rprSdk")
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
@@ -515,7 +515,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')]) {
                     dir("core_tests_configuration") {
-                        bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat  . ${REMOTE_HOST}")
                         downloadFiles("/volume1/Assets/rpr_core_autotests/", ".", "--include='*.json' --include='*/' --exclude='*'")
                     }
                 }
