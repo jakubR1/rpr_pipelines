@@ -68,8 +68,13 @@ def getViewerTool(String osName, Map options) {
     }
 }
 
-
 def checkExistenceOfPlugin(String osName, Map options) {
+    String defaultUninstallerPath = "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\UsdConvertor\\unins000.exe"
+
+    return fileExists(defaultUninstallerPath)
+}
+
+def checkExistenceOfRPRViewer(String osName, Map options) {
     String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
     String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
 
@@ -116,16 +121,29 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         installerName = "${options.commitSHA}.exe"
     }
 
-    try {
-        if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
-            println "[INFO] Uninstalling Inventor Plugin"
-            bat """
-                start "" /wait "${getUninstallerPath()}" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
-            """
+    if (cleanInstall) {
+        try {
+            if (checkExistenceOfRPRViewer(osName, options)) {
+                println "[INFO] Uninstalling RPRViewer"
+                bat """
+                    start "" /wait "${getUninstallerPath()}" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall_RPRViewer.log
+                """
+            }
+        } catch (e) {
+            throw new Exception("Failed to uninstall old RPRViewer")
         }
-    } catch (e) {
-        throw new Exception("Failed to uninstall old plugin")
-    } 
+
+        try {
+            if (checkExistenceOfPlugin(osName, options)) {
+                println "[INFO] Uninstalling Inventor Plugin"
+                bat """
+                    start "" /wait "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\UsdConvertor\\unins000.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall_Plugin.log
+                """
+            }
+        } catch (e) {
+            throw new Exception("Failed to uninstall old plugin")
+        }
+    }
 
     try {
         println "[INFO] Install Inventor Plugin"
