@@ -32,7 +32,7 @@ def call(String osName, String tool, Map options, String credentialsId = '', Int
     switch(osName) {
         case 'Windows':
             customBuildLink = options['customBuildLinkWindows']
-            if (tool.contains("RPRViewer")) {
+            if (tool.contains("RPRViewer") || tool.contains("RPRInventor")) {
                 extension = "exe"
             } else {
                 extension = "msi"
