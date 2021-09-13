@@ -255,7 +255,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
     String collectTraces = "False"
 
     if ((executionType == "server" && options.serverCollectTraces) || (executionType == "client" && options.clientCollectTraces)) {
-        collectTraces = options.collectTracesType.toLowerCase()
+        collectTraces = options.collectTracesType
     }
 
     def screenResolution 
