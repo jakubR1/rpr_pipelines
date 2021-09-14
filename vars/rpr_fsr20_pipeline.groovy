@@ -17,6 +17,9 @@ def uploadToDropbox(String osName, Map options) {
 
 
 def executeBuildWindows(Map options) {
+
+    Boolean buildStageFailed = false
+
     options.winBuildConfiguration.each() { winBuildConf ->
 
         println "Current build configuration: ${winBuildConf}."
@@ -64,10 +67,14 @@ def executeBuildWindows(Map options) {
             GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
 
         } catch (e) {
-            print("Failed to build/")
-            currentBuild.result = "FAILED"
+            buildStageFailed = true
             GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "failure", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
         }
+    }
+
+    if (buildStageFailed) {
+        currentBuild.result = "FAILED"
+        error "Failed to build the FSR project."
     }
 }
 
