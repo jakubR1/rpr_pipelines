@@ -64,9 +64,9 @@ def executeBuildWindows(Map options) {
             GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
 
         } catch (e) {
+            print("Failed to build/")
             currentBuild.result = "FAILED"
             GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "failure", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
-            throw e
         }
     }
 }
