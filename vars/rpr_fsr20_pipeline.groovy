@@ -26,6 +26,9 @@ def executeBuildWindows(Map options) {
         String winArtifactsDir = "${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
         String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
 
+        String archiveUrl = ""
+        String BUILD_NAME
+
         try {
             dir("FSR2.0") {
                 GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.${winBuildName}.log")
@@ -37,9 +40,6 @@ def executeBuildWindows(Map options) {
                     %msbuild% D3D12Demo.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ${logName} 2>&1
                 """
             }
-
-            String archiveUrl = ""
-            String BUILD_NAME
 
             dir("FSR2.0") {
                 BUILD_NAME = options.branchPostfix ? "FSR2.0_${winBuildName}.(${options.branchPostfix}).7z" : "FSR2.0_${winBuildName}.7z"
