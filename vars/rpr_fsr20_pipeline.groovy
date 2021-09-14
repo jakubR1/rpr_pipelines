@@ -18,9 +18,13 @@ def uploadToDropbox(String osName, Map options) {
 
 def executeBuildWindows(Map options) {
 
+    Map builtConfigurations = [:]
+
     options.winBuildConfiguration.each() { winBuildConf ->
 
-        withNotifications(title: "Windows_${winBuildConf}", options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+        builtConfigurations[winBuildConf] = false
+
+        withNotifications(title: "Windows_${winBuildConf}", options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE_NO_THROW) {
 
             println "Current build configuration: ${winBuildConf}."
 
@@ -59,6 +63,14 @@ def executeBuildWindows(Map options) {
 
             archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            builtConfigurations[winBuildConf] = true
+        }
+    }
+
+    builtConfigurations.each { key, value ->
+        if (!value) {
+            currentBuild.result = "FAILURE"
         }
     }
 }

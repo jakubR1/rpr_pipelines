@@ -149,12 +149,36 @@ public class NotificationConfiguration {
             ]
         ]
     ]
-
+    
     def static BUILD_SOURCE_CODE = [
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to build the project.", 
                 "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static BUILD_SOURCE_CODE_NO_THROW = [
+        "begin": ["message": "Building the project."],
+
+        "end": ["message": "The project was successfully built and published."],
+    
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to build the project.", 
+                "rethrow": ExceptionThrowType.NO,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static BUILD_SOURCE_CODE_IGNORE_FAIL = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to build the project.", 
+                "rethrow": ExceptionThrowType.NO,
                 "githubNotification": ["status": "failure"]
             ]
         ],
