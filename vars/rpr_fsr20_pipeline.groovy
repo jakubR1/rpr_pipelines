@@ -18,25 +18,18 @@ def uploadToDropbox(String osName, Map options) {
 
 def executeBuildWindows(Map options) {
 
-    Boolean buildStageFailed = false
-
     options.winBuildConfiguration.each() { winBuildConf ->
 
-        println "Current build configuration: ${winBuildConf}."
+        withNotifications(title: "Windows_${winBuildConf}", options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
 
-        String winBuildName = "${winBuildConf}"
-        String logName = "${STAGE_NAME}.${winBuildName}.log"
-        String winArtifactsDir = "${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
-        String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
+            println "Current build configuration: ${winBuildConf}."
 
-        String archiveUrl = ""
-        String BUILD_NAME
+            String logName = "${STAGE_NAME}.${winBuildConf}.log"
+            String winArtifactsDir = "${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+            String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
 
-        try {
             dir("FSR2.0") {
-                GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.${winBuildName}.log")
-
-                outputEnvironmentInfo("Windows", "Build-Windows.${winBuildName}")
+                outputEnvironmentInfo("Windows", "Build-Windows.${winBuildConf}")
 
                 bat """
                     set msbuild="${msBuildPath}"
@@ -44,8 +37,11 @@ def executeBuildWindows(Map options) {
                 """
             }
 
+            String archiveUrl = ""
+            String BUILD_NAME
+
             dir("FSR2.0") {
-                BUILD_NAME = options.branchPostfix ? "FSR2.0_${winBuildName}.(${options.branchPostfix}).7z" : "FSR2.0_${winBuildName}.7z"
+                BUILD_NAME = options.branchPostfix ? "FSR2.0_${winBuildConf}.(${options.branchPostfix}).7z" : "FSR2.0_${winBuildConf}.7z"
 
                 bat """
                     package.cmd ${winBuildConf}
@@ -63,18 +59,7 @@ def executeBuildWindows(Map options) {
 
             archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-
-            GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
-
-        } catch (e) {
-            buildStageFailed = true
-            GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "failure", options, NotificationConfiguration.BUILD_SOURCE_CODE_FAILURE_MESSAGE, archiveUrl)
         }
-    }
-
-    if (buildStageFailed) {
-        currentBuild.result = "FAILED"
-        error "Failed to build the FSR project."
     }
 }
 
@@ -87,18 +72,17 @@ def executeBuild(String osName, Map options) {
             }
         }
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
-            switch(osName) {
-                case "Windows":
-                    executeBuildWindows(options)
-                    break
-                case "OSX":
-                    println("Unsupported OS")
-                    break
-                default:
-                    println("Unsupported OS")
-            }
+        switch(osName) {
+            case "Windows":
+                executeBuildWindows(options)
+                break
+            case "OSX":
+                println("Unsupported OS")
+                break
+            default:
+                println("Unsupported OS")
         }
+
     } catch (e) {
         throw e
     } finally {

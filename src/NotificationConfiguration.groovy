@@ -517,8 +517,6 @@ public class NotificationConfiguration {
 
     def static BUILD_SOURCE_CODE_END_MESSAGE = "The project was successfully built and published."
 
-    def static BUILD_SOURCE_CODE_FAILURE_MESSAGE = "Failed to build the project."
-
     def static REASON_IS_NOT_IDENTIFIED = "The reason is not automatically identified. Please contact support."
 
     def static SOME_TESTS_ERRORED = "Some tests were marked as error. Check the report for details."
