@@ -71,6 +71,7 @@ def executeBuildWindows(Map options) {
     builtConfigurations.each { key, value ->
         if (!value) {
             currentBuild.result = "FAILURE"
+            options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.BUILD_SOURCE_CODE["exceptions"][0]["problemMessage"])
         }
     }
 }
