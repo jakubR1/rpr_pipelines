@@ -74,7 +74,7 @@ def call(String jobName,
                 String machineConfiguration
                 String reportName
 
-                if (engine != "None" || engine != "\"") {
+                if (engine == "None" || engine == "\"") {
                     engine = ""
                 }
 
@@ -133,7 +133,7 @@ def call(String jobName,
                 uploadFiles("baselines/", refPathProfile)
 
                 // Update baselines on UMS
-                if (UMS_MAPPINGS.contains(toolName)) {
+                if (UMS_MAPPINGS.containsKey(toolName)) {
                     def toolNameUMS = UMS_MAPPINGS[toolName]
 
                     withCredentials([string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL")]) {
@@ -146,10 +146,10 @@ def call(String jobName,
                             validResponseCodes: "200"
                         )
 
-                        def token = this.context.readJSON text: "${response.content}"
+                        def token = readJSON(text: "${response.content}")["token"]
 
                         // Receive product id
-                        def response = this.context.httpRequest(
+                        response = httpRequest(
                             consoleLogResponseBody: true,
                             contentType: "APPLICATION_JSON",
                             customHeaders: [
@@ -172,7 +172,7 @@ def call(String jobName,
                         }
 
                         // Find necessary result suite
-                        response = this.context.httpRequest(
+                        response = httpRequest(
                             consoleLogResponseBody: true,
                             contentType: "APPLICATION_JSON",
                             customHeaders: [
@@ -180,7 +180,7 @@ def call(String jobName,
                             ],
                             httpMode: "GET",
                             ignoreSslErrors: true,
-                            url: PROD_UMS_URL + "/api/buildSuites?jobsId=${testCaseInfo.job_id_prod}&id=${testCaseInfo.build_id_prod}"
+                            url: PROD_UMS_URL + "/api/buildSuites"
                         )
 
                         content = jsonSlurper.parseText(response.content)
@@ -195,7 +195,7 @@ def call(String jobName,
                         }
 
                         // Receive list of test case result
-                        response = this.context.httpRequest(
+                        response = httpRequest(
                             consoleLogResponseBody: true,
                             contentType: "APPLICATION_JSON",
                             customHeaders: [
