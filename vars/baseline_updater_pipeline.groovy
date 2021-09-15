@@ -2,6 +2,8 @@ import groovy.transform.Field
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurperClassic
 
 
 @Field final Map BASELINE_DIR_MAPPING = [
@@ -40,6 +42,13 @@ import net.sf.json.JsonConfig
     "northstar": "NorthStar",
     "hdrprplugin": "RPR",
     "hdstormrendererplugin": "GL"
+]
+
+@Field final Map UMS_MAPPINGS = [
+    "blender": "AMD Radeon™ ProRender for Blender",
+    "maya": "AMD Radeon™ ProRender for Maya",
+    "max": "AMD Radeon™ ProRender for 3ds Max",
+    "core": "AMD Radeon™ ProRender Core"
 ]
 
 
@@ -114,8 +123,92 @@ def call(String jobName,
                     downloadFiles(remoteResultPath, "results")
                 }
 
+                def testCaseInfo
+                dir ("results/${groupName}") {
+                    // read information about some test case to reach UMS entities ids
+                    testCaseInfo = readJSON(file: findFiles(glob: "*_RPR.json")[0].name)[0]
+                }
+
                 python3("jobs_launcher\\common\\scripts\\generate_baselines.py --results_root results --baseline_root baselines")
                 uploadFiles("baselines/", refPathProfile)
+
+                // Update baselines on UMS
+                if (UMS_MAPPINGS.contains(toolName)) {
+                    def toolNameUMS = UMS_MAPPINGS[toolName]
+
+                    withCredentials([string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL")]) {
+                        // Receive token
+                        def response = httpRequest(
+                            consoleLogResponseBody: true,
+                            authentication: "universeMonitoringSystem",
+                            httpMode: "POST",
+                            url: PROD_UMS_URL + "/user/login",
+                            validResponseCodes: "200"
+                        )
+
+                        def token = this.context.readJSON text: "${response.content}"
+
+                        // Receive product id
+                        def response = this.context.httpRequest(
+                            consoleLogResponseBody: true,
+                            contentType: "APPLICATION_JSON",
+                            customHeaders: [
+                                [name: "Authorization", value: "Token ${token}"]
+                            ],
+                            httpMode: "GET",
+                            ignoreSslErrors: true,
+                            url: PROD_UMS_URL + "/api/jobs"
+                        )
+
+                        def jsonSlurper = new JsonSlurperClassic()
+                        def content = jsonSlurper.parseText(response.content)
+
+                        def productId
+                        for (product in content["data"]) {
+                            if (product["name"] == toolNameUMS) {
+                                productId = product["_id"]
+                                break
+                            }
+                        }
+
+                        // Find necessary result suite
+                        response = this.context.httpRequest(
+                            consoleLogResponseBody: true,
+                            contentType: "APPLICATION_JSON",
+                            customHeaders: [
+                                [name: "Authorization", value: "Token ${token}"]
+                            ],
+                            httpMode: "GET",
+                            ignoreSslErrors: true,
+                            url: PROD_UMS_URL + "/api/buildSuites?jobsId=${testCaseInfo.job_id_prod}&id=${testCaseInfo.build_id_prod}"
+                        )
+
+                        content = jsonSlurper.parseText(response.content)
+
+                        def targetSuiteResultId
+
+                        for (suiteResult in content) {
+                            if (content["name"].contains(groupName)) {
+                                targetSuiteResultId = suiteResult["_id"]
+                                break
+                            }
+                        }
+
+                        // Receive list of test case result
+                        response = this.context.httpRequest(
+                            consoleLogResponseBody: true,
+                            contentType: "APPLICATION_JSON",
+                            customHeaders: [
+                                [name: "Authorization", value: "Token ${token}"]
+                            ],
+                            httpMode: "GET",
+                            ignoreSslErrors: true,
+                            url: PROD_UMS_URL + "/api/testSuiteResult?jobsId=${testCaseInfo.job_id_prod}&id=${targetSuiteResultId}"
+                        )
+
+                        content = jsonSlurper.parseText(response.content)
+                    }
+                }
             }
         }
     }
