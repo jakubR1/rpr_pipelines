@@ -65,7 +65,11 @@ def call(String jobName,
                 String machineConfiguration
                 String reportName
 
-                if (engine && engine != "None" && engine != "\"") {
+                if (engine != "None" || engine != "\"") {
+                    engine = ""
+                }
+
+                if (engine) {
                     reportName = "Test_Report_${ENGINE_REPORT_MAPPING[engine.toLowerCase()]}"
 
                     String engineBaselineName = ENGINE_BASELINES_MAPPING[engine.toLowerCase()]
