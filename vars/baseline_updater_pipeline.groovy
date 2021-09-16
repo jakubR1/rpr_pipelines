@@ -52,6 +52,13 @@ import groovy.json.JsonSlurperClassic
 ]
 
 
+@NonCPS
+def parseResponse(String response) {
+    def jsonSlurper = new groovy.json.JsonSlurperClassic()
+    return jsonSlurper.parseText(response)
+}
+
+
 def call(String jobName,
     String buildID,
     String resultPath,
@@ -151,7 +158,6 @@ def call(String jobName,
                         // Receive product id
                         response = httpRequest(
                             consoleLogResponseBody: true,
-                            contentType: "APPLICATION_JSON",
                             customHeaders: [
                                 [name: "Authorization", value: "Token ${token}"]
                             ],
@@ -160,8 +166,7 @@ def call(String jobName,
                             url: PROD_UMS_URL + "/api/jobs"
                         )
 
-                        def jsonSlurper = new JsonSlurperClassic()
-                        def content = jsonSlurper.parseText(response.content)
+                        def content = parseResponse(response.content)
 
                         def productId
                         for (product in content["data"]) {
@@ -174,16 +179,15 @@ def call(String jobName,
                         // Find necessary result suite
                         response = httpRequest(
                             consoleLogResponseBody: true,
-                            contentType: "APPLICATION_JSON",
                             customHeaders: [
                                 [name: "Authorization", value: "Token ${token}"]
                             ],
                             httpMode: "GET",
                             ignoreSslErrors: true,
-                            url: PROD_UMS_URL + "/api/buildSuites"
+                            url: PROD_UMS_URL + "/api/buildSuites?id=${testCaseInfo.build_id_prod}&jobId=${testCaseInfo.job_id_prod}"
                         )
 
-                        content = jsonSlurper.parseText(response.content)
+                        content = parseResponse(response.content)
 
                         def targetSuiteResultId
 
@@ -197,16 +201,15 @@ def call(String jobName,
                         // Receive list of test case result
                         response = httpRequest(
                             consoleLogResponseBody: true,
-                            contentType: "APPLICATION_JSON",
                             customHeaders: [
                                 [name: "Authorization", value: "Token ${token}"]
                             ],
                             httpMode: "GET",
                             ignoreSslErrors: true,
-                            url: PROD_UMS_URL + "/api/testSuiteResult?jobsId=${testCaseInfo.job_id_prod}&id=${targetSuiteResultId}"
+                            url: PROD_UMS_URL + "/api/testSuiteResult?jobId=${testCaseInfo.job_id_prod}&id=${targetSuiteResultId}"
                         )
 
-                        content = jsonSlurper.parseText(response.content)
+                        content = parseResponse(response.content)
                     }
                 }
             }
