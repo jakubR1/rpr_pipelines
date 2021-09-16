@@ -57,17 +57,24 @@ def executeBuild(String osName, Map options) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
+        String artifactName
+
         switch (osName) {
             case 'Windows': 
                 executeBuildWindows()
+                artifactName = "RadeonProRenderMaterialLibrary.msi"
                 break
             case 'OSX':
                 executeBuildOSX()
+                artifactName = "RadeonProRenderMaterialLibrary.dmg"
                 break
             default: 
                 executeBuildLinux()
+                artifactName = "RadeonProRenderMaterialLibrary.run"
         }
-        archiveArtifacts "RadeonProRenderMaterialLibrary*"
+
+        makeArchiveArtifacts(name: artifactName, storeOnNAS: options.storeOnNAS)
+
     } catch (e) {
         currentBuild.result = "FAILED"
         throw e
@@ -91,5 +98,6 @@ def call(String projectBranch = "master",
                             PRJ_NAME:"RadeonProRenderMaterialLibrary",
                             PRJ_ROOT:"rpr-plugins",
                             BUILD_TIMEOUT:'25',
-                            projectRepo:projectRepo])
+                            projectRepo:projectRepo,
+                            storeOnNAS:true])
 }

@@ -161,4 +161,135 @@ class GithubApiProvider {
         return parseResponse(response.content)
     }
 
+    /**
+     * Function to create a comment inside a pull request (see https://docs.github.com/en/rest/reference/issues#create-an-issue-comment)
+     *
+     * @param pullUrl url to target pull request
+     * @param message
+     */
+    def createPullRequestComment(String pullUrl, String message) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${pullUrl.replace('https://github.com', 'https://api.github.com/repos').replace('/pull/', '/issues/')}/comments",
+                httpMode: "POST",
+                contentType: "APPLICATION_JSON",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ],
+                requestBody: "{\"body\" : \"${message}\"}"
+            )
+
+            return parseResponse(response.content)
+        }
+    }
+
+    /**
+     * Function to get all releases in repository (see https://docs.github.com/en/rest/reference/repos#list-releases)
+     *
+     * @param repositoryUrl url to the target repository
+     */
+    def getReleases(String repositoryUrl) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/releases",
+                httpMode: "GET",
+                contentType: "APPLICATION_JSON",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ]
+            )
+
+            return parseResponse(response.content)
+        }
+    }
+
+    /**
+     * Function to create a new release (see https://docs.github.com/en/rest/reference/repos#create-a-release)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param tagName name of the target tag
+     * @param name name of the new release
+     * @param targetCommitish target commit to create a new tag if it's required
+     */
+    def createRelease(String repositoryUrl, String tagName, String name, String targetCommitish = "") {
+        def releaseData = [
+            tag_name: tagName,
+            name: name
+        ]
+
+        if (targetCommitish) {
+            releaseData["target_commitish"] = targetCommitish
+        }
+
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/releases",
+                httpMode: "POST",
+                contentType: "APPLICATION_JSON",
+                customHeaders: [
+                    [name: 'Content-type', value: 'application/json'],
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ],
+                requestBody: JsonOutput.toJson(releaseData),
+                validResponseCodes: '0:401,422'
+            )
+
+            return parseResponse(response.content)
+        }
+    }
+
+    /**
+     * Function to get all assets of some release (see https://docs.github.com/en/rest/reference/repos#list-release-assets)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param releaseId id of the target release
+     */
+    def getAssets(String repositoryUrl, String releaseId) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/releases/${releaseId}/assets",
+                httpMode: "GET",
+                contentType: "APPLICATION_JSON",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ]
+            )
+
+            return parseResponse(response.content)
+        }
+    }
+
+    /**
+     * Function to create a new release (see https://docs.github.com/en/rest/reference/repos#upload-a-release-asset)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param releaseId id of the target release
+     * @param assetName name of the asset which should be uploaded
+     */
+    def addAsset(String repositoryUrl, String releaseId, String assetName) {
+        context.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'radeonprorender', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD']]) {
+            context.bat """
+                curl -X POST --retry 5 -H "Content-Type: application/octet-stream" --data-binary @${assetName} -u %GITHUB_USERNAME%:%GITHUB_PASSWORD% "${repositoryUrl.replace('https://github.com', 'https://uploads.github.com/repos')}/releases/${releaseId}/assets?name=${assetName}"
+            """
+        }
+    }
+
+    /**
+     * Function to remove specified asset of some release (see https://docs.github.com/en/rest/reference/repos#delete-a-release-asset)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param assetId id of the target asset
+     */
+    def removeAsset(String repositoryUrl, String assetId) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/releases/assets/${assetId}",
+                httpMode: "DELETE",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ]
+            )
+        }
+    }
+
 }

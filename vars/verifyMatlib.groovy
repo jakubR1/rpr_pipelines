@@ -23,9 +23,13 @@ def call(String tool, String cacheImgPath, Integer allowableDiff, String osName,
                 println "Tool not supported"
                 return
         }
-        println "[INFO] Comparing material baseline and created image"
-        diff = utils.compareImages(this, cacheImgPath, baselineImgPath)
-        println "[INFO] Image difference = ${diff}%"
+
+        // TODO stabilize MatLib checking on Mac
+        if (osName != "OSX") {
+            println "[INFO] Comparing material baseline and created image"
+            diff = utils.compareImages(this, cacheImgPath, baselineImgPath)
+            println "[INFO] Image difference = ${diff}%"
+        }
     } catch (e) {
         throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_VERIFY_MATLIB, e)
     }

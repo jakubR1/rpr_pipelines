@@ -121,11 +121,11 @@ def call(Map blockOptions, Closure code) {
                     return
                 }
             }
-
-            // exception wasn't found in configuration. Rethrow it
-            println("[${this.class.getName()}][WARNING] Exception wasn't found in configuration")
-            throw e
         }
+
+        // exception wasn't found in configuration. Rethrow it
+        println("[${this.class.getName()}][WARNING] Exception wasn't found in configuration")
+        throw e
     }
 }
 

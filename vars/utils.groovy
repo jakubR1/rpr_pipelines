@@ -1,6 +1,7 @@
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import hudson.model.Result
 import groovy.json.JsonOutput
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 /**
  * self in methods params is a context of executable pipeline. Without it you can't call Jenkins methods.
@@ -86,7 +87,7 @@ class utils {
         }
     }
 
-    static def stashTestData(Object self, Map options, Boolean publishOnNAS = false) {
+    static def stashTestData(Object self, Map options, Boolean publishOnNAS = false, String excludes = "") {
         if (publishOnNAS) {
             String engine = ""
             String stashName = ""
@@ -109,25 +110,24 @@ class utils {
             }
 
             String path = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/${stashName}/"
-            self.makeStash(includes: '**/*', name: stashName, allowEmpty: true, customLocation: path, preZip: true, postUnzip: true, storeOnNAS: true)
+            self.makeStash(includes: '**/*', excludes: excludes, name: stashName, allowEmpty: true, customLocation: path, preZip: true, postUnzip: true, storeOnNAS: true)
             self.makeStash(includes: '*.json', excludes: '*/events/*.json', name: options.testResultsName, allowEmpty: true, storeOnNAS: true)
         } else {
-            self.makeStash(includes: '**/*', name: options.testResultsName, allowEmpty: true)
+            self.makeStash(includes: '**/*', excludes: excludes, name: options.testResultsName, allowEmpty: true)
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false) {
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = [:]) {
         Map params
+
+        String redirectReportName = "redirect_report.html"
+        String wrapperReportName = "test_report.html"
 
         if (publishOnNAS) {
             String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
 
-            self.dir(reportDir) {
-                // upload report to NAS in archive and unzip it
-                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
-            }
-
             String reportLinkBase
+            String authReportLinkBase
 
             self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
                 self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
@@ -135,18 +135,55 @@ class utils {
             }
 
             reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+
+            self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
+                authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
+            }
+
+            def links = []
+            def linksTitles
+
+            reportFiles.split(",").each { reportFile ->
+                links << "${authReportLinkBase}${reportFile.trim()}"
+            }
+
+            links = links.join(",")
+
+            if (reportTitles) {
+                linksTitles = reportTitles
+            } else {
+                linksTitles = reportFiles
+            }
+
+            String jenkinsBuildUrl = ""
+            String jenkinsBuildName = "Test report"
+
+            if (nasReportInfo.containsKey("jenkinsBuildUrl")) {
+                jenkinsBuildUrl = nasReportInfo["jenkinsBuildUrl"]
+            }
+
+            if (nasReportInfo.containsKey("jenkinsBuildName")) {
+                jenkinsBuildName = nasReportInfo["jenkinsBuildName"]
+            }
+
+            self.dir(reportDir) {
+                if (self.isUnix()) {
+                    self.sh(script: '$CIS_TOOLS/make_wrapper_page.sh ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                } else {
+                    self.bat(script: '%CIS_TOOLS%\\make_wrapper_page.bat ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                }
+            }
+
+            self.dir(reportDir) {
+                // upload report to NAS in archive and unzip it
+                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+            }
             
             self.dir("redirect_links") {
-                self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
-                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
-
-                    reportFiles.split(",").each { reportFile ->
-                        if (self.isUnix()) {
-                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
-                        } else {
-                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
-                        }
-                    }
+                if (self.isUnix()) {
+                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${wrapperReportName}\" \".\" \"${redirectReportName}\"")
+                } else {
+                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${wrapperReportName}\"  \".\" \"${redirectReportName}\"")
                 }
             }
             
@@ -161,7 +198,7 @@ class utils {
                           alwaysLinkToLastBuild: false,
                           keepAll: true,
                           reportDir: "redirect_links",
-                          reportFiles: updateReportFiles,
+                          reportFiles: redirectReportName,
                           // TODO: custom reportName (issues with escaping)
                           reportName: reportName]
         } else {
@@ -172,22 +209,25 @@ class utils {
                           reportFiles: reportFiles,
                           // TODO: custom reportName (issues with escaping)
                           reportName: reportName]
+
+            if (reportTitles) {
+                params['reportTitles'] = reportTitles
+            }
         }
 
-        if (reportTitles) {
-            params['reportTitles'] = reportTitles
-        }
-        self.publishHTML(params)
-        try {
-            self.httpRequest(
-                url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
-                authentication: 'jenkinsCredentials',
-                httpMode: 'GET'
-            )
-            self.println("[INFO] Report exists.")
-        } catch(e) {
-            self.println("[ERROR] Can't access report")
-            throw new Exception("Can't access report", e)
+        if (!nasReportInfo.containsKey("updatable") || !nasReportInfo["updatable"]) {
+            self.publishHTML(params)
+            try {
+                self.httpRequest(
+                    url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
+                    authentication: 'jenkinsCredentials',
+                    httpMode: 'GET'
+                )
+                self.println("[INFO] Report exists.")
+            } catch(e) {
+                self.println("[ERROR] Can't access report")
+                throw new Exception("Can't access report", e)
+            }
         }
     }
 
@@ -501,26 +541,55 @@ class utils {
      */
     static def reboot(Object self, String osName) {
         try {
+            String nodeName = self.env.NODE_NAME
+
             switch(osName) {
                 case "Windows":
                     self.bat """
-                        shutdown /r /f /t 0
+                        shutdown /r /f /t 2
                     """
                     break
                 case "OSX":
                     self.sh """
-                        sudo shutdown -r now
+                        (sleep 2; sudo reboot) &
                     """
                 // Ubuntu
                 default:
                     self.sh """
-                        shutdown -h now
+                        (sleep 2; sudo reboot) &
                     """
             }
-        } catch (e) {
+
+            while (true) {
+                // some nodes can fail any action after reboot
+                try {
+                    self.sleep(15)
+                    List nodesList = self.nodesByLabel(label: nodeName, offline: false)
+                    while (nodesList.size() == 0) {
+                        self.sleep(15)
+                        nodesList = self.nodesByLabel(label: nodeName, offline: false)
+                    }
+
+                    self.println("[INFO] Node is available")
+
+                    break
+                } catch (FlowInterruptedException e) {
+                    throw e
+                } catch (Exception e) {
+                    //do nothing
+                }
+            }
+        } catch (FlowInterruptedException e) {
+            throw e
+        } catch (Exception e) {
             self.println("[ERROR] Failed to reboot machine")
             self.println(e.toString())
             self.println(e.getMessage())
         }
-    } 
+    }
+
+    @NonCPS
+    static Boolean isNodeIdle(String nodeName) {
+        return jenkins.model.Jenkins.instance.getNode(nodeName).getComputer().countIdle() > 0
+    }
 }

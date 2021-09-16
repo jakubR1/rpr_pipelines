@@ -14,7 +14,7 @@ class UniverseManagerFactory {
      * @param productName Name of product in UMS
      */
     static UniverseManager get(def context, Map options, def env, String productName) {
-        if (options.containsKey("engines")) {
+        if (options["engines"]) {
             return new UniverseManagerEngine(context, env, productName)
         } else {
             return new UniverseManagerDefault(context, env, productName)

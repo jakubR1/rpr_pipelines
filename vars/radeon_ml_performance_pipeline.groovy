@@ -70,31 +70,35 @@ def executeTests(String osName, String asicName, Map options)
 }
 
 
-def executeWindowsBuildCommand(Map options, String build_type){
+def executeWindowsBuildCommand(Map options, String buildType){
 
     bat """
-        mkdir build-${build_type}
-        cd build-${build_type}
-        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${build_type}.log 2>&1
+        mkdir build-${buildType}
+        cd build-${buildType}
+        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
         set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-        %msbuild% RadeonML.sln -property:Configuration=${build_type} >> ..\\${STAGE_NAME}_${build_type}.log 2>&1
+        %msbuild% RadeonML.sln -property:Configuration=${buildType} >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
     """
     
     bat """
-        cd build-${build_type}
-        xcopy ..\\third_party\\miopen\\MIOpen.dll ${build_type}
-        xcopy ..\\third_party\\tensorflow\\windows\\* ${build_type}
-        mkdir ${build_type}\\rml
-        mkdir ${build_type}\\rml_internal
-        xcopy ..\\rml\\include\\rml\\*.h* ${build_type}\\rml
-        xcopy ..\\rml\\include\\rml_internal\\*.h* ${build_type}\\rml_internal
+        cd build-${buildType}
+        xcopy ..\\third_party\\miopen\\MIOpen.dll ${buildType}
+        xcopy ..\\third_party\\tensorflow\\windows\\* ${buildType}
+        mkdir ${buildType}\\rml
+        mkdir ${buildType}\\rml_internal
+        xcopy ..\\rml\\include\\rml\\*.h* ${buildType}\\rml
+        xcopy ..\\rml\\include\\rml_internal\\*.h* ${buildType}\\rml_internal
     """
 
-    zip dir: "build-${build_type}\\${build_type}", zipFile: "build-${build_type}\\${CIS_OS}_${build_type}.zip"
-    archiveArtifacts "build-${build_type}\\${CIS_OS}_${build_type}.zip"
-    
-    zip archive: true, dir: "build-${build_type}\\${build_type}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "${CIS_OS}_${build_type}.zip"
+    String ARTIFACT_NAME = "${CIS_OS}_${buildType}.zip"
+    String artifactURL
 
+    dir("build-${buildType}\\${buildType}") {
+        bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
+        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+    }
+
+    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "${CIS_OS}_${buildType}.zip"
 }
 
 
@@ -144,8 +148,8 @@ def executeBuild(String osName, Map options)
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
-        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
-        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/", "../RML_thirdparty/tensorflow")
 
         outputEnvironmentInfo(osName)
 

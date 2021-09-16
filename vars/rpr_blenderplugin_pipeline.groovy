@@ -184,16 +184,16 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
-def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry)
+def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine)
 {
     try {
         dir("scripts") {
             switch(osName) {
                 case 'Windows':
-                    bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                    bat "build_rpr_cache.bat ${toolVersion} ${engine} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
                     break
                 default:
-                    sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
+                    sh "./build_rpr_cache.sh ${toolVersion} ${engine} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
             }
         }
     } catch (e) {
@@ -261,13 +261,34 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_blender.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
             String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blender_autotests_assets" : "/mnt/c/TestResources/rpr_blender_autotests_assets"
             downloadFiles("/volume1/Assets/rpr_blender_autotests/", assets_dir)
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
+            timeout(time: "5", unit: "MINUTES") {
+                String prefsDir
+                String customKeys = ""
+                switch (osName) {
+                    case "Windows":
+                        prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Blender Foundation/Blender/${options.toolVersion}/config"
+                        break
+                    case "OSX":
+                        prefsDir = "/Users/${env.USER}/Library/Application Support/Blender/${options.toolVersion}/config"
+                        customKeys = "--protect-args"
+                        break
+                    default:
+                        prefsDir = "/home/${env.USERNAME}/.config/blender/${options.toolVersion}/config"
+                        break
+                }
+
+                downloadFiles("/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}/*", prefsDir, customKeys, false)
+            }
         }
 
         try {
@@ -283,8 +304,8 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {                         
                     timeout(time: "12", unit: "MINUTES") {
-                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
-                        String cacheImgPath = "./Work/Results/Blender28/cache_building.jpg"
+                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
+                        String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
                             throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         } else {
@@ -404,10 +425,10 @@ def executeTests(String osName, String asicName, Map options)
             }
             if (stashResults) {
                 dir('Work') {
-                    if (fileExists("Results/Blender28/session_report.json")) {
+                    if (fileExists("Results/Blender/session_report.json")) {
 
                         def sessionReport = null
-                        sessionReport = readJSON file: 'Results/Blender28/session_report.json'
+                        sessionReport = readJSON file: 'Results/Blender/session_report.json'
 
                         if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
@@ -442,6 +463,10 @@ def executeTests(String osName, String asicName, Map options)
                                 }
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
+                        }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
                         }
                     }
                 }
@@ -484,15 +509,12 @@ def executeBuildWindows(Map options)
                 """
             }
 
-
-            archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 dir("../../..") {
-                    options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", BUILD_NAME, false)
+                    options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", ARTIFACT_NAME, false)
                 }
             }
 
@@ -502,7 +524,7 @@ def executeBuildWindows(Map options)
 
             makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -528,14 +550,12 @@ def executeBuildOSX(Map options)
                 """
             }
 
-            archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 dir("../../..") {
-                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME, false)
+                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", ARTIFACT_NAME, false)
                 }
             }
 
@@ -545,7 +565,7 @@ def executeBuildOSX(Map options)
 
             makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -572,14 +592,12 @@ def executeBuildLinux(String osName, Map options)
                 """
             }
 
-            archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 dir("../../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME, false)
+                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderBlenderAddon/BlenderPkg/.build", ARTIFACT_NAME, false)
                 }
             }
 
@@ -589,7 +607,7 @@ def executeBuildLinux(String osName, Map options)
 
             makeStash(includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
 
     }
@@ -639,6 +657,14 @@ def executeBuild(String osName, Map options)
             options.universeManager.sendToMINIO(options, osName, "..", "*.log")
             options.universeManager.finishBuildStage(osName)
         }
+    }
+}
+
+def getReportBuildArgs(String engineName, Map options) {
+    if (options["isPreBuilt"]) {
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\""""
+    } else {
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\""""
     }
 }
 
@@ -694,12 +720,14 @@ def executePreBuild(Map options)
             options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
             options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             options.commitShortSHA = options.commitSHA[0..6]
+            options.branchName = env.BRANCH_NAME ?: options.projectBranch
 
             println(bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim());
             println "The last commit was written by ${options.commitAuthor}."
             println "Commit message: ${options.commitMessage}"
             println "Commit SHA: ${options.commitSHA}"
             println "Commit shortSHA: ${options.commitShortSHA}"
+            println "Branch name: ${options.branchName}"
 
             if (options.projectBranch) {
                 currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -716,6 +744,7 @@ def executePreBuild(Map options)
                         githubNotificator.init(options)
                         options["githubNotificator"] = githubNotificator
                         githubNotificator.initPreBuild("${BUILD_URL}")
+                        options.projectBranchName = githubNotificator.branchName
                     }
                     
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -754,7 +783,11 @@ def executePreBuild(Map options)
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
                     }
+                } else {
+                    options.projectBranchName = options.projectBranch
                 }
+
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
                 currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -769,7 +802,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_blender') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_blender.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
 
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             dir ('jobs_launcher') {
@@ -897,6 +930,11 @@ def executePreBuild(Map options)
             options.universeManager.createBuilds(options)
         }
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 def executeDeploy(Map options, List platformList, List testResultList, String engine)
@@ -907,7 +945,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
 
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_blender.git')
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             List lostStashes = []
@@ -943,11 +981,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 println("[ERROR] Can't generate number of lost tests")
             }
 
-            String branchName = env.BRANCH_NAME ?: options.projectBranch
-
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "BUILD_URL=${BUILD_URL}"]) {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
                         retryInfoList.each{ gpu ->
@@ -973,15 +1009,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         try {
-                            if (options['isPreBuilt']) {
-                                bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                """
-                            } else {
-                                bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                """
-                            }
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
                             GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
@@ -1001,10 +1029,13 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
-                if (!options.testDataSaved) {
+                if (!options.testDataSaved && !options.storeOnNAS) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                            "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                            ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -1069,7 +1100,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
@@ -1102,7 +1136,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1121,9 +1155,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkUbuntu18 = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "Northstar,Tahoe",
-    String tester_tag = "Blender2.8",
-    String toolVersion = "2.92",
+    String enginesNames = "Northstar",
+    String tester_tag = "Blender",
+    String toolVersion = "2.93",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
     Integer testCaseRetries = 3)
@@ -1230,6 +1264,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_blender.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
@@ -1237,7 +1272,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,
                         tests:tests,
-                        PRJ_NAME:"RadeonProRenderBlender2.8Plugin",
+                        PRJ_NAME:"RadeonProRenderBlenderPlugin",
                         PRJ_ROOT:"rpr-plugins",
                         toolVersion:toolVersion,
                         isPreBuilt:isPreBuilt,
@@ -1246,9 +1281,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         splitTestsExecution:splitTestsExecution,
                         sendToUMS: sendToUMS,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:135,
+                        TEST_TIMEOUT:180,
                         ADDITIONAL_XML_TIMEOUT:15,
-                        NON_SPLITTED_PACKAGE_TIMEOUT:60,
+                        NON_SPLITTED_PACKAGE_TIMEOUT:90,
                         DEPLOY_TIMEOUT:180,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,
@@ -1271,7 +1306,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
 
             if (sendToUMS) {

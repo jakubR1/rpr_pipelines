@@ -44,9 +44,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
         def testTasks = [:]
         gpuNames.split(',').each() {
             String asicName = it
+
+            String taskName = "Test-${asicName}-${osName}"
             
-            testTasks["Test-${asicName}-${osName}"] = {
-                stage("Test-${asicName}-${osName}") {
+            testTasks[taskName] = {
+                stage(taskName) {
                     // if not split - testsList doesn't exists
                     // TODO: replace testsList check to splitExecution var
                     options.testsList = options.testsList ?: ['']
@@ -108,9 +110,16 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 newOptions["stage"] = "Test"
                                 newOptions["asicName"] = asicName
                                 newOptions["osName"] = osName
+                                newOptions["taskName"] = taskName
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
-                                newOptions['tests'] = testName ?: options.tests
+                                if (!options.splitTestsExecution && testName) {
+                                    // case for non splitted projects with multiple engines (e.g. Streaming SDK with multiple games)
+                                    newOptions['engine'] = testName
+                                    newOptions['tests'] = options.tests
+                                } else {
+                                    newOptions['tests'] = testName ?: options.tests
+                                }
 
                                 def retringFunction = { nodesList, currentTry ->
                                     try {
@@ -165,7 +174,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             testsOrTestPackage = newOptions['tests']
                                         } else {
                                             //all non splitTestsExecution and non regression builds (e.g. any build of core)
-                                            testsOrTestPackage = 'DefaultExecution'
+                                            if (testName) {
+                                                testsOrTestPackage = testName
+                                            } else {
+                                                testsOrTestPackage = 'DefaultExecution'
+                                            }
                                         }
 
                                         if (!expectedExceptionMessage) {
@@ -295,26 +308,39 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
     return retNode
 }
 
-def makeDeploy(Map options, String engine = "") {
-    Boolean executeDeployStage = true
+def shouldExecuteDelpoyStage(Map options) {
     if (options['executeTests']) {
         if (options.containsKey('tests') && options.containsKey('testsPackage')){
             if (options['testsPackage'] == 'none' && options['tests'].size() == 1 && options['tests'].get(0).length() == 0){
-                executeDeployStage = false
+                return false
             }
         }
     } else {
-        executeDeployStage = false
+        return false
     }
+
+    return true
+}
+
+def makeDeploy(Map options, String engine = "") {
+    Boolean executeDeployStage = shouldExecuteDelpoyStage(options)
+
     if (executeDeploy && executeDeployStage) {
-        String stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
+        String stageName
+
+        if (options.enginesNames) {
+            stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
+        } else {
+            stageName = engine ? "Deploy-${engine}" : "Deploy"
+        }
+
         stage(stageName) {
             def reportBuilderLabels = ""
 
             if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
-                reportBuilderLabels = "Windows && ReportBuilder"
+                reportBuilderLabels = "Windows && ReportBuilder && !NoDeploy"
             } else {
-                reportBuilderLabels = "Windows && Tester"
+                reportBuilderLabels = "Windows && Tester && !NoDeploy"
             }
 
             options["stage"] = "Deploy"
@@ -511,7 +537,15 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 if (options.engines) {
                     options.engines.each { engine ->
-                        tasks["Deploy-${options.enginesNames[options.engines.indexOf(engine)]}"] = {
+                        String stageName
+
+                        if (options.enginesNames) {
+                            stageName = "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}"
+                        } else {
+                            stageName = "Deploy-${engine}"
+                        }
+
+                        tasks[stageName] = {
                             if (testsLeft[engine] != null) {
                                 while (testsLeft[engine] != 0) {
                                     sleep(120)
@@ -549,7 +583,14 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     options.engines.each {
                         if (testsLeft && testsLeft[it] != 0) {
                             // Build was aborted. Make reports from existing data
-                            tasks["Deploy-${options.enginesNames[options.engines.indexOf(it)]}"] = {
+                            String stageName
+
+                            if (options.enginesNames) {
+                                stageName = "Deploy-${options.enginesNames[options.engines.indexOf(it)]}"
+                            } else {
+                                stageName = "Deploy-${it}"
+                            }
+                            tasks[stageName] = {
                                 makeDeploy(options, it)
                             }
                         }
