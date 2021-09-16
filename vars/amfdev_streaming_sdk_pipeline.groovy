@@ -255,7 +255,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
     String collectTraces = "False"
 
     if ((executionType == "server" && options.serverCollectTraces) || (executionType == "client" && options.clientCollectTraces)) {
-        collectTraces = "True"
+        collectTraces = options.collectTracesType
     }
 
     def screenResolution 
@@ -1223,6 +1223,7 @@ def call(String projectBranch = "",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
+    String collectTracesType = "AfterTests",
     String games = "Valorant",
     String androidBuildConfiguration = "release,debug",
     String androidTestingBuildName = "debug",
@@ -1310,6 +1311,7 @@ def call(String projectBranch = "",
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
+                        collectTracesType:collectTracesType,
                         storeOnNAS: storeOnNAS,
                         finishedBuildStages: new ConcurrentHashMap()
                         ]
