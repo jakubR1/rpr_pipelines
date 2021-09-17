@@ -11,7 +11,7 @@ import universe.*
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
 @Field final String CUSTOM_INSTALL_PATH = "C:\\Program Files\\testRPRViewer\\subdir"
-@Field final def installsPerformedMap
+@Field final def installsPerformedMap = new ConcurrentHashMap()
 
 
 @NonCPS
@@ -1073,7 +1073,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800,NVIDIA_RTX2080TI',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800,NVIDIA_RTX2080TI,NVIDIA_RTX3070',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
@@ -1087,7 +1087,6 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
-    installsPerformedMap = new ConcurrentHashMap()
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
