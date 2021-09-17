@@ -135,48 +135,25 @@ def call(String jobName,
 
                 // Update baselines on UMS
                 if (testCaseInfo.job_id_prod || testCaseInfo.job_id_dev) {
-                    withCredentials([string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL")]) {
-                        // Receive token
-                        def response = httpRequest(
-                            consoleLogResponseBody: true,
-                            authentication: "universeMonitoringSystem",
-                            httpMode: "POST",
-                            url: PROD_UMS_URL + "/user/login",
-                            validResponseCodes: "200"
-                        )
+                    List umsInstances = [
+                        [urlCredential: "prodUniverseURL", jobIdKey: "job_id_prod", buildIdKey: "build_id_prod"],
+                        [urlCredential: "devUniverseURL", jobIdKey: "job_id_dev", buildIdKey: "build_id_dev"]
+                    ]
 
-                        def token = readJSON(text: "${response.content}")["token"]
+                    umsInstances.each() { instanceInfo ->
+                        withCredentials([string(credentialsId: instanceInfo["urlCredential"], variable: "UMS_URL")]) {
+                            // Receive token
+                            def response = httpRequest(
+                                consoleLogResponseBody: true,
+                                authentication: "universeMonitoringSystem",
+                                httpMode: "POST",
+                                url: UMS_URL + "/user/login",
+                                validResponseCodes: "200"
+                            )
 
-                        // Find necessary result suite
-                        response = httpRequest(
-                            consoleLogResponseBody: true,
-                            customHeaders: [
-                                [name: "Authorization", value: "Token ${token}"]
-                            ],
-                            httpMode: "GET",
-                            ignoreSslErrors: true,
-                            url: PROD_UMS_URL + "/api/build?id=${testCaseInfo.build_id_prod}&jobId=${testCaseInfo.job_id_prod}"
-                        )
+                            def token = readJSON(text: "${response.content}")["token"]
 
-                        def content = parseResponse(response.content)
-
-                        def targetSuiteResultId
-
-                        String platformName = "${osName}-${gpuName}"
-
-                        suiteLoop: for (suite in content["suites"]) {
-                            if (suite["suite"]["name"] == groupName) {
-                                for (suiteResult in suite["envs"]) {
-                                    if (suiteResult["env"] == platformName) {
-                                        targetSuiteResultId = suiteResult["_id"]
-                                        break suiteLoop
-                                    }
-                                }
-                            }
-                        }
-
-                        if (caseName) {
-                            // Receive list of test case result
+                            // Find necessary result suite
                             response = httpRequest(
                                 consoleLogResponseBody: true,
                                 customHeaders: [
@@ -184,40 +161,70 @@ def call(String jobName,
                                 ],
                                 httpMode: "GET",
                                 ignoreSslErrors: true,
-                                url: PROD_UMS_URL + "/api/testSuiteResult?jobId=${testCaseInfo.job_id_prod}&id=${targetSuiteResultId}"
+                                url: UMS_URL + "/api/build?id=${testCaseInfo[instanceInfo['buildIdKey']]}&jobId=${testCaseInfo[instanceInfo['jobIdKey']]}"
                             )
 
-                            content = parseResponse(response.content)
+                            def content = parseResponse(response.content)
 
-                            def targetCaseResultId
+                            def targetSuiteResultId
 
-                            for (testCaseResult in content["results"]) {
-                                if (testCaseResult["test_case"]["name"] == caseName) {
-                                    targetCaseResultId = testCaseResult["_id"]
-                                    break
+                            String platformName = "${osName}-${gpuName}"
+
+                            suiteLoop: for (suite in content["suites"]) {
+                                if (suite["suite"]["name"] == groupName) {
+                                    for (suiteResult in suite["envs"]) {
+                                        if (suiteResult["env"] == platformName) {
+                                            targetSuiteResultId = suiteResult["_id"]
+                                            break suiteLoop
+                                        }
+                                    }
                                 }
                             }
 
-                            httpRequest(
-                                consoleLogResponseBody: true,
-                                customHeaders: [
-                                    [name: "Authorization", value: "Token ${token}"]
-                                ],
-                                httpMode: "POST",
-                                ignoreSslErrors: true,
-                                url: PROD_UMS_URL + "/baselines/testCaseResult?id=${targetCaseResultId}&product_id=${testCaseInfo.job_id_prod}"
-                            )
-                        } else {
-                            // Make baselines the whole test suite result
-                            httpRequest(
-                                consoleLogResponseBody: true,
-                                customHeaders: [
-                                    [name: "Authorization", value: "Token ${token}"]
-                                ],
-                                httpMode: "POST",
-                                ignoreSslErrors: true,
-                                url: PROD_UMS_URL + "/baselines/testSuiteResult?id=${targetSuiteResultId}&product_id=${testCaseInfo.job_id_prod}"
-                            )
+                            if (caseName) {
+                                // Receive list of test case result
+                                response = httpRequest(
+                                    consoleLogResponseBody: true,
+                                    customHeaders: [
+                                        [name: "Authorization", value: "Token ${token}"]
+                                    ],
+                                    httpMode: "GET",
+                                    ignoreSslErrors: true,
+                                    url: UMS_URL + "/api/testSuiteResult?jobId=${testCaseInfo[instanceInfo['jobIdKey']]}&id=${targetSuiteResultId}"
+                                )
+
+                                content = parseResponse(response.content)
+
+                                def targetCaseResultId
+
+                                for (testCaseResult in content["results"]) {
+                                    if (testCaseResult["test_case"]["name"] == caseName) {
+                                        targetCaseResultId = testCaseResult["_id"]
+                                        break
+                                    }
+                                }
+
+                                httpRequest(
+                                    consoleLogResponseBody: true,
+                                    customHeaders: [
+                                        [name: "Authorization", value: "Token ${token}"]
+                                    ],
+                                    httpMode: "POST",
+                                    ignoreSslErrors: true,
+                                    url: UMS_URL + "/baselines/testCaseResult?id=${targetCaseResultId}&product_id=${testCaseInfo[instanceInfo['jobIdKey']]}"
+                                )
+                            } else {
+                                // Make baselines the whole test suite result
+                                httpRequest(
+                                    consoleLogResponseBody: true,
+                                    customHeaders: [
+                                        [name: "Authorization", value: "Token ${token}"]
+                                    ],
+                                    httpMode: "POST",
+                                    ignoreSslErrors: true,
+                                    url: UMS_URL + "/baselines/testSuiteResult?id=${targetSuiteResultId}&product_id=${testCaseInfo[instanceInfo['jobIdKey']]}"
+                                )
+                            }
                         }
                     }
                 }
