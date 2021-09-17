@@ -28,14 +28,14 @@ def getPreparedUE(Map options) {
 
 
 def executeBuildWindows(Map options) {
-    bat("if exist \"PARAGON_BINARY\" rmdir /Q /S PARAGON_BINARY")
+    bat("if exist \"TOYSHOP_BINARY\" rmdir /Q /S TOYSHOP_BINARY")
     bat("if exist \"RPRHybrid-UE\" rmdir /Q /S RPRHybrid-UE")
 
     utils.removeFile(this, "Windows", "*.log")
 
     dir("ParagonGame") {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
-            String paragonGameURL = "svn://" + ART_NAS_IP + "/ParagonGame"
+            String paragonGameURL = "svn://" + ART_NAS_IP + "/ToyShopUnreal"
             checkoutScm(checkoutClass: "SubversionSCM", repositoryUrl: paragonGameURL, credentialsId: "artNasUser")
         }
     }
@@ -53,7 +53,7 @@ def executeBuildWindows(Map options) {
     // download textures
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", "textures")
 
-    bat("mkdir PARAGON_BINARY")
+    bat("mkdir TOYSHOP_BINARY")
 
     bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid.log\" 2>&1")
     bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
@@ -61,12 +61,12 @@ def executeBuildWindows(Map options) {
 
     // the last script can return non-zero exit code, but build can be ok
     try {
-        bat("4_PackageParagon.bat > \"4_PackageParagon.log\" 2>&1")
+        bat("4_PackageParagon_ToyShop.bat > \"4_PackageParagon.log\" 2>&1")
     } catch (e) {
         println(e.getMessage())
     }
 
-    dir("PARAGON_BINARY\\WindowsNoEditor") {
+    dir("TOYSHOP_BINARY\\WindowsNoEditor") {
         String ARTIFACT_NAME = "ParagonGame.zip"
         bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
         makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
