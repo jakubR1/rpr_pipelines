@@ -77,15 +77,11 @@ class GithubApiProvider {
                 } else {
                     return parseResponse(response.content)
                 }
-            } catch(Exception e) {
+            } catch(NoHttpResponseException e) {
+                context.println("[WARNING] No http response exception appeared")
                 context.println(e.toString())
                 context.println(e.getMessage())
-
-                if (retries >= times) {
-                    throw e
-                }
-
-                sleep(30)
+                sleep(90)
             }
         }
     }
