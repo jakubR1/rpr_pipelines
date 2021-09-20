@@ -33,6 +33,14 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
     switch(osName) {
         case 'Windows':
             customBuildLink = options['customBuildLinkWindows']
+<<<<<<< HEAD
+=======
+            if (tool.contains("RPRViewer") || tool.contains("RPRInventor")) {
+                extension = "exe"
+            } else {
+                extension = "msi"
+            }
+>>>>>>> origin/master
             break
         case 'OSX':
             customBuildLink = options['customBuildLinkOSX']
