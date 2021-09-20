@@ -186,7 +186,8 @@ public class NotificationConfiguration {
         "rebootConfiguration": [
             "AnyTool": false,
             "Tools": [
-                "USDViewer": ["Windows"]
+                "USDViewer": ["Windows"],
+                "StandaloneUSDViewer": ["Windows"]
             ]
         ]
     ]
