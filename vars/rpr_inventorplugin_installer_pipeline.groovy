@@ -13,6 +13,12 @@ import universe.*
 @Field final String CUSTOM_INSTALL_PATH = "C:\\Program Files\\testRPRViewer\\subdir"
 @Field final def installsPerformedMap = new ConcurrentHashMap()
 
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows"],
+    productExtensions: ["Windows": "exe"],
+    artifactNameBeginning: "RPRInventorPlugin_Setup_"
+)
+
 
 @NonCPS
 def shouldInstallationPerform(def key, String installationType, Integer maxTries) {
@@ -29,44 +35,6 @@ def updateMap(def keyName, String installationType, String status) {
     }
 }
 
-def getViewerTool(String osName, Map options) {
-    switch (osName) {
-        case "Windows":
-
-            if (options['isPreBuilt']) {
-                clearBinariesWin()
-                println "[INFO] PreBuilt plugin specified. Downloading and copying..."
-                downloadPlugin(osName, "RPRInventorPlugin_Setup", options, "", 600)
-                bat """
-                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RPRInventorPlugin_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
-                """
-            } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}.exe")) {
-                    println "[INFO] The plugin ${options.commitSHA}.exe exists in the storage."
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RPRInventorPlugin_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
-                    """
-                }
-            }
-
-            break
-
-        case "OSX":
-            println "OSX isn't supported"
-            break
-
-        default:
-            println "Linux isn't supported"
-    }
-}
 
 def checkExistenceOfPlugin(String osName, Map options) {
     String defaultUninstallerPath = "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\UsdConvertor\\unins000.exe"
@@ -264,7 +232,7 @@ def executeTests(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
             timeout(time: "40", unit: "MINUTES") {
-                getViewerTool(osName, options)
+                getProduct(osName, options)
             }
         }
 
@@ -558,7 +526,7 @@ def executeBuildWindows(Map options) {
             "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" rprplugin_installer.iss >> ${STAGE_NAME}.RPRInventorPluginInstaller.log 2>&1
         """
 
-        makeStash(includes: "RPRInventorPlugin_Setup.exe", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "RPRInventorPlugin_Setup.exe", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
         options.pluginWinSha = sha1 "RPRInventorPlugin_Setup.exe"
 
         if (options.branch_postfix) {
@@ -666,6 +634,8 @@ def executeBuild(String osName, Map options) {
                     println "Linux isn't supported"
             }
         }
+
+        options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
@@ -1094,7 +1064,8 @@ def call(String projectBranch = "",
                 Tests execution type: ${parallelExecutionTypeString}
                 Test stage timeout: ${testStageTimeout}
             """
-            options << [projectBranch: projectBranch,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        projectBranch: projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_inventor.git",
                         testsBranch: testsBranch,
                         updateRefs: updateRefs,
