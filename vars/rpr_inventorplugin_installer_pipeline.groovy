@@ -16,7 +16,7 @@ import universe.*
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows"],
     productExtensions: ["Windows": "exe"],
-    artifactNameBeginning: "RPRInventorPlugin_Setup_"
+    artifactNameBeginning: "RPRInventorPlugin_Setup"
 )
 
 

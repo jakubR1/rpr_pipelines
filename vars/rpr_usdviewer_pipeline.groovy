@@ -16,7 +16,7 @@ import universe.*
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows"],
     productExtensions: ["Windows": "exe"],
-    artifactNameBeginning: "RPRViewer_Setup_"
+    artifactNameBeginning: "RPRViewer_Setup"
 )
 
 
