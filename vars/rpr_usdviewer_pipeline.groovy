@@ -61,7 +61,6 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
     String installerName = ""
     String dirOption = ""
     String logPostfix
-    
 
     if (cleanInstall) {
         if (customPathInstall) {
@@ -78,7 +77,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         installerName = customPluginName
         logPostfix = "_custom"
     } else if (options['isPreBuilt']) {
-        installerName = "${options.pluginWinSha}.exe"
+        installerName = "${options[getProduct.getIdentificatorKey('Windows')]}.exe"
     } else {
         installerName = "${options.commitSHA}.exe"
     }
@@ -523,7 +522,6 @@ def executeBuildWindows(Map options) {
                     """
 
                     makeStash(includes: "RPRViewer_Setup.exe", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
-                    options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
 
                     if (options.branch_postfix) {
                         bat """

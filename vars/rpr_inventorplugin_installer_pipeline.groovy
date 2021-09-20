@@ -84,7 +84,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         installerName = customPluginName
         logPostfix = "_custom"
     } else if (options['isPreBuilt']) {
-        installerName = "${options.pluginWinSha}.exe"
+        installerName = "${options[getProduct.getIdentificatorKey('Windows')]}.exe"
     } else {
         installerName = "${options.commitSHA}.exe"
     }
@@ -527,7 +527,6 @@ def executeBuildWindows(Map options) {
         """
 
         makeStash(includes: "RPRInventorPlugin_Setup.exe", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
-        options.pluginWinSha = sha1 "RPRInventorPlugin_Setup.exe"
 
         if (options.branch_postfix) {
             bat """
