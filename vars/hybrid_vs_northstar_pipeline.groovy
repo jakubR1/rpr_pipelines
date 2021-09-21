@@ -236,7 +236,7 @@ def executeBuildWindows(Map options) {
                 } else {
                     unstash("enginesDlls")
                 }
-                
+
                 zip archive: true, zipFile: "HybridVsNorthStar_Windows.zip"
                 stash(includes: "HybridVsNorthStar_Windows.zip", name: "Tool_Windows")
             }
@@ -363,11 +363,13 @@ def executePreBuild(Map options)
 
                 String branchName = env.BRANCH_NAME.split("_", 3)[2]
 
-                String artifactRemotePath = "/volume1/web/job/RadeonProRender-Hybrid/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
+                String archiveName = "BaikalNext_Build-Windows.zip"
+
+                String artifactRemotePath = "/volume1/web/RadeonProRender-Hybrid/${branchName}/${options.hybridBuildNumber}/Artifacts/${archiveName}"
 
                 downloadFiles(artifactRemotePath, ".")
 
-                unzip(zipFile: "BaikalNext_Build-Windows.zip")
+                unzip(zipFile: archiveName)
 
                 dir("BaikalNext/bin") {
                     stash includes: "HybridPro.dll", name: "HybridProDll", allowEmpty: false
