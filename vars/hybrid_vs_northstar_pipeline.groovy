@@ -90,12 +90,6 @@ def prepareTool(String osName, Map options) {
         case "Windows":
             unstash("Tool_Windows")
             unzip(zipFile: "HybridVsNorthStar_Windows.zip")
-            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
-                unstash("Northstar64Dll")
-                unstash("HybridProDll")
-            } else {
-                unstash("enginesDlls")
-            }
             break
         case "OSX":
             println("Unsupported OS")
@@ -236,6 +230,13 @@ def executeBuildWindows(Map options) {
             String BUILD_NAME = "HybridVsNorthStar_Windows.zip"
 
             dir("bin\\Release") {
+                if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
+                    unstash("Northstar64Dll")
+                    unstash("HybridProDll")
+                } else {
+                    unstash("enginesDlls")
+                }
+                
                 zip archive: true, zipFile: "HybridVsNorthStar_Windows.zip"
                 stash(includes: "HybridVsNorthStar_Windows.zip", name: "Tool_Windows")
             }
