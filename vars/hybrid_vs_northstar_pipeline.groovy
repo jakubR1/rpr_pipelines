@@ -349,9 +349,9 @@ def executePreBuild(Map options)
     dir('HybridVsNorthStar') {
         stash includes: "resources/", name: "testResources", allowEmpty: false
         dir("third_party") {
-            stash includes: "Northstar64.dll", name: "Northstar64Dll", allowEmpty: false
-
             if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
+                stash includes: "Northstar64.dll", name: "Northstar64Dll", allowEmpty: false
+
                 if (options.commitMessage.contains("PR URL")) {
                     def parts = options.commitMessage.replace("Triggered by Build #", "").replace("PR URL - ", "").split(". ")
                     options.hybridBuildNumber = parts[0] as Integer
@@ -362,17 +362,9 @@ def executePreBuild(Map options)
 
                 String branchName = env.BRANCH_NAME.split("_", 3)[2]
 
-                String jenkinsUrl
+                String artifactRemotePath = "/volume1/web/job/RadeonProRender-Hybrid/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
 
-                withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
-                    jenkinsUrl = "${JENKINS_URL}/job/RadeonProRender-Hybrid/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
-                }
-
-                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-                    bat """
-                        curl --retry 5 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "${jenkinsUrl}/BaikalNext_Build-Windows.zip"
-                    """
-                }
+                downloadFiles(artifactRemotePath, ".")
 
                 unzip(zipFile: "BaikalNext_Build-Windows.zip")
 
