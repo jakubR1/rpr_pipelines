@@ -142,7 +142,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "10", unit: "MINUTES") {
                 unstash("testResources")
 
                 // Bug of tool (it can't work without resources in current dir)
