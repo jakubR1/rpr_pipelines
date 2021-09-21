@@ -571,4 +571,28 @@ class utils {
     static Boolean isNodeIdle(String nodeName) {
         return jenkins.model.Jenkins.instance.getNode(nodeName).getComputer().countIdle() > 0
     }
+
+    static def downloadMetrics(Object self, String localDir, String remoteDir) {
+        try {
+            self.dir(localDir) {
+                self.uploadFiles(".", "${remoteDir}")
+            }
+        } catch (e) {
+            self.println("[WARNING] Failed to download history of tracked metrics.")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
+    static def updateMetrics(Object self, String localDir, String remoteDir) {
+        try {
+            self.dir(localDir) {
+                self.uploadFiles(".", "${remoteDir}")
+            }
+        } catch (e) {
+            self.println("[WARNING] Failed to update history of tracked metrics.")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
 }
