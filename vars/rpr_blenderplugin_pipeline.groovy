@@ -661,7 +661,7 @@ def executeBuild(String osName, Map options)
 }
 
 def getReportBuildArgs(String engineName, Map options) {
-    boolean collectTrackedMetrics = env.JOB_NAME.contains("Manual")
+    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
 
     if (options["isPreBuilt"]) {
         return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
@@ -984,11 +984,12 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             try {
+                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+                boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
-                // TODO: change metrics collection condition
-                if (env.JOB_NAME.contains("Manual")) {
+                if (useTrackedMetrics) {
                     utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
                 }
 
@@ -1032,8 +1033,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                     }
                 }
 
-                // TODO: change metrics collection condition
-                if (env.JOB_NAME.contains("Manual")) {
+                if (saveTrackedMetrics)) {
                     utils.updateMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
