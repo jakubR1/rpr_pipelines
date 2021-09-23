@@ -549,20 +549,6 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
             }
         }
 
-        // Start Android emulator
-        // TODO remove hard coded name of emulator
-        bat """
-            start /b emulator.exe @Pixel 1>\"emulator_${options.currentTry}.log\" 2>&1
-        """
-
-        // Start Appium Server
-        bat """
-            start /b appium 1>\"appium_${options.currentTry}.log\"  2>&1
-        """
-
-        // Give Android emulator time to be loaded
-        sleep(30)
-
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
             executeTestCommand(osName, asicName, options)
         }
