@@ -989,7 +989,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
 
                 // TODO: change metrics collection condition
                 if (env.JOB_NAME.contains("Manual")) {
-                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
                 }
 
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
@@ -1034,7 +1034,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
 
                 // TODO: change metrics collection condition
                 if (env.JOB_NAME.contains("Manual")) {
-                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                    utils.updateMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())

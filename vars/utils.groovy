@@ -575,7 +575,7 @@ class utils {
     static def downloadMetrics(Object self, String localDir, String remoteDir) {
         try {
             self.dir(localDir) {
-                self.uploadFiles(".", "${remoteDir}")
+                self.downloadFiles("${remoteDir}", ".")
             }
         } catch (e) {
             self.println("[WARNING] Failed to download history of tracked metrics.")
