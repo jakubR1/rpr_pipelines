@@ -124,7 +124,7 @@ def executePreBuild(Map options) {
         """
 
         if (options.incrementVersion) {
-            if (env.BRANCH_NAME == "master") {
+            if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
                 println("[INFO] Incrementing version of change made by ${options.commitAuthor}.")
 
                 dir("../inc") {
@@ -166,6 +166,20 @@ def executePreBuild(Map options) {
                     } else {
                         println("[INFO] New commit weren't found. Version incrementing won't run")
                     }
+                }
+
+                // update RadeonProRenderInventorPlugin submodule in Inventor installer repository
+                dir("../Inst") {
+                    checkoutScm(branchName: "master", repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git", submoduleDepth: 1)
+
+                    bat """
+                        cd RadeonProRenderInventorPlugin
+                        git checkout master
+                        cd ..
+                        git add RadeonProRenderInventorPlugin
+                        git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule"
+                        git push origin HEAD:master
+                    """
                 }
             }
         }
