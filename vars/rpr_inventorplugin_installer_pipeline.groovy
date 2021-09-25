@@ -181,7 +181,7 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
         switch (osName) {
             case "Windows":
                 bat """
-                    make_results_baseline.bat ${delete}
+                    make_results_baseline.bat ${delete} Inventor
                 """
                 break
 
