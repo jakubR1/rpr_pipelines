@@ -256,12 +256,19 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
     // Installing Addon in Blender
     String addonName = options[getProduct.getIdentificatorKey(osName)]
 
+    String installerPath
+
+    // if local installer file exists - use it
+    Boolean useLocalInstaller = fileExists("${addonName}.zip")
+
     switch(osName) {
+        installerPath = useLocalInstaller ? "${addonName}.zip" : "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addonName}.zip"
+
         case "Windows":
             bat """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addonName}.zip" >> registerRPRinBlender.py
+                echo addon_path = "${installerPath} >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install(filepath=addon_path) >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable(module="${pluginName}") >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref() >> registerRPRinBlender.py
@@ -271,10 +278,12 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             break
       
         case "OSX":
+            installerPath = useLocalInstaller ? "${addonName}.zip" : "${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"
+
             sh """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"' >> registerRPRinBlender.py
+                echo addon_path = '"${useLocalInstaller}"' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable'(module="${pluginName}")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
@@ -284,10 +293,12 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             break
 
         default:
+            installerPath = useLocalInstaller ? "${addonName}.zip" : "${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"
+
             sh """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"' >> registerRPRinBlender.py
+                echo addon_path = '"${installerPath}"' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable'(module="${pluginName}")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
