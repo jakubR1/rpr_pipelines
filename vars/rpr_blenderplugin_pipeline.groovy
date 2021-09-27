@@ -1034,7 +1034,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 }
 
                 if (saveTrackedMetrics) {
-                    utils.updateMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())

@@ -584,7 +584,7 @@ class utils {
         }
     }
 
-    static def updateMetrics(Object self, String localDir, String remoteDir) {
+    static def uploadMetrics(Object self, String localDir, String remoteDir) {
         try {
             self.dir(localDir) {
                 self.uploadFiles(".", "${remoteDir}")
