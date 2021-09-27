@@ -113,7 +113,7 @@ def executeTests(String osName, String asicName, Map options) {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "12", unit: "MINUTES") {
-                    getProduct(osName, options, "", true)
+                    getProduct(osName, options, "", false)
                     newPluginInstalled = installBlenderAddon(osName, 'hdusd', options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }

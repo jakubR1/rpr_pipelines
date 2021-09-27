@@ -12,7 +12,7 @@ public class PipelineConfiguration {
      *
      * @param supportedOS list of supported OS
      * @param productExtensions map with extension of product for each OS
-     * @param artifactNameBase beginning of the name of the artifact which is same in any case
+     * @param artifactNameBase the name of the artifact without OS name / version. It must be same for any OS / version
      */
     PipelineConfiguration(Map params) {
         this.supportedOS = params["supportedOS"]

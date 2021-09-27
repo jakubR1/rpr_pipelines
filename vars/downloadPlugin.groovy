@@ -28,6 +28,7 @@ def runCurl(String curlCommand, Integer tries=5, Integer oneTryTimeout=90) {
 def call(String osName, Map options, String credentialsId = '', Integer oneTryTimeout = 90) {
     String customBuildLink = ""
     String extension = options["configuration"]["productExtensions"][osName]
+    // the name of the artifact without OS name / version. It must be same for any OS / version
     String artifactNameBase = options["configuration"]["artifactNameBase"]
 
     switch(osName) {
