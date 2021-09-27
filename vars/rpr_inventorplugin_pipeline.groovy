@@ -147,7 +147,7 @@ def executePreBuild(Map options) {
                     """
 
                     def githubApiProvider = new GithubApiProvider(this)
-                    def githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "pdate RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
+                    def githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
                 }
             }
         }
