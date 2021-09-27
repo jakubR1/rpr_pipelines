@@ -1033,7 +1033,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                     }
                 }
 
-                if (saveTrackedMetrics)) {
+                if (saveTrackedMetrics) {
                     utils.updateMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
