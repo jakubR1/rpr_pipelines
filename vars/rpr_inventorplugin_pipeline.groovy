@@ -1,4 +1,10 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+import groovy.transform.Field
+
+
+@Field final String INSTALLER_REPO = "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git"
+@Field final String HTTP_INSTALLER_REPO = "https://github.com/Radeon-Pro/RadeonProRenderInventorPluginInstaller"
+
 
 def executeBuildWindows(Map options) {
     String buildName = "${options.buildConfiguration}_${options.buildPlatform.replace(' ', '')}_${options.pluginVersion}"
@@ -170,16 +176,19 @@ def executePreBuild(Map options) {
 
                 // update RadeonProRenderInventorPlugin submodule in Inventor installer repository
                 dir("../Inst") {
-                    checkoutScm(branchName: "master", repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git", submoduleDepth: 1)
+                    checkoutScm(branchName: "master", repositoryUrl: INSTALLER_REPO, submoduleDepth: 1)
 
                     bat """
                         cd RadeonProRenderInventorPlugin
                         git checkout master
                         cd ..
                         git add RadeonProRenderInventorPlugin
-                        git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule"
-                        git push origin HEAD:master
+                        git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}"
+                        git push origin HEAD:autoupdate_${options.pluginVersion}
                     """
+
+                    def githubApiProvider = new GithubApiProvider(this)
+                    def githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
                 }
             }
         }
