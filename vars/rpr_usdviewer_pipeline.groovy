@@ -789,7 +789,7 @@ def executePreBuild(Map options) {
                             git checkout master
                             cd ..
                             git add RPRViewer
-                            git commit -m "buildmaster: update RPRViewer submodule"
+                            git commit -m "buildmaster: update RPRViewer submodule to ${options.pluginVersion}"
                             git push origin HEAD:master
                         """
                     }
