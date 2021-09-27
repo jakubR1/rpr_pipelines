@@ -232,7 +232,7 @@ def call(String jobName,
                                 }
                             } catch (e) {
                                 println("[ERROR] Failed to update baselines on UMS ${instanceInfo.instanceName}")
-                                problemMessageManager.saveGlobalFailReason(NotificationConfiguration.FAILED_UPDATE_BASELINES_NAS.replace("<name>", instanceInfo.instanceName))
+                                problemMessageManager.saveGlobalFailReason(NotificationConfiguration.FAILED_UPDATE_BASELINES_UMS.replace("<name>", instanceInfo.instanceName))
                                 currentBuild.result = "FAILURE"
                             }
                         }
