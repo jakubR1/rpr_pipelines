@@ -6,22 +6,34 @@ def getStashName(String osName) {
     return "app${osName}"
 }
 
-def saveDownloadedInstaller(String artifactNameBase, String extension, String identificatorValue) {
-    if (isUnix()) {
-        sh """
-            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-            mv ${artifactNameBase}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${identificatorValue}.${extension}"
-        """
+def saveDownloadedInstaller(String artifactNameBase, String extension, String identificatorValue, Boolean cacheInstaller) {
+    if (cacheInstaller) {
+        if (isUnix()) {
+            sh """
+                mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                mv ${artifactNameBase}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${identificatorValue}.${extension}"
+            """
+        } else {
+            bat """
+                IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                move ${artifactNameBase}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${identificatorValue}.${extension}"
+            """
+        }
     } else {
-        bat """
-            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-            move ${artifactNameBase}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${identificatorValue}.${extension}"
-        """
+        if (isUnix()) {
+            sh """
+                mv ${artifactNameBase}*.${extension} "${identificatorValue}.${extension}"
+            """
+        } else {
+            bat """
+                move ${artifactNameBase}*.${extension} "${identificatorValue}.${extension}"
+            """
+        }
     }
 }
 
 
-def call(String osName, Map options, String unzipDestination = "", Boolean saveInstaller = true) {
+def call(String osName, Map options, String unzipDestination = "", Boolean cacheInstaller = true) {
     if (!options["configuration"].supportedOS.contains(osName)) {
         throw new Exception("Unsupported OS")
     }
@@ -54,9 +66,7 @@ def call(String osName, Map options, String unzipDestination = "", Boolean saveI
             println "[INFO] The product does not exist in the storage. Downloading and copying..."
             downloadPlugin(osName, options)
 
-            if (saveInstaller) {
-                saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey])
-            }
+            saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
             if (unzipDestination) {
                 unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unzipDestination, quiet: true
@@ -84,9 +94,7 @@ def call(String osName, Map options, String unzipDestination = "", Boolean saveI
             println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
             makeUnstash(name: stashName, unzip: false, storeOnNAS: options.storeOnNAS)
 
-            if (saveInstaller) {
-                saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey])
-            }
+            saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
             if (unzipDestination) {
                 unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unzipDestination, quiet: true
