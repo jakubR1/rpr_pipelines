@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows", "OSX", "Ubuntu18", "Ubuntu20"],
     productExtensions: ["Windows": "zip", "OSX": "zip", "Ubuntu18": "zip", "Ubuntu20": "zip"],
-    artifactNameBeginning: "binCore"
+    artifactNameBase: "binCore"
 )
 
 

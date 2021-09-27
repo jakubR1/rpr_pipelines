@@ -28,7 +28,7 @@ def runCurl(String curlCommand, Integer tries=5, Integer oneTryTimeout=90) {
 def call(String osName, Map options, String credentialsId = '', Integer oneTryTimeout = 90) {
     String customBuildLink = ""
     String extension = options["configuration"]["productExtensions"][osName]
-    String tool = options["configuration"]["artifactNameBeginning"]
+    String artifactNameBase = options["configuration"]["artifactNameBase"]
 
     switch(osName) {
         case 'Windows':
@@ -50,44 +50,44 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
 
     if (customBuildLink.startsWith("https://builds.rpr")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     } else if (customBuildLink.startsWith("https://rpr.cis")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     } else if (customBuildLink.startsWith("/CIS/")) {
         downloadFiles("/volume1${customBuildLink}", ".")
         if (isUnix()) {
             sh """
-                mv ${customBuildLink.split("/")[-1]} ${tool}_${osName}.${extension}
+                mv ${customBuildLink.split("/")[-1]} ${artifactNameBase}_${osName}.${extension}
             """
         } else {
             bat """
-                move ${customBuildLink.split("/")[-1]} ${tool}_${osName}.${extension}
+                move ${customBuildLink.split("/")[-1]} ${artifactNameBase}_${osName}.${extension}
             """
         }
     } else if (customBuildLink.contains("cis.nas")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'reportsNAS', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD'],
             string(credentialsId: "nasIP", variable: "NAS_IP"), string(credentialsId: "nasDomain", variable: "NAS_DOMAIN")]) {
 
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink.replace(NAS_DOMAIN, NAS_IP).replace("https", "http")}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink.replace(NAS_DOMAIN, NAS_IP).replace("https", "http")}\"", 5, oneTryTimeout)
 
         }
     } else {
         if (credentialsId) {
             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+                runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
             }
         } else {
-            runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     }
 
-    validatePlugin(osName, "${tool}_${osName}.${extension}", options)
+    validatePlugin(osName, "${artifactNameBase}_${osName}.${extension}", options)
 
     // We haven't any branch so we use sha1 for identifying plugin build
-    def pluginSha = sha1 "${tool}_${osName}.${extension}"
+    def pluginSha = sha1 "${artifactNameBase}_${osName}.${extension}"
     println "Downloaded plugin sha1: ${pluginSha}"
 
     options[getProduct.getIdentificatorKey(osName)] = pluginSha

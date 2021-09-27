@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows", "OSX", "Ubuntu20"],
     productExtensions: ["Windows": "zip", "OSX": "zip", "Ubuntu20": "zip"],
-    artifactNameBeginning: "BlenderUSDHydraAddon"
+    artifactNameBase: "BlenderUSDHydraAddon"
 )
 
 

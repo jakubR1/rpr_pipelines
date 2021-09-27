@@ -5,19 +5,19 @@ public class PipelineConfiguration {
 
     List supportedOS
     Map productExtensions
-    String artifactNameBeginning
+    String artifactNameBase
 
     /**
      * Main constructor
      *
      * @param supportedOS list of supported OS
      * @param productExtensions map with extension of product for each OS
-     * @param artifactNameBeginning beginning of the name of the artifact which is same in any case
+     * @param artifactNameBase beginning of the name of the artifact which is same in any case
      */
     PipelineConfiguration(Map params) {
         this.supportedOS = params["supportedOS"]
         this.productExtensions = params["productExtensions"]
-        this.artifactNameBeginning = params["artifactNameBeginning"]
+        this.artifactNameBase = params["artifactNameBase"]
     }
 
 }

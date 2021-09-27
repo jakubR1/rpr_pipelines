@@ -12,7 +12,7 @@ import TestsExecutionType
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows"],
     productExtensions: ["Windows": "zip"],
-    artifactNameBeginning: "binCore"
+    artifactNameBase: "binCore"
 )
 
 

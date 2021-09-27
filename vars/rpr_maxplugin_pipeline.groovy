@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows"],
     productExtensions: ["Windows": "msi"],
-    artifactNameBeginning: "RadeonProRender"
+    artifactNameBase: "RadeonProRender"
 )
 
 

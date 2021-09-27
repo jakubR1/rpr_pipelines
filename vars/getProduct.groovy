@@ -15,7 +15,7 @@ def call(String osName, Map options, String unzipDestination = "", Boolean repla
     String identificatorKey = getIdentificatorKey(osName)
     String stashName = getStashName(osName)
     String extension = options["configuration"]["productExtensions"][osName]
-    String tool = options["configuration"]["artifactNameBeginning"]
+    String artifactNameBase = options["configuration"]["artifactNameBase"]
 
     if (replaceInstaller) {
         removeInstaller(osName: osName, options: options, extension: extension)
@@ -46,12 +46,12 @@ def call(String osName, Map options, String unzipDestination = "", Boolean repla
             if (isUnix()) {
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv ${tool}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}"
+                    mv ${artifactNameBase}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}"
                 """
             } else {
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move ${tool}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
+                    move ${artifactNameBase}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
                 """
             }
 
@@ -84,12 +84,12 @@ def call(String osName, Map options, String unzipDestination = "", Boolean repla
             if (isUnix()) {
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv ${tool}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}"
+                    mv ${artifactNameBase}*.${extension} "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}"
                 """
             } else {
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move ${tool}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
+                    move ${artifactNameBase}*.${extension} "${CIS_TOOLS}\\..\\PluginsBinaries\\${options[identificatorKey]}.${extension}"
                 """
             }
 
