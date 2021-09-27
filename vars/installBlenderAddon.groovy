@@ -263,7 +263,7 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
 
     switch(osName) {
         case "Windows":
-            // build full path to local addon or build full path it in PluginBinaries
+            // build a full path to a local addon or build a full path to an addon in PluginBinaries
             addonPath = useLocalInstaller ? "${pwd()}\\" + findFiles(glob: "${addonName}.zip")[0].path : "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addonName}.zip"
 
             bat """
@@ -279,7 +279,7 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             break
       
         case "OSX":
-            // build full path to local addon or build full path it in PluginBinaries
+            // build a full path to a local addon or build a full path to an addon in PluginBinaries
             addonPath = useLocalInstaller ? "${pwd()}/" + findFiles(glob: "${addonName}.zip")[0].path : "${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"
 
             sh """
@@ -295,7 +295,7 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             break
 
         default:
-            // build full path to local addon or build full path it in PluginBinaries
+            // build a full path to a local addon or build a full path to an addon in PluginBinaries
             addonPath = useLocalInstaller ? "${pwd()}/" + findFiles(glob: "${addonName}.zip")[0].path : "${CIS_TOOLS}/../PluginsBinaries/${addonName}.zip"
 
             sh """
