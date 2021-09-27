@@ -569,4 +569,8 @@ public class NotificationConfiguration {
 
     def static FILES_CRASHED = "Corrupted autotest JSON files detected."
 
+    def static FAILED_UPDATE_BASELINES_NAS = "Failed to update baselines on NAS"
+
+    def static FAILED_UPDATE_BASELINES_UMS = "Failed to update baselines on UMS <name>"
+
 }
