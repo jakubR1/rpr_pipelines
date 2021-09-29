@@ -172,23 +172,40 @@ def call(String projectBranch = "",
          String platforms = "Windows",
          String projects = "ShooterGame,ToyShop") {
 
-    println "Projects: ${projects}"
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
-                           [platforms:platforms,
-                            PRJ_NAME:"HybridParagon",
-                            projectRepo:"git@github.com:Radeon-Pro/RPRHybrid.git",
-                            projectBranch:projectBranch,
-                            ueRepo:"git@github.com:Radeon-Pro/RPRHybrid-UE.git",
-                            ueBranch:ueBranch,
-                            BUILDER_TAG:"BuilderU",
-                            TESTER_TAG:"HybridTester",
-                            executeBuild:true,
-                            executeTests:true,
-                            // TODO: ignore timeout in run_with_retries func. Need to implement more correct solution
-                            BUILD_TIMEOUT: 3000,
-                            PROJECT_BUILD_TIMEOUT: 210,
-                            retriesForTestStage:1,
-                            storeOnNAS: true,
-                            projects: projects.split(",")])
+    try {
+        println "Projects: ${projects}"
+
+        if (!projects) {
+            problemMessageManager.saveGlobalFailReason("Missing 'projects' param")
+            throw new Exception("Missing 'projects' param")
+        }
+
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
+                               [platforms:platforms,
+                                PRJ_NAME:"HybridParagon",
+                                projectRepo:"git@github.com:Radeon-Pro/RPRHybrid.git",
+                                projectBranch:projectBranch,
+                                ueRepo:"git@github.com:Radeon-Pro/RPRHybrid-UE.git",
+                                ueBranch:ueBranch,
+                                BUILDER_TAG:"BuilderU",
+                                TESTER_TAG:"HybridTester",
+                                executeBuild:true,
+                                executeTests:true,
+                                // TODO: ignore timeout in run_with_retries func. Need to implement more correct solution
+                                BUILD_TIMEOUT: 3000,
+                                PROJECT_BUILD_TIMEOUT: 210,
+                                retriesForTestStage:1,
+                                storeOnNAS: true,
+                                projects: projects.split(","),
+                                problemMessageManager: problemMessageManager])
+    } catch(e) {
+        currentBuild.result = "FAILURE"
+        println(e.toString())
+        println(e.getMessage())
+        throw e
+    } finally {
+        problemMessageManager.publishMessages()
+    }
 }
