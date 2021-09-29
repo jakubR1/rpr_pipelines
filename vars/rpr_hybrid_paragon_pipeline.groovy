@@ -33,7 +33,7 @@ def executeBuildWindows(Map options) {
 
     utils.removeFile(this, "Windows", "*.log")
 
-    dir("ParagonGame") {
+    dir("ToyShopUnreal") {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
             String paragonGameURL = "svn://" + ART_NAS_IP + "/ToyShopUnreal"
             checkoutScm(checkoutClass: "SubversionSCM", repositoryUrl: paragonGameURL, credentialsId: "artNasUser")
@@ -47,27 +47,35 @@ def executeBuildWindows(Map options) {
     // download build scripts
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
 
-    // copy prepared UE if it exists
-    getPreparedUE(options)
+    dir("RPRHybrid-UE") {
+        checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
+    }
 
     // download textures
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", "textures")
 
     bat("mkdir TOYSHOP_BINARY")
-
-    bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid.log\" 2>&1")
-    bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
-    bat("3_UpdateUE4.bat > \"3_UpdateUE4.log\" 2>&1")
-
-    // the last script can return non-zero exit code, but build can be ok
+    
     try {
-        bat("4_PackageParagon_ToyShop.bat > \"4_PackageParagon.log\" 2>&1")
+        bat("UpdateRPRHybrid.bat > \"UpdateRPRHybrid.log\" 2>&1")
+    } catch (e) {
+        println(e.getMessage())
+    }
+    
+    try {
+        bat("UpdateUE4.bat > \"UpdateUE4.log\" 2>&1")
+    } catch (e) {
+        println(e.getMessage())
+    }
+    
+    try {
+        bat("PackageToyShop.bat > \"PackageToyShop.log\" 2>&1")
     } catch (e) {
         println(e.getMessage())
     }
 
     dir("TOYSHOP_BINARY\\WindowsNoEditor") {
-        String ARTIFACT_NAME = "ParagonGame.zip"
+        String ARTIFACT_NAME = "ToyShop.zip"
         bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
         makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
     }
