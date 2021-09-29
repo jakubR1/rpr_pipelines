@@ -79,7 +79,7 @@ def checkoutGitScm(Map checkoutOptions) {
             [$class: 'CleanCheckout', deleteUntrackedNestedRepositories: true],
             [$class: 'CheckoutOption', timeout: 30],
             [$class: 'AuthorInChangelog'],
-            [$class: 'CloneOption', timeout: 60, noTags: false],
+            [$class: 'CloneOption', timeout: 120, noTags: false],
             [$class: 'SubmoduleOption', disableSubmodules: checkoutOptions['disableSubmodules'],
              parentCredentials: true, recursiveSubmodules: checkoutOptions['recursiveSubmodules'], shallow: true, 
              depth: checkoutOptions['submoduleDepth'], timeout: 60, reference: '', trackingSubmodules: false],

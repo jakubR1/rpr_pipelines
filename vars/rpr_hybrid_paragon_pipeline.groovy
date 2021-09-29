@@ -37,6 +37,10 @@ def executeBuildWindows(Map options) {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
             String paragonGameURL = "svn://" + ART_NAS_IP + "/ToyShopUnreal"
             checkoutScm(checkoutClass: "SubversionSCM", repositoryUrl: paragonGameURL, credentialsId: "artNasUser")
+            
+            dir("Config") {
+                downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildConfigs/DefaultEngine.ini", ".")
+            }
         }
     }
 
@@ -45,7 +49,7 @@ def executeBuildWindows(Map options) {
     }
 
     // download build scripts
-    downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
+    downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".", "", false)
 
     dir("RPRHybrid-UE") {
         checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
@@ -151,7 +155,7 @@ def call(String projectBranch = "",
                             TESTER_TAG:"HybridTester",
                             executeBuild:true,
                             executeTests:true,
-                            BUILD_TIMEOUT: 180,
+                            BUILD_TIMEOUT: 300,
                             retriesForTestStage:1,
                             storeOnNAS: true])
 }
