@@ -1,3 +1,20 @@
+import groovy.transform.Field
+
+
+@Field projectsInfo = [
+    "ShooterGame": [
+        "targetDir": "PARAGON_BINARY",
+        "svnRepoName": "ParagonGame"
+    ],
+    "ToyShop": [
+        "targetDir": "TOYSHOP_BINARY",
+        "svnRepoName": "ToyShopUnreal"
+    ]
+]
+
+@Field finishedProjects = []
+
+
 def getPreparedUE(Map options) {
     String targetFolderPath = "${CIS_TOOLS}\\..\\PreparedUE\\${options.ueSha}"
 
@@ -27,16 +44,29 @@ def getPreparedUE(Map options) {
 }
 
 
-def executeBuildWindows(Map options) {
-    bat("if exist \"TOYSHOP_BINARY\" rmdir /Q /S TOYSHOP_BINARY")
+def executeBuildWindows(String projectName, Map options) {
+    if (!projectsInfo.contains(projectName)) {
+        throw new Exception("Unknown project name: ${projectName}")
+    }
+
+    String targetDir = projectsInfo[projectName]["targetDir"]
+    String svnRepoName = projectsInfo[projectName]["svnRepoName"]
+
+    bat("if exist \"${targetDir}\" rmdir /Q /S ${targetDir}")
     bat("if exist \"RPRHybrid-UE\" rmdir /Q /S RPRHybrid-UE")
 
     utils.removeFile(this, "Windows", "*.log")
 
-    dir("ParagonGame") {
+    dir(svnRepoName) {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
-            String paragonGameURL = "svn://" + ART_NAS_IP + "/ToyShopUnreal"
+            String paragonGameURL = "svn://" + ART_NAS_IP + "/${svnRepoName}"
             checkoutScm(checkoutClass: "SubversionSCM", repositoryUrl: paragonGameURL, credentialsId: "artNasUser")
+        }
+
+        if (projectName == "ToyShop") {
+            dir("Config") {
+                downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildConfigs/DefaultEngine.ini", ".", "", false)
+            }
         }
     }
 
@@ -53,7 +83,7 @@ def executeBuildWindows(Map options) {
     // download textures
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", "textures")
 
-    bat("mkdir TOYSHOP_BINARY")
+    bat("mkdir ${targetDir}")
 
     bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid.log\" 2>&1")
     bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
@@ -61,13 +91,13 @@ def executeBuildWindows(Map options) {
 
     // the last script can return non-zero exit code, but build can be ok
     try {
-        bat("4_PackageParagon_ToyShop.bat > \"4_PackageParagon.log\" 2>&1")
+        bat("4_PackageParagon_${projectName}.bat > \"4_PackageParagon.log\" 2>&1")
     } catch (e) {
         println(e.getMessage())
     }
 
-    dir("TOYSHOP_BINARY\\WindowsNoEditor") {
-        String ARTIFACT_NAME = "ParagonGame.zip"
+    dir("${targetDir}\\WindowsNoEditor") {
+        String ARTIFACT_NAME = "${targetDir}.zip"
         bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
         makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
     }
@@ -75,25 +105,34 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuild(String osName, Map options) {
-    try {
-        outputEnvironmentInfo(osName)
-        
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
-            GithubNotificator.updateStatus("Build", osName, "in_progress", options, "Checkout has been finished. Trying to build...")
+    for (projectName in options["projects"]) {
+        // skip projects which can be built on the previous try
+        if (finishedProjects.contains(projectName)) {
+            continue
+        }
 
-            switch(osName) {
-                case "Windows":
-                    executeBuildWindows(options)
-                    break
-                default:
-                    println("${osName} is not supported")
+        timeout(time: options["PROJECT_BUILD_TIMEOUT"], unit: "MINUTES") {
+            try {
+                outputEnvironmentInfo(osName)
+                
+                withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+                    switch(osName) {
+                        case "Windows":
+                            executeBuildWindows(options)
+                            break
+                        default:
+                            println("${osName} is not supported")
+                    }
+                }
+
+                finishedProjects.append(projectName)
+            } catch (e) {
+                println(e.getMessage())
+                throw e
+            } finally {
+                archiveArtifacts "*.log"
             }
         }
-    } catch (e) {
-        println(e.getMessage())
-        throw e
-    } finally {
-        archiveArtifacts "*.log"
     }
 }
 
@@ -130,7 +169,10 @@ def executePreBuild(Map options) {
 
 def call(String projectBranch = "",
          String ueBranch = "rpr_material_serialization_particles",
-         String platforms = "Windows") {
+         String platforms = "Windows",
+         String projects = "ShooterGame,ToyShop") {
+
+    println "Projects: ${projects}"
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [platforms:platforms,
@@ -143,7 +185,10 @@ def call(String projectBranch = "",
                             TESTER_TAG:"HybridTester",
                             executeBuild:true,
                             executeTests:true,
-                            BUILD_TIMEOUT: 180,
+                            // TODO: ignore timeout in run_with_retries func. Need to implement more correct solution
+                            BUILD_TIMEOUT: 3000,
+                            PROJECT_BUILD_TIMEOUT: 210,
                             retriesForTestStage:1,
-                            storeOnNAS: true])
+                            storeOnNAS: true,
+                            projects: projects.split(",")])
 }
