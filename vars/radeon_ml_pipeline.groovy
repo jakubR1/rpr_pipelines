@@ -11,6 +11,7 @@ def executeUnitTestsCommand(String osName, Map options) {
             """
             break
         case 'OSX':
+        case 'MacOS_ARM':
             sh """
                 chmod +x tests
                 export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
@@ -56,18 +57,34 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                                 pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                                 python -V >> ${STAGE_NAME}.ft.log 2>&1
                                 python run_tests.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
-                                rename ft-executor.log ${STAGE_NAME}.engine.log
+                                python execute_cases.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results >> ${STAGE_NAME}.ft.log 2>&1
+                                python process_cases.py -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                                rename ft.log ${STAGE_NAME}.execution.ft.log
+                                rename ft-process.log ${STAGE_NAME}.process.ft.log
                             """
                         }
                         break
+
+                    case 'MacOS_ARM':
+                        sh """
+                            export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
+                            python3.9 execute_cases.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results >> ${STAGE_NAME}.ft.log 2>&1
+                            python3.9-intel64 process_cases.py -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                            mv ft.log ${STAGE_NAME}.execute.ft.log
+                            mv ft-process.log ${STAGE_NAME}.process.ft.log
+                        """
+                        break
+
                     default:
                         sh """
                             export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
                             pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                             python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
                             env >> ${STAGE_NAME}.ft.log 2>&1
-                            python3.8 run_tests.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
-                            mv ft-executor.log ${STAGE_NAME}.engine.log
+                            python3.8 execute_cases.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results >> ${STAGE_NAME}.ft.log 2>&1
+                            python3.8 process_cases.py -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                            mv ft.log ${STAGE_NAME}.execute.ft.log
+                            mv ft-process.log ${STAGE_NAME}.process.ft.log
                         """
                 }
             }
@@ -79,7 +96,8 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
             throw e
         } finally {
             archiveArtifacts "*.log"
-            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}")
+            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}", options.storeOnNAS, \
+                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": false])
         }
     }
 }
@@ -196,14 +214,14 @@ def executeBuildWindows(String osName, Map options) {
 
 
 def executeOSXBuildCommand(String osName, Map options, String buildType) {
-    
+
     sh """
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK_10_15 -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
         make -j 4 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
-    
+
     sh """
         cd build-${buildType}
         mv bin ${buildType}
@@ -234,9 +252,12 @@ def executeOSXBuildCommand(String osName, Map options, String buildType) {
     dir("build-${buildType}") {
         String ARTIFACT_NAME = "${osName}_${buildType}.tar"
         artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+        
+        dir(buildType) {
+            sh("zip ${osName}_${buildType}.zip libRadeonML*.dylib test*")
+            archiveArtifacts "${osName}_${buildType}.zip"
+        }
     }
-
-    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${osName}_${buildType}.zip"
 
     return artifactURL
 }
@@ -248,11 +269,10 @@ def executeBuildOSX(String osName, Map options) {
 
     sh """
         cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
-        cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
     """
 
-    options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
-    
+    options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
+
     String releaseLink = executeOSXBuildCommand(osName, options, "Release")
     String debugLink = executeOSXBuildCommand(osName, options, "Debug")
 
@@ -360,9 +380,9 @@ def executeBuild(String osName, Map options) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
         
-        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/*", "../RML_thirdparty/MIOpen")
-        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
-        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/", "../RML_thirdparty/tensorflow")
+        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/", "./DirectML")
 
         outputEnvironmentInfo(osName, "${STAGE_NAME}_Release")
         outputEnvironmentInfo(osName, "${STAGE_NAME}_Debug")
@@ -373,6 +393,7 @@ def executeBuild(String osName, Map options) {
                     executeBuildWindows(osName, options)
                     break
                 case 'OSX':
+                case 'MacOS_ARM':
                     executeBuildOSX(osName, options)
                     break
                 default:
@@ -480,7 +501,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080TI;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080TI;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;MacOS_ARM:AppleM1',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
          Boolean executeFT = true) {
@@ -520,7 +541,8 @@ def call(String projectBranch = "",
                     retriesForTestStage:1,
                     gitlabURL:gitlabURL,
                     gitlabURLSSH:gitlabURLSSH,
-                    storeOnNAS:true
+                    storeOnNAS:true,
+                    flexibleUpdates: true
                     ]
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage, options)

@@ -18,6 +18,7 @@ def executeTestCommand(String osName, String libType, Boolean testPerformance)
             }
             break
         case 'OSX':
+        case 'MacOS_ARM':
             dir("unittest") {
                 sh "mkdir testSave"
                 if (testPerformance) {
@@ -302,6 +303,7 @@ def executeBuild(String osName, Map options)
                 executeBuildWindows(options.cmakeKeys, osName, options)
                 break
             case 'OSX':
+            case 'MacOS_ARM':
                 executeBuildUnix(options.cmakeKeys, osName, options, 'clang')
                 break
             case 'Ubuntu18-Clang':
@@ -381,7 +383,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;Ubuntu18-Clang;MacOS_ARM:AppleM1',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
@@ -402,6 +404,7 @@ def call(String projectBranch = "",
                             TESTER_TAG:tester_tag,
                             BUILD_TIMEOUT:'40',
                             TEST_TIMEOUT:'45',
+                            BUILDER_TAG:'BuilderRIF',
                             executeBuild:true,
                             executeTests:true,
                             PRJ_NAME:"RadeonProImageProcessor",

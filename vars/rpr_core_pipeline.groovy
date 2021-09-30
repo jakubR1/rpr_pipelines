@@ -465,7 +465,7 @@ def executeBuildOSX(Map options) {
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             makeStash(includes: ARTIFACT_NAME, name: 'OSXSDK', preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginWinSha = sha1 ARTIFACT_NAME
+            options.pluginOSXSha = sha1 ARTIFACT_NAME
         }
 
         if (options.sendToUMS) {
@@ -489,7 +489,7 @@ def executeBuildLinux(String osName, Map options) {
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             makeStash(includes: ARTIFACT_NAME, name: "${osName}SDK", preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginWinSha = sha1 ARTIFACT_NAME
+            options.pluginUbuntuSha = sha1 ARTIFACT_NAME
         }
 
         if (options.sendToUMS) {
@@ -849,7 +849,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT,AppleM1;Ubuntu20:AMD_RadeonVII',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,NVIDIA_RTX3070,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT,AppleM1;Ubuntu20:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String renderDevice = "gpu",

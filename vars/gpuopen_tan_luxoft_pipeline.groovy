@@ -665,7 +665,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
         if (options['executeTests'] && testResultList) {
             checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_tan.git')
 
-            downloadFiles("/volume1/CIS/bin_storage/allure/*", "allure")
+            downloadFiles("/volume1/CIS/bin_storage/allure/", "allure")
     
             dir("allure-results") {
                 testResultList.each() {

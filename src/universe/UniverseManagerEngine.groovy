@@ -54,26 +54,26 @@ class UniverseManagerEngine extends UniverseManager  {
 
     def createBuilds(Map options) {
         // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+        boolean updBaselines = options.updateRefs.contains("Update")
         context.withCredentials([context.string(credentialsId: "prodUniverseFrontURL", variable: "PROD_UMS_FRONT_URL"),
             context.string(credentialsId: "devUniverseProdURL", variable: "DEV_UMS_FRONT_URL")]) {
             if (universeClientParentProd) {
-                universeClientParentProd.createBuild("", "", false, options, context.PROD_UMS_FRONT_URL, "prod")
+                universeClientParentProd.createBuild("", "", updBaselines, options, context.PROD_UMS_FRONT_URL, "prod")
             }
             if (universeClientParentDev) {
-                universeClientParentDev.createBuild("", "", false, options, context.DEV_UMS_FRONT_URL, "dev")
+                universeClientParentDev.createBuild("", "", updBaselines, options, context.DEV_UMS_FRONT_URL, "dev")
             }
         }
-
         for (int i = 0; i < options.engines.size(); i++) {
             String engine = options.engines[i]
             String engineName = options.enginesNames[i]
             if (universeClientParentProd?.build) {
                 universeClientsProd[engine] = new UniverseClient(context, universeURLProd, env, imageServiceURL, productName, engineName, universeClientParentProd)
-                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, updBaselines)
             }
             if (universeClientParentDev?.build) {
                 universeClientsDev[engine] = new UniverseClient(context, universeURLDev, env, imageServiceURL, productName, engineName, universeClientParentDev)
-                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, updBaselines)
             }
         }
 

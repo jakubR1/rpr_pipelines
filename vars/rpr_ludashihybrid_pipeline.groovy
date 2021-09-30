@@ -70,7 +70,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
             uploadFiles("./BaikalNext/RprTest/ReferenceImages/*.*", "${REF_PATH_PROFILE}")
         } else {
             println("Executing Tests")
-            downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprTest/ReferenceImages/")
+            downloadFiles("${REF_PATH_PROFILE}/", "./BaikalNext/RprTest/ReferenceImages/")
             executeTestCommand(osName, options)
         }
     } catch (e) {

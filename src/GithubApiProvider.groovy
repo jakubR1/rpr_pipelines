@@ -313,4 +313,38 @@ class GithubApiProvider {
         }
     }
 
+     * Function to create PR in specified repository (see https://docs.github.com/en/rest/reference/pulls#create-a-pull-request)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param head the name of the branch which should be merged
+     * @param base the name of the branch where the head should be merged
+     * @param title the title of the new pull request
+     * @param body the contents of the pull request.
+     */
+    def createPR(String repositoryUrl, String head, String base, String title = "", String body = "") {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def prData = [
+                head: head,
+                base: base
+            ]
+
+            if (title) {
+                prData["title"] = title
+            }
+
+            if (body) {
+                prData["body"] = body
+            }
+
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/pulls",
+                httpMode: "POST",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ],
+                requestBody: JsonOutput.toJson(prData)
+            )
+        }
+    }
+
 }
