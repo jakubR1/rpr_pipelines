@@ -85,7 +85,7 @@ def executeBuild(String osName, Map options) {
 
 def executeDeploy(Map options, List platformList, List testResultList) {}
 
-def call(String projectBranch = "master",
+def call(String projectBranch = "",
          String projectRepo = 'git@github.com:Radeon-Pro/RadeonProRenderPkgPlugin.git',
          String platforms = 'Windows;OSX;Ubuntu18',
          Boolean enableNotifications = true) {

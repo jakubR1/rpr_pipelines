@@ -1,6 +1,7 @@
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import hudson.model.Result
 import groovy.json.JsonOutput
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 /**
  * self in methods params is a context of executable pipeline. Without it you can't call Jenkins methods.
@@ -216,7 +217,7 @@ class utils {
 
         if (!nasReportInfo.containsKey("updatable") || !nasReportInfo["updatable"]) {
             self.publishHTML(params)
-            try {
+            /*try {
                 self.httpRequest(
                     url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
                     authentication: 'jenkinsCredentials',
@@ -226,7 +227,7 @@ class utils {
             } catch(e) {
                 self.println("[ERROR] Can't access report")
                 throw new Exception("Can't access report", e)
-            }
+            }*/
         }
     }
 
@@ -551,11 +552,15 @@ class utils {
                     self.println("[INFO] Node is available")
 
                     break
-                } catch (e1) {
+                } catch (FlowInterruptedException e) {
+                    throw e
+                } catch (Exception e) {
                     //do nothing
                 }
             }
-        } catch (e) {
+        } catch (FlowInterruptedException e) {
+            throw e
+        } catch (Exception e) {
             self.println("[ERROR] Failed to reboot machine")
             self.println(e.toString())
             self.println(e.getMessage())
@@ -565,5 +570,29 @@ class utils {
     @NonCPS
     static Boolean isNodeIdle(String nodeName) {
         return jenkins.model.Jenkins.instance.getNode(nodeName).getComputer().countIdle() > 0
+    }
+
+    static def downloadMetrics(Object self, String localDir, String remoteDir) {
+        try {
+            self.dir(localDir) {
+                self.downloadFiles("${remoteDir}", ".")
+            }
+        } catch (e) {
+            self.println("[WARNING] Failed to download history of tracked metrics.")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
+    static def uploadMetrics(Object self, String localDir, String remoteDir) {
+        try {
+            self.dir(localDir) {
+                self.uploadFiles(".", "${remoteDir}")
+            }
+        } catch (e) {
+            self.println("[WARNING] Failed to update history of tracked metrics.")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
     }
 }

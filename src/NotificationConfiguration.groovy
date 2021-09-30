@@ -149,7 +149,7 @@ public class NotificationConfiguration {
             ]
         ]
     ]
-
+    
     def static BUILD_SOURCE_CODE = [
         "exceptions": [
             [
@@ -157,12 +157,37 @@ public class NotificationConfiguration {
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]
+        ]
+    ]
+
+    def static BUILD_SOURCE_CODE_NO_THROW = [
+        "begin": ["message": "Building the project."],
+
+        "end": ["message": "The project was successfully built and published."],
+    
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to build the project.", 
+                "rethrow": ExceptionThrowType.NO,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static BUILD_SOURCE_CODE_IGNORE_FAIL = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to build the project.", 
+                "rethrow": ExceptionThrowType.NO,
+                "githubNotification": ["status": "failure"]
+            ]
         ],
 
         "rebootConfiguration": [
             "AnyTool": false,
             "Tools": [
-                "USDViewer": ["Windows"]
+                "USDViewer": ["Windows"],
+                "StandaloneUSDViewer": ["Windows"]
             ]
         ]
     ]
@@ -202,6 +227,17 @@ public class NotificationConfiguration {
             [
                 "class": Exception, "problemMessage": "Failed to download test scenes.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_PREFERENCES = [
+        "begin": ["message": "Downloading preferences."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download preferences.", 
+                "rethrow": ExceptionThrowType.NO
             ]
         ]
     ]
@@ -287,6 +323,27 @@ public class NotificationConfiguration {
             ],
             [
                 "class": Exception, "problemMessage": "Failed to install the plugin (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static INSTALL_PLUGIN_CUSTOM_PATH = [
+        "begin": ["message": "Installing the plugin (custom path install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout (custom path install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to uninstall old plugin (custom path install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Failed to uninstall old plugin"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to install the plugin (custom path install).", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]
@@ -393,6 +450,27 @@ public class NotificationConfiguration {
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static BUILD_CACHE_CUSTOM_PATH = [
+        "begin": ["message": "Building cache (clean install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout (custom path install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "No output image after cache building (custom path install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to build cache (custom path install).", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]

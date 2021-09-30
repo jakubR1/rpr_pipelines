@@ -17,19 +17,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
 
                 if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
-                        println "[INFO] The plugin ${options['pluginWinSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesWin()
+                    removeInstaller(osName: osName, options: options, extension: "zip")
 
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+                    clearBinariesWin()
 
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
-                        """
-                    }
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
+                    """
                 } else {
                     clearBinariesWin()
 
@@ -43,19 +41,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 }
 
             } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesWin()
+                removeInstaller(osName: osName, options: options, extension: "zip")
 
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+                clearBinariesWin()
 
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
-                    """
-                }
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move BlenderUSDHydraAddon*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
+                """
             }
 
             break
@@ -67,19 +63,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
 
                 if (options['pluginUbuntuSha']) {
-                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
-                        println "[INFO] The plugin ${options['pluginUbuntuSha']}.zip exists in the storage."
-                    } else {
-                        clearBinariesUnix()
+                    removeInstaller(osName: osName, options: options, extension: "zip")
 
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+                    clearBinariesUnix()
 
-                        sh """
-                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                            mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                        """
-                    }
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
                 } else {
                     clearBinariesUnix()
 
@@ -93,19 +87,17 @@ def getBlenderAddonInstaller(String osName, Map options) {
                 }
 
             } else {
-                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
-                } else {
-                    clearBinariesUnix()
+                removeInstaller(osName: osName, options: options, extension: "zip")
 
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
-                   
-                    sh """
-                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
-                    """
-                }
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
+               
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
+                """
             }
     }
 }
@@ -195,7 +187,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdblender.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
         }
 
@@ -362,6 +354,10 @@ def executeTests(String osName, String asicName, Map options) {
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
                         }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
                     }
                 }
             } else {
@@ -455,7 +451,7 @@ def executeBuildLinux(String osName, Map options) {
             """
             
             if (options.updateDeps) {
-                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
             }
         } else {
            sh """
@@ -532,6 +528,13 @@ def executeBuild(String osName, Map options) {
     }
 }
 
+def getReportBuildArgs(String engineName, Map options) {
+    if (options["isPreBuilt"]) {
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\""""
+    } else {
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\""""
+    }
+}
 
 def executePreBuild(Map options)
 {
@@ -660,7 +663,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdblender') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdblender.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
 
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             dir('jobs_launcher') {
@@ -757,6 +760,11 @@ def executePreBuild(Map options)
 
         println "timeouts: ${options.timeouts}"
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -767,7 +775,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
 
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdblender.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             List lostStashes = []
@@ -833,15 +841,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         try {
-                            if (options['isPreBuilt']) {
-                                bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                """
-                            } else {
-                                bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                """
-                            }
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
                             GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
@@ -864,7 +864,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                            "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                            ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -930,7 +933,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -1076,6 +1081,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_usdblender.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
@@ -1096,6 +1102,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:30,
+                        BUILDER_TAG:'BuilderHydra',
                         TESTER_TAG:tester_tag,
                         resX: resX,
                         resY: resY,
@@ -1114,7 +1121,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
-                        storeOnNAS:true
+                        storeOnNAS:true,
+                        flexibleUpdates: true
                         ]
         }
 

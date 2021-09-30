@@ -243,6 +243,14 @@ def executeTests(String osName, String asicName, Map options)
             downloadFiles("/volume1/Assets/rpr_maya_autotests/", assets_dir)
         }
 
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
+            timeout(time: "5", unit: "MINUTES") {
+                String prefsDir = isUnix() ? "/Users/${env.USER}/Library/Preferences/Autodesk/Maya/${options.toolVersion}/prefs" : "/mnt/c/Users/${env.USERNAME}/Documents/Maya/${options.toolVersion}/prefs"
+                String customKeys = isUnix() ? "--protect-args" : ""
+                downloadFiles("/volume1/CIS/tools-preferences/Maya/${osName}/${options.toolVersion}/prefs/*", prefsDir, customKeys, false)
+            }
+        }
+
         try {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -358,7 +366,9 @@ def executeTests(String osName, String asicName, Map options)
         }
         println(e.toString())
         println(e.getMessage())
-        
+
+        utils.reboot(this, osName)
+
         if (e instanceof ExpectedExceptionWrapper) {
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
@@ -578,10 +588,12 @@ def executeBuild(String osName, Map options)
 }
 
 def getReportBuildArgs(String engineName, Map options) {
+    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+
     if (options["isPreBuilt"]) {
-        return """"Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\""""
+        return """"Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
     } else {
-        return """"Maya" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\""""
+        return """"Maya" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
     }
 }
 
@@ -893,7 +905,16 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             try {
+                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+                boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderMayaPlugin"
+
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                
+                if (useTrackedMetrics) {
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
+                }
+
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -932,6 +953,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             }
                         }
                     }
+                }
+
+                if (saveTrackedMetrics) {
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
@@ -1044,7 +1069,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaPlugin.git",
         String projectBranch = "",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;OSX:AMD_RXVEGA',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT',
         String updateRefs = 'No',
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,

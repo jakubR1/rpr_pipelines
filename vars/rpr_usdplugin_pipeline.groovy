@@ -166,7 +166,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
             }
         }
@@ -273,6 +273,10 @@ def executeTests(String osName, String asicName, Map options) {
                                         "All tests were marked as error."
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
+                        }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
                         }
                     }
                 }
@@ -580,6 +584,10 @@ def executeBuild(String osName, Map options) {
     }
 }
 
+def getReportBuildArgs(Map options, String title = "USD") {
+    return """${title} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
+}
+
 def executePreBuild(Map options) {
     // manual job
     if (options.forceBuild) {
@@ -668,7 +676,7 @@ def executePreBuild(Map options) {
     options.groupsUMS = []
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_houdini') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             }
@@ -693,6 +701,11 @@ def executePreBuild(Map options) {
             options.universeManager.createBuilds(options)
         }
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -700,7 +713,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
             List lostStashes = []
             dir("summaryTestResults") {
@@ -747,13 +760,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         if (options.buildType == "Houdini") {
                             def python3 = options.houdini_python3 ? "py3" : "py2.7"
                             def tool = "Houdini ${options.houdiniVersion} ${python3}"
-                            bat """
-                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                            """
+
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options, utils.escapeCharsByUnicode(tool))}"
                         } else {
-                            bat """
-                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                            """
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
                         }
                         bat "get_status.bat ..\\summaryTestResults"
                     }
@@ -770,7 +780,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                             options.testDataSaved = true
                         } catch(e1) {
                             println """
@@ -829,8 +842,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", \
-                    "Test Report", "Summary  Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
@@ -883,6 +898,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             options << [projectRepo: projectRepo,
                         projectBranch: projectBranch,
                         usdBranch: usdBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_houdini.git",
                         testsBranch: testsBranch,
                         updateRefs: updateRefs,
                         enableNotifications: enableNotifications,
@@ -912,7 +928,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType: parallelExecutionType,
                         sendToUMS: sendToUMS,
                         universePlatforms: convertPlatforms(platforms),
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

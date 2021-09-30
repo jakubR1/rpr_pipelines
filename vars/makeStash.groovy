@@ -107,9 +107,9 @@ def call(Map params) {
                             }
                         } else {
                             if (preZip) {
-                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace(" ", "\\ ").replace('(', '\\(').replace(')', '\\)')}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace('(', '\\(').replace(')', '\\)').replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" " + '%REMOTE_HOST%')
                             } else {
-                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes.replace('(', '\\(').replace(')', '\\)')} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes.replace('(', '\\(').replace(')', '\\)').replace(" ", "\\ ")} \"${remotePath.replace(" ", "\\ ")}\" " + '%REMOTE_HOST%')
                             }
                         }
                     }

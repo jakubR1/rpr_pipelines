@@ -17,51 +17,62 @@ def uploadToDropbox(String osName, Map options) {
 
 
 def executeBuildWindows(Map options) {
+
+    Map builtConfigurations = [:]
+
     options.winBuildConfiguration.each() { winBuildConf ->
 
-        println "Current build configuration: ${winBuildConf}."
+        builtConfigurations[winBuildConf] = false
 
-        String winBuildName = "${winBuildConf}"
-        String logName = "${STAGE_NAME}.${winBuildName}.log"
-        String winArtifactsDir = "${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
-        String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
+        withNotifications(title: "Windows_${winBuildConf}", options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE_NO_THROW) {
 
-        dir("FSR2.0") {
-            GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.${winBuildName}.log")
+            println "Current build configuration: ${winBuildConf}."
 
-            outputEnvironmentInfo("Windows", "Build-Windows.${winBuildName}")
+            String logName = "${STAGE_NAME}.${winBuildConf}.log"
+            String winArtifactsDir = "${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+            String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
 
-            bat """
-                set msbuild="${msBuildPath}"
-                %msbuild% D3D12Demo.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ${logName} 2>&1
-            """
-        }
+            dir("FSR2.0") {
+                outputEnvironmentInfo("Windows", "Build-Windows.${winBuildConf}")
 
-        String archiveUrl = ""
-
-        String BUILD_NAME
-
-        dir("FSR2.0") {
-            BUILD_NAME = options.branchPostfix ? "FSR2.0_${winBuildName}.(${options.branchPostfix}).7z" : "FSR2.0_${winBuildName}.7z"
-
-            bat """
-                package.cmd ${winBuildConf}
-            """
-
-            utils.renameFile(this, "Windows", "FSR2-*.7z", BUILD_NAME)
-
-            if (options["githubApiProvider"]) {
-                options["githubApiProvider"].addAsset(HTTP_PROJET_REPO, options["release_id"], BUILD_NAME)
+                bat """
+                    set msbuild="${msBuildPath}"
+                    %msbuild% D3D12Demo.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ${logName} 2>&1
+                """
             }
 
-            archiveArtifacts artifacts: BUILD_NAME, allowEmptyArchive: false
-            uploadToDropbox("Windows", options)
+            String archiveUrl = ""
+            String BUILD_NAME
+
+            dir("FSR2.0") {
+                BUILD_NAME = options.branchPostfix ? "FSR2.0_${winBuildConf}.(${options.branchPostfix}).7z" : "FSR2.0_${winBuildConf}.7z"
+
+                bat """
+                    package.cmd ${winBuildConf}
+                """
+
+                utils.renameFile(this, "Windows", "FSR2-*.7z", BUILD_NAME)
+
+                if (options["githubApiProvider"]) {
+                    options["githubApiProvider"].addAsset(HTTP_PROJET_REPO, options["release_id"], BUILD_NAME)
+                }
+
+                archiveArtifacts artifacts: BUILD_NAME, allowEmptyArchive: false
+                uploadToDropbox("Windows", options)
+            }
+
+            archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+            rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            builtConfigurations[winBuildConf] = true
         }
+    }
 
-        archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-
-        GithubNotificator.updateStatus("Build", "Windows_${winBuildName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
+    builtConfigurations.each { key, value ->
+        if (!value) {
+            currentBuild.result = "FAILURE"
+            options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.BUILD_SOURCE_CODE["exceptions"][0]["problemMessage"])
+        }
     }
 }
 
@@ -74,18 +85,17 @@ def executeBuild(String osName, Map options) {
             }
         }
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
-            switch(osName) {
-                case "Windows":
-                    executeBuildWindows(options)
-                    break
-                case "OSX":
-                    println("Unsupported OS")
-                    break
-                default:
-                    println("Unsupported OS")
-            }
+        switch(osName) {
+            case "Windows":
+                executeBuildWindows(options)
+                break
+            case "OSX":
+                println("Unsupported OS")
+                break
+            default:
+                println("Unsupported OS")
         }
+
     } catch (e) {
         throw e
     } finally {

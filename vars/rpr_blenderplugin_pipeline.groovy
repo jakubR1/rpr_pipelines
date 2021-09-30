@@ -270,6 +270,27 @@ def executeTests(String osName, String asicName, Map options)
             downloadFiles("/volume1/Assets/rpr_blender_autotests/", assets_dir)
         }
 
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
+            timeout(time: "5", unit: "MINUTES") {
+                String prefsDir
+                String customKeys = ""
+                switch (osName) {
+                    case "Windows":
+                        prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Blender Foundation/Blender/${options.toolVersion}/config"
+                        break
+                    case "OSX":
+                        prefsDir = "/Users/${env.USER}/Library/Application Support/Blender/${options.toolVersion}/config"
+                        customKeys = "--protect-args"
+                        break
+                    default:
+                        prefsDir = "/home/${env.USERNAME}/.config/blender/${options.toolVersion}/config"
+                        break
+                }
+
+                downloadFiles("/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}/*", prefsDir, customKeys, false)
+            }
+        }
+
         try {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -284,7 +305,7 @@ def executeTests(String osName, String asicName, Map options)
                 if (newPluginInstalled) {                         
                     timeout(time: "12", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
-                        String cacheImgPath = "./Work/Results/Blender28/cache_building.jpg"
+                        String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
                             throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         } else {
@@ -404,10 +425,10 @@ def executeTests(String osName, String asicName, Map options)
             }
             if (stashResults) {
                 dir('Work') {
-                    if (fileExists("Results/Blender28/session_report.json")) {
+                    if (fileExists("Results/Blender/session_report.json")) {
 
                         def sessionReport = null
-                        sessionReport = readJSON file: 'Results/Blender28/session_report.json'
+                        sessionReport = readJSON file: 'Results/Blender/session_report.json'
 
                         if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
@@ -640,10 +661,12 @@ def executeBuild(String osName, Map options)
 }
 
 def getReportBuildArgs(String engineName, Map options) {
+    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+
     if (options["isPreBuilt"]) {
-        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\""""
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
     } else {
-        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\""""
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
     }
 }
 
@@ -961,7 +984,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             try {
+                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+                boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderBlenderPlugin"
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+
+                if (useTrackedMetrics) {
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
+                }
+
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -1000,6 +1031,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             }
                         }
                     }
+                }
+
+                if (saveTrackedMetrics) {
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
@@ -1115,7 +1150,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1135,7 +1170,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
     String enginesNames = "Northstar",
-    String tester_tag = "Blender2.8",
+    String tester_tag = "Blender",
     String toolVersion = "2.93",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
@@ -1251,7 +1286,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,
                         tests:tests,
-                        PRJ_NAME:"RadeonProRenderBlender2.8Plugin",
+                        PRJ_NAME:"RadeonProRenderBlenderPlugin",
                         PRJ_ROOT:"rpr-plugins",
                         toolVersion:toolVersion,
                         isPreBuilt:isPreBuilt,
@@ -1260,9 +1295,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         splitTestsExecution:splitTestsExecution,
                         sendToUMS: sendToUMS,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:135,
+                        TEST_TIMEOUT:180,
                         ADDITIONAL_XML_TIMEOUT:15,
-                        NON_SPLITTED_PACKAGE_TIMEOUT:60,
+                        NON_SPLITTED_PACKAGE_TIMEOUT:90,
                         DEPLOY_TIMEOUT:180,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,

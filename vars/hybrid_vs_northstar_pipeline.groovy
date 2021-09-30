@@ -90,12 +90,6 @@ def prepareTool(String osName, Map options) {
         case "Windows":
             unstash("Tool_Windows")
             unzip(zipFile: "HybridVsNorthStar_Windows.zip")
-            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
-                unstash("Northstar64Dll")
-                unstash("HybridProDll")
-            } else {
-                unstash("enginesDlls")
-            }
             break
         case "OSX":
             println("Unsupported OS")
@@ -148,7 +142,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "10", unit: "MINUTES") {
                 unstash("testResources")
 
                 // Bug of tool (it can't work without resources in current dir)
@@ -202,6 +196,8 @@ def executeTests(String osName, String asicName, Map options) {
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
             }
+
+            utils.reboot(this, osName)
         } catch (e) {
             // throw exception in finally block only if test stage was finished
             if (options.executeTestsFinished) {
@@ -234,6 +230,13 @@ def executeBuildWindows(Map options) {
             String BUILD_NAME = "HybridVsNorthStar_Windows.zip"
 
             dir("bin\\Release") {
+                if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
+                    unstash("Northstar64Dll")
+                    unstash("HybridProDll")
+                } else {
+                    unstash("enginesDlls")
+                }
+
                 zip archive: true, zipFile: "HybridVsNorthStar_Windows.zip"
                 stash(includes: "HybridVsNorthStar_Windows.zip", name: "Tool_Windows")
             }
@@ -347,9 +350,9 @@ def executePreBuild(Map options)
     dir('HybridVsNorthStar') {
         stash includes: "resources/", name: "testResources", allowEmpty: false
         dir("third_party") {
-            stash includes: "Northstar64.dll", name: "Northstar64Dll", allowEmpty: false
-
             if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
+                stash includes: "Northstar64.dll", name: "Northstar64Dll", allowEmpty: false
+
                 if (options.commitMessage.contains("PR URL")) {
                     def parts = options.commitMessage.replace("Triggered by Build #", "").replace("PR URL - ", "").split(". ")
                     options.hybridBuildNumber = parts[0] as Integer
@@ -360,19 +363,13 @@ def executePreBuild(Map options)
 
                 String branchName = env.BRANCH_NAME.split("_", 3)[2]
 
-                String jenkinsUrl
+                String archiveName = "BaikalNext_Build-Windows.zip"
 
-                withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
-                    jenkinsUrl = "${JENKINS_URL}/job/RadeonProRender-Hybrid/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
-                }
+                String artifactRemotePath = "/volume1/web/RadeonProRender-Hybrid/${branchName}/${options.hybridBuildNumber}/Artifacts/${archiveName}"
 
-                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-                    bat """
-                        curl --retry 5 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "${jenkinsUrl}/BaikalNext_Build-Windows.zip"
-                    """
-                }
+                downloadFiles(artifactRemotePath, ".")
 
-                unzip(zipFile: "BaikalNext_Build-Windows.zip")
+                unzip(zipFile: archiveName)
 
                 dir("BaikalNext/bin") {
                     stash includes: "HybridPro.dll", name: "HybridProDll", allowEmpty: false
@@ -598,7 +595,7 @@ def call(String projectBranch = "",
                         nodeRetry: nodeRetry,
                         platforms:platforms,
                         BUILD_TIMEOUT: 15,
-                        TEST_TIMEOUT: 30,
+                        TEST_TIMEOUT: 60,
                         DEPLOY_TIMEOUT: 15,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
