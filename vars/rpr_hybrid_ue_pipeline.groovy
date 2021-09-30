@@ -45,7 +45,7 @@ def getPreparedUE(Map options) {
 
 
 def executeBuildWindows(String projectName, Map options) {
-    if (!projectsInfo.contains(projectName)) {
+    if (!projectsInfo.containsKey(projectName)) {
         throw new Exception("Unknown project name: ${projectName}")
     }
 
@@ -118,14 +118,14 @@ def executeBuild(String osName, Map options) {
                 withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
                     switch(osName) {
                         case "Windows":
-                            executeBuildWindows(options)
+                            executeBuildWindows(projectName, options)
                             break
                         default:
                             println("${osName} is not supported")
                     }
                 }
 
-                finishedProjects.append(projectName)
+                finishedProjects.add(projectName)
             } catch (e) {
                 println(e.getMessage())
                 throw e
