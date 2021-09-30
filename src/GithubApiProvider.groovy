@@ -310,6 +310,8 @@ class GithubApiProvider {
             )
 
             return parseResponse(response.content)
+        }
+    }
 
     /**
      * Function to create PR in specified repository (see https://docs.github.com/en/rest/reference/pulls#create-a-pull-request)
