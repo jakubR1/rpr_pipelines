@@ -49,7 +49,8 @@ public class ReportUpdater {
                 String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_report_template.sh")
 
                 rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
-                    .replace("<report_name>", reportName.replace(" ", "_")).replace("<build_script_args>", buildArgsFunc(engineName, options))
+                    .replace("<report_name>", reportName.replace(" ", "_")).replace("<build_script_args>", buildArgsFunc(engineName, options)) \
+                    .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL)
 
                 // replace DOS EOF by Unix EOF
                 rebuiltScript = rebuiltScript.replaceAll("\r\n", "\n")
@@ -72,7 +73,8 @@ public class ReportUpdater {
             String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_report_template.sh")
 
             rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
-                .replace("<report_name>", reportName.replace(" ", "_")).replace("<build_script_args>", buildArgsFunc(options))
+                .replace("<report_name>", reportName.replace(" ", "_")).replace("<build_script_args>", buildArgsFunc(options)) \
+                .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL)
 
             // replace DOS EOF by Unix EOF
             rebuiltScript = rebuiltScript.replaceAll("\r\n", "\n")

@@ -661,10 +661,12 @@ def executeBuild(String osName, Map options)
 }
 
 def getReportBuildArgs(String engineName, Map options) {
+    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
+
     if (options["isPreBuilt"]) {
-        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\""""
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
     } else {
-        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\""""
+        return """${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
     }
 }
 
@@ -982,7 +984,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             try {
+                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+                boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderBlenderPlugin"
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+
+                if (useTrackedMetrics) {
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
+                }
+
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -1021,6 +1031,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             }
                         }
                     }
+                }
+
+                if (saveTrackedMetrics) {
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
@@ -1271,6 +1285,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         incrementVersion:incrementVersion,
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,
+                        testsPackageOriginal:testsPackage,
                         tests:tests,
                         PRJ_NAME:"RadeonProRenderBlenderPlugin",
                         PRJ_ROOT:"rpr-plugins",

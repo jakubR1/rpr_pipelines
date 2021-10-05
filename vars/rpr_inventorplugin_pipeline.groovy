@@ -1,4 +1,10 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+import groovy.transform.Field
+
+
+@Field final String INSTALLER_REPO = "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git"
+@Field final String HTTP_INSTALLER_REPO = "https://github.com/Radeon-Pro/RadeonProRenderInventorPluginInstaller"
+
 
 def executeBuildWindows(Map options) {
     String buildName = "${options.buildConfiguration}_${options.buildPlatform.replace(' ', '')}_${options.pluginVersion}"
@@ -124,48 +130,24 @@ def executePreBuild(Map options) {
         """
 
         if (options.incrementVersion) {
-            if (env.BRANCH_NAME == "master") {
+            if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
                 println("[INFO] Incrementing version of change made by ${options.commitAuthor}.")
 
-                dir("../inc") {
-                    // init submodule
-                    checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git")
+                // update RadeonProRenderInventorPlugin submodule in Inventor installer repository
+                dir("../Inst") {
+                    checkoutScm(branchName: "master", repositoryUrl: INSTALLER_REPO, submoduleDepth: 1)
 
-                    println("[INFO] Current build version: ${options.pluginVersion}")
+                    bat """
+                        cd RadeonProRenderInventorPlugin
+                        git checkout master
+                        cd ..
+                        git add RadeonProRenderInventorPlugin
+                        git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}"
+                        git push origin HEAD:autoupdate_${options.pluginVersion}
+                    """
 
-                    dir("RadeonProRenderInventorPlugin") {
-                        bat """
-                            git checkout -B master origin/master
-                        """
-                    }
-
-                    String pluginVersion = utils.incrementVersion(self: this, currentVersion: options.pluginVersion, index: 4)
-                    Boolean hasUpdates
-
-                    try {
-                        bat """
-                            git add RadeonProRenderInventorPlugin
-                            git commit -m "buildmaster: version update to ${pluginVersion}"
-                        """
-                        hasUpdates = true
-                    } catch (e) {
-                        // nothing to commit
-                        hasUpdates = false
-                    }
-
-                    if (hasUpdates) {
-                        println("[INFO] New commits were found. Version incrementing in progress...")
-
-                        options.pluginVersion = pluginVersion
-                        println("[INFO] New build version: ${options.pluginVersion}")
-
-                        bat """
-                            git tag -a "${options.pluginVersion}" -m "version update to ${options.pluginVersion}"
-                            git push origin HEAD:master --tags
-                        """
-                    } else {
-                        println("[INFO] New commit weren't found. Version incrementing won't run")
-                    }
+                    def githubApiProvider = new GithubApiProvider(this)
+                    def githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
                 }
             }
         }

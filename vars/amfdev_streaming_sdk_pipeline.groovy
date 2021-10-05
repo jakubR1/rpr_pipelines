@@ -425,6 +425,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        rebootAndroidDevice()
 
         utils.reboot(this, osName)
 
@@ -512,10 +513,21 @@ def executeTestsServer(String osName, String asicName, Map options) {
 }
 
 
+def rebootAndroidDevice() {
+    try {
+        bat "adb reboot"
+        println "[INFO] Android device rebooted"
+    } catch (Exception e) {
+        println "[ERROR] Failed to reboot Android device"
+    }
+}
+
+
 def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        rebootAndroidDevice()
 
         utils.reboot(this, "Windows")
 
