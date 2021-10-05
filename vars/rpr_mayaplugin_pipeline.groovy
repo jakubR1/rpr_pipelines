@@ -588,7 +588,7 @@ def executeBuild(String osName, Map options)
 }
 
 def getReportBuildArgs(String engineName, Map options) {
-    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
 
     if (options["isPreBuilt"]) {
         return """"Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
@@ -1191,6 +1191,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         incrementVersion:incrementVersion,
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,
+                        testsPackageOriginal:testsPackage,
                         tests:tests,
                         toolVersion:toolVersion,
                         executeBuild:false,
