@@ -462,7 +462,7 @@ class utils {
      * @param maxLength - maximum lenght of string with name of each united suite (it's necessary for prevent issues with to log path lengts on Deploy stage)
      * @return Return List of String objects (each string contains united suites in one run). Return suites argument if some exception appears
      */
-    static List uniteSuites(Object self, String weightsFile, List suites, Integer maxWeight=3600, Integer maxLength=40) {
+    static List uniteSuites(Object self, String weightsFile, List suites, Integer maxWeight=10, Integer maxLength=40) {
         List unitedSuites = []
 
         try {
