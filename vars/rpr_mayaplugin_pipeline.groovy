@@ -262,7 +262,7 @@ def executeTests(String osName, String asicName, Map options)
             }
 
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
-                if (newPluginInstalled) {
+                if (true) {
                     timeout(time: "20", unit: "MINUTES") {
                         String cacheImgPath = "./Work/Results/Maya/cache_building.jpg"
                         utils.removeFile(this, osName, cacheImgPath)

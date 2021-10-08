@@ -302,7 +302,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
-                if (newPluginInstalled) {                         
+                if (true) {                         
                     timeout(time: "12", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
                         String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
