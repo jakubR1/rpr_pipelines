@@ -60,7 +60,7 @@ def call(String jobName,
     String toolName) {
 
     stage("UpdateBaselines") {
-        node("Windows") {
+        node("Windows && !NoBaselinesUpdate") {
             ws("WS/UpdateBaselines") {
                 ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
