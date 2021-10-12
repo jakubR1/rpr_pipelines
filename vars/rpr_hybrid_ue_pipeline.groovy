@@ -15,7 +15,7 @@ import groovy.transform.Field
 @Field finishedProjects = []
 
 
-def getPreparedUE(Map options) {
+def getPreparedUE(Map options, String projectName) {
     String targetFolderPath = "${CIS_TOOLS}\\..\\PreparedUE\\${options.ueSha}"
 
     if (!fileExists(targetFolderPath)) {
@@ -25,7 +25,7 @@ def getPreparedUE(Map options) {
             checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
         }
 
-        bat("0_SetupUE.bat > \"0_SetupUE.log\" 2>&1")
+        bat("0_SetupUE.bat > \"0_SetupUE_${projectName}.log\" 2>&1")
 
         println("[INFO] Prepared UE is ready. Saving it for use in future builds...")
 
@@ -78,26 +78,26 @@ def executeBuildWindows(String projectName, Map options) {
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
 
     // copy prepared UE if it exists
-    getPreparedUE(options)
+    getPreparedUE(options, projectName)
 
     // download textures
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", "textures")
 
     bat("mkdir ${targetDir}")
 
-    bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid.log\" 2>&1")
-    bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
-    bat("3_UpdateUE4.bat > \"3_UpdateUE4.log\" 2>&1")
+    bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid_${projectName}.log\" 2>&1")
+    bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE_${projectName}.log\" 2>&1")
+    bat("3_UpdateUE4.bat > \"3_UpdateUE4_${projectName}.log\" 2>&1")
 
     // the last script can return non-zero exit code, but build can be ok
     try {
-        bat("4_PackageParagon_${projectName}.bat > \"4_PackageParagon.log\" 2>&1")
+        bat("4_PackageParagon_${projectName}.bat > \"4_PackageParagon_${projectName}.log\" 2>&1")
     } catch (e) {
         println(e.getMessage())
     }
 
     dir("${targetDir}\\WindowsNoEditor") {
-        String ARTIFACT_NAME = "${targetDir}.zip"
+        String ARTIFACT_NAME = "${projectName}.zip"
         bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
         makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
     }
