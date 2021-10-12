@@ -425,8 +425,6 @@ def executeTestsServer(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
-        rebootAndroidDevice()
-
         utils.reboot(this, osName)
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
@@ -527,8 +525,6 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
-        rebootAndroidDevice()
-
         utils.reboot(this, "Windows")
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
