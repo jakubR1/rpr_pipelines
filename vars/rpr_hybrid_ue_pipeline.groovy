@@ -91,7 +91,7 @@ def executeBuildWindows(String projectName, Map options) {
 
     // the last script can return non-zero exit code, but build can be ok
     try {
-        bat("4_${projectName}.bat > \"4_${projectName}.log\" 2>&1")
+        bat("4_Package_${projectName}.bat > \"4_Package_${projectName}.log\" 2>&1")
     } catch (e) {
         println(e.getMessage())
     }
