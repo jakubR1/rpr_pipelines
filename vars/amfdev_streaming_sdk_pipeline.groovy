@@ -521,10 +521,25 @@ def rebootAndroidDevice() {
 }
 
 
+def initAndroidDevice() {
+    try {
+        withCredentials([string(credentialsId: "androidDeviceIp", variable: "ANDROID_DEVICE_IP")]) {
+            bat "adb connect " + ANDROID_DEVICE_IP + ":5555"
+            println "[INFO] Connected to Android device"
+        }
+    } catch (Exception e) {
+        println "[ERROR] Failed to connect to Android device"
+        throw e
+    }
+}
+
+
 def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        initAndroidDevice()
+
         utils.reboot(this, "Windows")
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
