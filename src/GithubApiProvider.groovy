@@ -293,6 +293,27 @@ class GithubApiProvider {
     }
 
     /**
+     * Function to get information about specific branch (see https://docs.github.com/en/rest/reference/repos#get-a-branch)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param branchName name of the target branch
+     */
+    def getBranch(String repositoryUrl, String branchName) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/branches/${branchName}",
+                httpMode: "GET",
+                contentType: "APPLICATION_JSON",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ]
+            )
+
+            return parseResponse(response.content)
+        }
+    }
+
+    /**
      * Function to create PR in specified repository (see https://docs.github.com/en/rest/reference/pulls#create-a-pull-request)
      *
      * @param repositoryUrl url to the target repository
