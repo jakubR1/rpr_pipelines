@@ -538,9 +538,9 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
-        initAndroidDevice()
-
         utils.reboot(this, "Windows")
+
+        initAndroidDevice()
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
