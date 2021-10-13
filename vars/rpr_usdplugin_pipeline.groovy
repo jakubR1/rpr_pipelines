@@ -589,41 +589,15 @@ def getReportBuildArgs(Map options, String title = "USD") {
 }
 
 def executePreBuild(Map options) {
-    // manual job
-    if (options.forceBuild) {
-        options.executeBuild = true
-        options.executeTests = true
-    // auto job
-    } else {
-        if (env.CHANGE_URL) {
-            println "[INFO] Branch was detected as Pull Request"
-            options.executeBuild = true
-            options.executeTests = true
-            options.testsPackage = "Full.json"
-        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeBuild = true
-           options.executeTests = true
-           options.testsPackage = "Full.json"
-        } else {
-            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "Full.json"
-        }
-    }
+
+    preBuildFunctions.setInitParams(this, options, 'Full.json', 'Houdini')
 
     dir('RadeonProRenderUSD') {
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
         }
 
-        options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
-        options.commitMessage = utils.getBatOutput(this, "git log --format=%%B -n 1")
-        options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
-        println """
-            The last commit was written by ${options.commitAuthor}.
-            Commit message: ${options.commitMessage}
-            Commit SHA: ${options.commitSHA}
-        """
+        preBuildFunctions.setRepoInfo(this, options, 'Houdini')
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
             options.majorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MAJOR_VERSION "', '')
@@ -666,10 +640,7 @@ def executePreBuild(Map options) {
                 options.projectBranchName = options.projectBranch
             }
 
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
-            currentBuild.description += "<b>Version:</b> ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}<br/>"
-            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            preBuildFunctions.setBuildDescription(this, options, 'Houdini')
         }
     }
 
@@ -677,11 +648,7 @@ def executePreBuild(Map options) {
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_houdini') {
             checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
-            dir('jobs_launcher') {
-                options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
-            }
-            options['testsBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
-            println "[INFO] Test branch hash: ${options['testsBranch']}"
+            preBuildFunctions.saveRepositoryInfo(this, options)
 
             if (options.testsPackage != "none") {
                 def groupNames = readJSON(file: "jobs/${options.testsPackage}")["groups"].collect { it.key }

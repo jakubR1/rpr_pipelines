@@ -547,17 +547,7 @@ def getReportBuildArgs(Map options) {
 }
 
 def executePreBuild(Map options) {
-    if (options['isPreBuilt']) {
-        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
-        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
-        options['executeBuild'] = false
-        options['executeTests'] = true
-    } else if (env.CHANGE_URL) {
-        println "Branch was detected as Pull Request"
-    } else if (env.BRANCH_NAME == "master") {
-        println("[INFO] ${env.BRANCH_NAME} branch was detected")
-        options.collectTrackedMetrics = true
-    }
+    preBuildFunctions.setInitParams(this, options, '', 'Core')
 
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderSDK') {
@@ -565,9 +555,7 @@ def executePreBuild(Map options) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
 
-            options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-            options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
-            options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            preBuildFunctions.setRepoInfo(this, options, 'Core')
 
             if (options.projectBranch != "") {
                 options.branchName = options.projectBranch
@@ -577,11 +565,6 @@ def executePreBuild(Map options) {
             if (options.incrementVersion) {
                 options.branchName = "master"
             }
-
-            println("The last commit was written by ${options.commitAuthor}.")
-            println("Commit message: ${options.commitMessage}")
-            println("Commit SHA: ${options.commitSHA}")
-            println "Branch name: ${options.branchName}"
 
             if (env.BRANCH_NAME) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -595,10 +578,7 @@ def executePreBuild(Map options) {
                 options.projectBranchName = options.projectBranch
             }
 
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
-            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+            preBuildFunctions.setBuildDescription(this, options, 'Core')
         }
     }
 
@@ -609,11 +589,8 @@ def executePreBuild(Map options) {
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_core') {
             checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
-            dir ('jobs_launcher') {
-                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            }
-            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            println("[INFO] Test branch hash: ${options['testsBranch']}")
+
+            preBuildFunctions.saveRepositoryInfo(this, options)
 
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported

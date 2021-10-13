@@ -2,6 +2,7 @@ import groovy.transform.Field
 import groovy.json.JsonOutput
 import universe.*
 import utils
+import preBuildFunctions
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
@@ -673,44 +674,10 @@ def getReportBuildArgs(String engineName, Map options) {
 def executePreBuild(Map options)
 {
 
-    // manual job with prebuilt plugin
-    if (options['isPreBuilt']) {
-        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
-        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
-        options['executeBuild'] = false
-        options['executeTests'] = true
-    // manual job
-    } else if (options.forceBuild) {
-        println "[INFO] Manual job launch detected"
-        options['executeBuild'] = true
-        options['executeTests'] = true
-    // auto job
-    } else {
-        if (env.CHANGE_URL) {
-            println "[INFO] Branch was detected as Pull Request"
-            options['executeBuild'] = true
-            options['executeTests'] = true
-            options['testsPackage'] = "regression.json"
-        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options['executeBuild'] = true
-           options['executeTests'] = true
-           options['testsPackage'] = "regression.json"
-        } else {
-            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options['testsPackage'] = "regression.json"
-        }
-    }
+    preBuildFunctions.setInitParams(this, options, 'regression.json', 'Blender')
 
-    // branch postfix
-    options["branch_postfix"] = ""
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options["branch_postfix"] = "release"
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
-        options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
-    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
-        options["branch_postfix"] = options.projectBranch.replace('/', '-')
-    }
+
+    preBuildFunctions.setBranchPostfix(this, options)
 
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon') {
@@ -718,18 +685,7 @@ def executePreBuild(Map options)
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
 
-            options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-            options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-            options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            options.commitShortSHA = options.commitSHA[0..6]
-            options.branchName = env.BRANCH_NAME ?: options.projectBranch
-
-            println(bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim());
-            println "The last commit was written by ${options.commitAuthor}."
-            println "Commit message: ${options.commitMessage}"
-            println "Commit SHA: ${options.commitSHA}"
-            println "Commit shortSHA: ${options.commitShortSHA}"
-            println "Branch name: ${options.branchName}"
+            preBuildFunctions.setRepoInfo(this, options, 'Blender')
 
             if (options.projectBranch) {
                 currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -773,14 +729,7 @@ def executePreBuild(Map options)
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
                     } else {
-                        if (options.commitMessage.contains("CIS:BUILD")) {
-                            options['executeBuild'] = true
-                        }
-
-                        if (options.commitMessage.contains("CIS:TESTS")) {
-                            options['executeBuild'] = true
-                            options['executeTests'] = true
-                        }
+                        preBuildFunctions.setParamsByCommitMessage(options)
                         // get a list of tests from commit message for auto builds
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
@@ -789,135 +738,19 @@ def executePreBuild(Map options)
                     options.projectBranchName = options.projectBranch
                 }
 
-                currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
-                currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-                currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-                currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-                currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+                preBuildFunctions.setBuildDescription(this, options, 'Blender')
             }
         }
     }
 
-    def tests = []
     options.timeouts = [:]
     options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_blender') {
             checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
-
-            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            dir ('jobs_launcher') {
-                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            }
-            println "[INFO] Test branch hash: ${options['testsBranch']}"
-
-            def packageInfo
-
-            if (options.testsPackage != "none") {
-                packageInfo = readJSON file: "jobs/${options.testsPackage}"
-                options.isPackageSplitted = packageInfo["split"]
-                // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
-                if (options.forceBuild && options.isPackageSplitted && options.tests) {
-                    options.testsPackage = "none"
-                }
-            }
-
-            if (options.testsPackage != "none") {
-                def tempTests = []
-
-                if (options.isPackageSplitted) {
-                    println("[INFO] Tests package '${options.testsPackage}' can be splitted")
-                } else {
-                    // save tests which user wants to run with non-splitted tests package
-                    if (options.tests) {
-                        tempTests = options.tests.split(" ") as List
-                    }
-                    println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
-                }
-
-                // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
-                String modifiedPackageName = "${options.testsPackage}~"
-                options.groupsUMS = tempTests.clone()
-
-                // receive list of group names from package
-                List groupsFromPackage = []
-
-                if (packageInfo["groups"] instanceof Map) {
-                    groupsFromPackage = packageInfo["groups"].keySet() as List
-                } else {
-                    // iterate through all parts of package
-                    packageInfo["groups"].each() {
-                        groupsFromPackage.addAll(it.keySet() as List)
-                    }
-                }
-
-                groupsFromPackage.each() {
-                    if (options.isPackageSplitted) {
-                        tempTests << it
-                        options.groupsUMS << it
-                    } else {
-                        if (tempTests.contains(it)) {
-                            // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName},${it}"
-                        } else {
-                            options.groupsUMS << it
-                        }
-                    }
-                }
-
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
-                options.tests.each() {
-                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-                }
-                options.engines.each { engine ->
-                    options.tests.each() {
-                        tests << "${it}-${engine}"
-                    }
-                }
-
-                modifiedPackageName = modifiedPackageName.replace('~,', '~')
-
-                if (options.isPackageSplitted) {
-                    options.testsPackage = "none"
-                } else {
-                    options.testsPackage = modifiedPackageName
-                    // check that package is splitted to parts or not
-                    if (packageInfo["groups"] instanceof Map) {
-                        options.engines.each { engine ->
-                            tests << "${modifiedPackageName}-${engine}"
-                        } 
-                        options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
-                    } else {
-                        // add group stub for each part of package
-                        options.engines.each { engine ->
-                            for (int i = 0; i < packageInfo["groups"].size(); i++) {
-                                tests << "${modifiedPackageName}-${engine}".replace(".json", ".${i}.json")
-                            }
-                        }
-
-                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
-                            options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
-                        }
-                    }
-                }
-            } else if (options.tests) {
-                options.groupsUMS = options.tests.split(" ") as List
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
-                options.tests.each() {
-                    def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-                }
-                options.engines.each { engine ->
-                    options.tests.each() {
-                        tests << "${it}-${engine}"
-                    }
-                }
-            } else {
-                options.executeTests = false
-            }
-            options.tests = tests
+            preBuildFunctions.saveRepositoryInfo(this, options)
+            preBuildFunctions.configureTestBlock(this, options, 'Blender')
         }
 
         if (env.BRANCH_NAME && options.githubNotificator) {
