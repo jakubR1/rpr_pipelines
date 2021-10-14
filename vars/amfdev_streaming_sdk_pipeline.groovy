@@ -275,7 +275,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
 
             case "Android":
                 bat """
-                    set CIS_OS=Windows 10(64bit) with Android emulator
+                    set CIS_OS=Windows 10(64bit) with Android real device
                     run_android.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
@@ -521,11 +521,26 @@ def rebootAndroidDevice() {
 }
 
 
+def initAndroidDevice() {
+    try {
+        withCredentials([string(credentialsId: "androidDeviceIp", variable: "ANDROID_DEVICE_IP")]) {
+            bat "adb connect " + ANDROID_DEVICE_IP + ":5555"
+            println "[INFO] Connected to Android device"
+        }
+    } catch (Exception e) {
+        println "[ERROR] Failed to connect to Android device"
+        throw e
+    }
+}
+
+
 def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
         utils.reboot(this, "Windows")
+
+        initAndroidDevice()
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
@@ -556,20 +571,6 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
                 }
             }
         }
-
-        // Start Android emulator
-        // TODO remove hard coded name of emulator
-        bat """
-            start /b emulator.exe @Pixel 1>\"emulator_${options.currentTry}.log\" 2>&1
-        """
-
-        // Start Appium Server
-        bat """
-            start /b appium 1>\"appium_${options.currentTry}.log\"  2>&1
-        """
-
-        // Give Android emulator time to be loaded
-        sleep(30)
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
             executeTestCommand(osName, asicName, options)
