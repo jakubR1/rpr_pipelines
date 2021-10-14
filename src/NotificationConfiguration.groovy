@@ -248,12 +248,12 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to download tests repository due to timeout.", 
-                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC,
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "timed_out"]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to download tests repository.", 
-                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER, "scope": ProblemMessageManager.SPECIFIC
             ]
         ]
     ]
