@@ -559,8 +559,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
         cleanWS()
-Test-NVIDIA_GF1080TI-Windows_failures/test_report.html
-Test-NVIDIA_GF1080TI-Windows_failures/report.html
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.BUILDING_UNIT_TESTS_REPORT) {
                 String reportFiles = ""
