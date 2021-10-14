@@ -157,6 +157,14 @@ public class NotificationConfiguration {
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]
+        ],
+
+        "rebootConfiguration": [
+            "AnyTool": false,
+            "Tools": [
+                "USDViewer": ["Windows"],
+                "StandaloneUSDViewer": ["Windows"]
+            ]
         ]
     ]
 
@@ -180,14 +188,6 @@ public class NotificationConfiguration {
                 "class": Exception, "problemMessage": "Failed to build the project.", 
                 "rethrow": ExceptionThrowType.NO,
                 "githubNotification": ["status": "failure"]
-            ]
-        ],
-
-        "rebootConfiguration": [
-            "AnyTool": false,
-            "Tools": [
-                "USDViewer": ["Windows"],
-                "StandaloneUSDViewer": ["Windows"]
             ]
         ]
     ]
