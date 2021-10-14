@@ -905,7 +905,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             try {
-                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackage == "Full.json"))
+                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
                 boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderMayaPlugin"
 
