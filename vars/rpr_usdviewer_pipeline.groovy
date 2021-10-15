@@ -1153,7 +1153,7 @@ def call(String projectBranch = "",
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries: testCaseRetries,
                         universePlatforms: convertPlatforms(platforms),
-                        sendToUMS: sendToUMS,
+                        sendToUMS: false,
                         baselinePluginPath: baselinePluginPath,
                         storeOnNAS: true,
                         flexibleUpdates: true
