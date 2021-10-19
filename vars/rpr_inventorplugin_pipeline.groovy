@@ -141,9 +141,10 @@ def executePreBuild(Map options) {
                         cd RadeonProRenderInventorPlugin
                         git checkout master
                         cd ..
+                        git checkout -b autoupdate_${options.pluginVersion}
                         git add RadeonProRenderInventorPlugin
                         git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}"
-                        git push origin HEAD:autoupdate_${options.pluginVersion}
+                        git push origin autoupdate_${options.pluginVersion}
                     """
 
                     def githubApiProvider = new GithubApiProvider(this)
