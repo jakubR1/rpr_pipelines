@@ -1018,7 +1018,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
             enginesNames = enginesNames.split(",") as List
             def formattedEngines = []
             enginesNames.each {
-                formattedEngines.add((it == "RPR") ? "HdRprPlugin" : "HdStormRendererPlugin")
+                formattedEngines.add((it == "RPR") ? "HdRprPlugin" : ((it == "GL") ? "HdStormRendererPlugin" : "Hybrid"))
             }
 
             Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
