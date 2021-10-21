@@ -47,8 +47,7 @@ def call(Map params) {
     } catch (e) {
         println("[ERROR] Failed to archive artifacts")
         println(e.toString())
-        println(e.getMessage())
-        println(e.getStackTrace())
+        e.printStackTrace()
         throw e
     }
 
