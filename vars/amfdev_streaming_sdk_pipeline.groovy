@@ -176,6 +176,8 @@ def closeGames(String osName, Map options, String gameName) {
                         taskkill /f /im \"Valley.exe\"
                         taskkill /f /im \"launcher.exe\"
                         taskkill /f /im \"superposition.exe\"
+                        taskkill /f /im \"dota2.exe\"
+                        taskkill /f /im \"csgo.exe\"
                     """
                 } else if (gameName == "Borderlands3") {
                     bat """
@@ -208,6 +210,14 @@ def closeGames(String osName, Map options, String gameName) {
                     bat """
                         taskkill /f /im \"launcher.exe\"
                         taskkill /f /im \"superposition.exe\"
+                    """
+                } else if (gameName == "Dota2") {
+                    bat """
+                        taskkill /f /im \"dota2.exe\"
+                    """
+                } else if (gameName == "CSGO") {
+                    bat """
+                        taskkill /f /im \"csgo.exe\"
                     """
                 }
 
