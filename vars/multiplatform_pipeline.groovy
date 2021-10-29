@@ -338,7 +338,7 @@ def makeDeploy(Map options, String engine = "") {
             def reportBuilderLabels = ""
 
             if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
-                reportBuilderLabels = "Windows && ReportBuilder && !NoDeploy"
+                reportBuilderLabels = "Windows && GitPublisher && !NoDeploy"
             } else {
                 reportBuilderLabels = "Windows && Tester && !NoDeploy"
             }
