@@ -143,6 +143,15 @@ def executePreBuild(Map options) {
                         branchName = "autoupdate_${options.pluginVersion}"
                     } else {
                         branchName = "inventor_auto_${env.BRANCH_NAME}"
+
+                        //delete remote branch if it exists
+                        try {
+                            bat "git push origin --delete ${branchName}"
+
+                            println("[INFO] Remote branch deleted")
+                        } catch (e) {
+                            println("[WARNING] Failed to delete remote branch")
+                        }
                     }
 
                     bat """
