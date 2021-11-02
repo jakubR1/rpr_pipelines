@@ -63,9 +63,9 @@ def call(Map params) {
             String remotePath
 
             if (params["customLocation"]) {
-                remotePath = params["customLocation"]
+                remotePath = params["customLocation"].replace(".", "_")
             } else {
-                remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+                remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/".replace(".", "_")
             }
 
             String stdout

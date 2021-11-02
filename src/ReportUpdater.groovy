@@ -31,7 +31,7 @@ public class ReportUpdater {
      * @param buildArgsFunc fuction to get string with arguments for build script
      */
     def init(def buildArgsFunc) {
-        String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/".replace(" ", "_")
+        String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/".replace(" ", "_").replace(".", "_")
 
         context.withCredentials([context.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
             context.bat('%CIS_TOOLS%\\clone_test_repo.bat' + ' %REMOTE_HOST%' + " ${remotePath} ${options.testRepo} ${options.testsBranch}")

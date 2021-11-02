@@ -22,7 +22,7 @@ def call(Map params) {
         Boolean debug = params["debug"]
 
         if (storeOnNAS) {
-            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/".replace(".", "_")
 
             int times = 3
             int retries = 0

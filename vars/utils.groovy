@@ -124,7 +124,7 @@ class utils {
         String wrapperReportName = "test_report.html"
 
         if (publishOnNAS) {
-            String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+            String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_").replace(".", "_")
 
             String reportLinkBase
             String authReportLinkBase
