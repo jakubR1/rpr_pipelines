@@ -320,6 +320,13 @@ def executeBuildWindows(String osName, Map options) {
 
     dir ("RadeonProRenderUSD") {
         GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        
+        String additionalKeys = ""
+
+        if (options.houdiniVersion.startsWith("18.5.")) {
+            additionalKeys = "-G 'Visual Studio 15 2017 Win64'"
+        }
+
         if (options.buildType == "Houdini") {
             options.win_tool_path = "C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}"
             bat """
@@ -327,14 +334,14 @@ def executeBuildWindows(String osName, Map options) {
                 set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 set HFS=${options.win_tool_path}
                 python --version >> ..\\${STAGE_NAME}.log 2>&1
-                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" ${additionalKeys ? '--cmake_options' : ''} "${additionalKeys}" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } else {
             bat """
                 mkdir build
                 set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 python --version >> ..\\${STAGE_NAME}.log 2>&1
-                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ..\\${STAGE_NAME}.log 2>&1
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst ${additionalKeys}" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } 
 
