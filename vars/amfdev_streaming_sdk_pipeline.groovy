@@ -531,6 +531,14 @@ def initAndroidDevice() {
         println "[ERROR] Failed to connect to Android device"
         throw e
     }
+
+    try {
+        bat "adb shell rm -rf sdcard/video*"
+        println "[INFO] Android deviced is cleared"
+    } catch (Exception e) {
+        println "[ERROR] Failed to clear Android device"
+        throw e
+    }
 }
 
 
