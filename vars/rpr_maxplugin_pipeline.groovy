@@ -10,64 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%203ds%20Max"
 
-
-def getMaxPluginInstaller(String osName, Map options)
-{
-    switch(osName) {
-        case 'Windows':
-
-            if (options['isPreBuilt']) {
-
-                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
-
-                if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.msi")) {
-                        println "[INFO] The plugin ${options['pluginWinSha']}.msi exists in the storage."
-                    } else {
-                        clearBinariesWin()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RadeonProRenderMax", options)
-
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.msi"
-                        """
-                    }
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RadeonProRenderMax", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
-                    """
-                }
-
-            } else {
-                if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['productCode']}.msi")) {
-                    println "[INFO] The plugin ${options['productCode']}.msi exists in the storage."
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['productCode']}.msi"
-                    """
-                }
-            }
-            break
-
-        default:
-            println "[WARNING] ${osName} is not supported"
-    }
-
-}
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows"],
+    productExtensions: ["Windows": "msi"],
+    artifactNameBase: "RadeonProRender"
+)
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
@@ -139,7 +86,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
             Boolean newPluginInstalled = false
             timeout(time: "15", unit: "MINUTES") {
-                getMaxPluginInstaller(osName, options)
+                getProduct(osName, options)
                 newPluginInstalled = installMSIPlugin(osName, "Max", options)
                 println "[INFO] Install function return ${newPluginInstalled}"
             }
@@ -326,9 +273,9 @@ def executeBuildWindows(Map options)
             echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
         """
 
-        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+        options[getProduct.getIdentificatorKey("Windows")] = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
         println "[INFO] Built MSI product code: ${options.productCode}"
-        makeStash(includes: 'RadeonProRenderMax.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
+        makeStash(includes: 'RadeonProRenderMax.msi', name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
     }
@@ -855,7 +802,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            options << [projectRepo:projectRepo,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_max.git",
                         testsBranch:testsBranch,
