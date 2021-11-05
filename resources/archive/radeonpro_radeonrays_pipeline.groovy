@@ -184,7 +184,6 @@ def call(String projectBranch = "",
                             TESTER_TAG:'D3D12',
                             projectURL:projectURL,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
-                            slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"${SLACK_BAIKAL_TOCKEN}",
+                            slackWorkspace:SlackUtils.SlackWorkspace.BAIKAL,
                             retriesForTestStage:1])
 }

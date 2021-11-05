@@ -64,29 +64,6 @@ class utils {
         }
     }
 
-    static def sendExceptionToSlack(Object self, String jobName, String buildNumber, String buildUrl, String webhook, String channel, String message) {
-        try {
-            def slackMessage = [
-                attachments: [[
-                    "title": "${jobName} [${buildNumber}]",
-                    "title_link": "${buildUrl}",
-                    "color": "#720000",
-                    "text": message
-                ]],
-                channel: channel
-            ]
-            self.httpRequest(
-                url: webhook,
-                httpMode: 'POST',
-                requestBody: JsonOutput.toJson(slackMessage)
-            )
-            self.println("[INFO] Exception was sent to Slack")
-        } catch (e) {
-            self.println("[ERROR] Failed to send exception to Slack")
-            self.println(e)
-        }
-    }
-
     static def stashTestData(Object self, Map options, Boolean publishOnNAS = false, String excludes = "") {
         if (publishOnNAS) {
             String engine = ""

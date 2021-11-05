@@ -242,7 +242,6 @@ def call(String projectBranch = "",
                             executeTests:false,
                             BUILD_TIMEOUT:'40',
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
-                            slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"${SLACK_BAIKAL_TOCKEN}",
+                            slackWorkspace:SlackUtils.SlackWorkspace.BAIKAL,
                             cmakeKeys:cmakeKeys])
 }
