@@ -746,6 +746,20 @@ def executePreBuild(Map options) {
                     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                     options.projectBranch = options.commitSHA
                     println "[INFO] Project branch hash: ${options.projectBranch}"
+
+                    // update RPRViewer submodule in Inventor installer repository
+                    dir("Inst") {
+                        checkoutScm(branchName: "master", repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git", submoduleDepth: 1)
+
+                        bat """
+                            cd RPRViewer
+                            git checkout master
+                            cd ..
+                            git add RPRViewer
+                            git commit -m "buildmaster: update RPRViewer submodule to ${options.pluginVersion}"
+                            git push origin HEAD:master
+                        """
+                    }
                 } else {
 
                     if (options.commitMessage.contains("CIS:BUILD")) {
@@ -1107,7 +1121,7 @@ def call(String projectBranch = "",
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries: testCaseRetries,
                         universePlatforms: convertPlatforms(platforms),
-                        sendToUMS: sendToUMS,
+                        sendToUMS: false,
                         baselinePluginPath: baselinePluginPath,
                         storeOnNAS: true,
                         flexibleUpdates: true

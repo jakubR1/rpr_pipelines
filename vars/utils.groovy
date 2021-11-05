@@ -64,29 +64,6 @@ class utils {
         }
     }
 
-    static def sendExceptionToSlack(Object self, String jobName, String buildNumber, String buildUrl, String webhook, String channel, String message) {
-        try {
-            def slackMessage = [
-                attachments: [[
-                    "title": "${jobName} [${buildNumber}]",
-                    "title_link": "${buildUrl}",
-                    "color": "#720000",
-                    "text": message
-                ]],
-                channel: channel
-            ]
-            self.httpRequest(
-                url: webhook,
-                httpMode: 'POST',
-                requestBody: JsonOutput.toJson(slackMessage)
-            )
-            self.println("[INFO] Exception was sent to Slack")
-        } catch (e) {
-            self.println("[ERROR] Failed to send exception to Slack")
-            self.println(e)
-        }
-    }
-
     static def stashTestData(Object self, Map options, Boolean publishOnNAS = false, String excludes = "") {
         if (publishOnNAS) {
             String engine = ""
@@ -217,7 +194,7 @@ class utils {
 
         if (!nasReportInfo.containsKey("updatable") || !nasReportInfo["updatable"]) {
             self.publishHTML(params)
-            try {
+            /*try {
                 self.httpRequest(
                     url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
                     authentication: 'jenkinsCredentials',
@@ -227,7 +204,7 @@ class utils {
             } catch(e) {
                 self.println("[ERROR] Can't access report")
                 throw new Exception("Can't access report", e)
-            }
+            }*/
         }
     }
 
@@ -570,5 +547,29 @@ class utils {
     @NonCPS
     static Boolean isNodeIdle(String nodeName) {
         return jenkins.model.Jenkins.instance.getNode(nodeName).getComputer().countIdle() > 0
+    }
+
+    static def downloadMetrics(Object self, String localDir, String remoteDir) {
+        try {
+            self.dir(localDir) {
+                self.downloadFiles("${remoteDir}", ".")
+            }
+        } catch (e) {
+            self.println("[WARNING] Failed to download history of tracked metrics.")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
+    static def uploadMetrics(Object self, String localDir, String remoteDir) {
+        try {
+            self.dir(localDir) {
+                self.uploadFiles(".", "${remoteDir}")
+            }
+        } catch (e) {
+            self.println("[WARNING] Failed to update history of tracked metrics.")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
     }
 }

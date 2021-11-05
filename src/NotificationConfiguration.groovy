@@ -157,6 +157,14 @@ public class NotificationConfiguration {
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]
+        ],
+
+        "rebootConfiguration": [
+            "AnyTool": false,
+            "Tools": [
+                "USDViewer": ["Windows"],
+                "StandaloneUSDViewer": ["Windows"]
+            ]
         ]
     ]
 
@@ -180,14 +188,6 @@ public class NotificationConfiguration {
                 "class": Exception, "problemMessage": "Failed to build the project.", 
                 "rethrow": ExceptionThrowType.NO,
                 "githubNotification": ["status": "failure"]
-            ]
-        ],
-
-        "rebootConfiguration": [
-            "AnyTool": false,
-            "Tools": [
-                "USDViewer": ["Windows"],
-                "StandaloneUSDViewer": ["Windows"]
             ]
         ]
     ]
@@ -248,12 +248,12 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to download tests repository due to timeout.", 
-                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC,
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "timed_out"]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to download tests repository.", 
-                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER, "scope": ProblemMessageManager.SPECIFIC
             ]
         ]
     ]
@@ -593,5 +593,9 @@ public class NotificationConfiguration {
     def static SEGMENTATION_FAULT = "Segmentation fault detected."
 
     def static FILES_CRASHED = "Corrupted autotest JSON files detected."
+
+    def static FAILED_UPDATE_BASELINES_NAS = "Failed to update baselines on NAS"
+
+    def static FAILED_UPDATE_BASELINES_UMS = "Failed to update baselines on UMS <name>"
 
 }

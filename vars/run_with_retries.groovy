@@ -12,14 +12,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
         println "[INFO] Couldn't find suitable nodes. Search will be retried after pause"
         if (!options.nodeNotFoundMessageSent) {
             node ("master") {
-                try {
-                    withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                        utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to find any node with labels '${labels}'")
-                    }
-                } catch (e) {
-                    println("[WARNING] Could not send message to slack")
-                }
-
+                SlackUtils.sendMessageToWorkspaceChannel(this, '', "Failed to find any node with labels '${labels}'", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                 options.nodeNotFoundMessageSent = true
             }
         }
@@ -158,24 +151,16 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             } else if (exceptionClassName.contains("RemotingSystemException")) {
                 
                 try {
-                    try {
-                        // take master node for send exception in Slack channel
-                        node ("master") {
-                            withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                                utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline")
-                                utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
-                                utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: Node was marked as offline")
-                            }
-                        }
-                    } catch (e3) {
-                        node ("master") {
-                            withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                                utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to mark node '${nodeName}' as offline")
-                            }
-                        }
+                    // take master node for send exception in Slack channel
+                    node ("master") {
+                        SlackUtils.sendMessageToWorkspaceChannel(this, '', "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
+                        utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
+                        SlackUtils.sendMessageToWorkspaceChannel(this, '', "${nodeName}: Node was marked as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                     }
                 } catch (e2) {
-                    println("[WARNING] Could not send message to slack")
+                    node ("master") {
+                        SlackUtils.sendMessageToWorkspaceChannel(this, '', "Failed to mark node '${nodeName}' as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
+                    }
                 }
 
             } else if (exceptionClassName.contains("ClosedChannelException")) {

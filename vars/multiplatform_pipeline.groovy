@@ -338,7 +338,7 @@ def makeDeploy(Map options, String engine = "") {
             def reportBuilderLabels = ""
 
             if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
-                reportBuilderLabels = "Windows && ReportBuilder && !NoDeploy"
+                reportBuilderLabels = "Windows && GitPublisher && !NoDeploy"
             } else {
                 reportBuilderLabels = "Windows && Tester && !NoDeploy"
             }
@@ -613,15 +613,15 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
     } finally {
         println("enableNotifications = ${options.enableNotifications}")
         if ("${options.enableNotifications}" == "true") {
-            sendBuildStatusNotification(currentBuild.result,
-                                        options.get('slackChannel', ''),
-                                        options.get('slackBaseUrl', ''),
-                                        options.get('slackTocken', ''),
+            SlackUtils.sendBuildStatusNotification(this,
+                                        currentBuild.result,
+                                        options.get('slackWorkspace', SlackUtils.SlackWorkspace.DEFAULT),
+                                        options.get('slackChannel', 'cis_stream'),
                                         options)
         }
 
         println("Send Slack message to debug channels")
-        sendBuildStatusToDebugSlack(options)
+        SlackUtils.sendBuildStatusToDebugChannel(this, options)
 
         println("[INFO] BUILD RESULT: ${currentBuild.result}")
         println("[INFO] BUILD CURRENT RESULT: ${currentBuild.currentResult}")

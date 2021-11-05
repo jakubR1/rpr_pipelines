@@ -79,7 +79,7 @@ def checkoutGitScm(Map checkoutOptions) {
             [$class: 'CleanCheckout', deleteUntrackedNestedRepositories: true],
             [$class: 'CheckoutOption', timeout: 30],
             [$class: 'AuthorInChangelog'],
-            [$class: 'CloneOption', timeout: 60, noTags: false],
+            [$class: 'CloneOption', timeout: 120, noTags: false],
             [$class: 'SubmoduleOption', disableSubmodules: checkoutOptions['disableSubmodules'],
              parentCredentials: true, recursiveSubmodules: checkoutOptions['recursiveSubmodules'], shallow: true, 
              depth: checkoutOptions['submoduleDepth'], timeout: 60, reference: '', trackingSubmodules: false],
@@ -127,9 +127,11 @@ def checkoutSubversionScm(Map checkoutOptions) {
     println "[INFO] SCM Class: ${checkoutOptions['checkoutClass']}"
     println "[INFO] Repository URL: ${checkoutOptions['repositoryUrl']}"
 
+    String credentialsId = checkoutOptions['credentialsId'] ?: ''
+
     checkout([$class: checkoutOptions['checkoutClass'], additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', 
                 excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', 
-                locations: [[cancelProcessOnExternalsFail: true, credentialsId: '', depthOption: 'infinity', 
+                locations: [[cancelProcessOnExternalsFail: true, credentialsId: credentialsId, depthOption: 'infinity', 
                 ignoreExternalsOption: true, local: '.', remote: checkoutOptions['repositoryUrl']]], 
                 quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
 }

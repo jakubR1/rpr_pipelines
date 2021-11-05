@@ -138,7 +138,6 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:'10',
                             projectRepo:projectRepo,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
-                            slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"${SLACK_BAIKAL_TOCKEN}",
+                            slackWorkspace:SlackUtils.SlackWorkspace.BAIKAL,
                             retriesForTestStage:1])
 }
