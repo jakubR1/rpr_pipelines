@@ -413,5 +413,5 @@ def call(String projectBranch = "",
                             testPerformance:testPerformance,
                             nodeRetry: nodeRetry,
                             retriesForTestStage:1,
-                            storeOnNAS:false])
+                            storeOnNAS:true])
 }
