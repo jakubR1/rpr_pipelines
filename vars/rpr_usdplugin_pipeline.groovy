@@ -351,6 +351,8 @@ def executeBuildWindows(String osName, Map options) {
             } else if (options.buildType == "USD") {
                 options.win_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
             }
+            
+            bat "rename hdRpr* ${options.win_build_name}.tar.gz"
 
             String ARTIFACT_NAME = "${options.win_build_name}.tar.gz"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
