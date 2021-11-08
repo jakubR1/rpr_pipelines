@@ -393,7 +393,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu18-Clang;Ubuntu20;OSX;CentOS7;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu18-Clang;Ubuntu20;OSX;CentOS7;MacOS_ARM;" : platforms
 
     def nodeRetry = []
 
@@ -413,5 +413,5 @@ def call(String projectBranch = "",
                             testPerformance:testPerformance,
                             nodeRetry: nodeRetry,
                             retriesForTestStage:1,
-                            storeOnNAS:true])
+                            storeOnNAS:false])
 }
