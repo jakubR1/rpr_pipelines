@@ -269,7 +269,7 @@ def installBlenderAddon(String osName, String pluginName, String tool_version, M
             bat """
                 echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
-                echo addon_path = "${addonPath}" >> registerRPRinBlender.py
+                echo addon_path = "${addonPath.replace("\\", "\\\\")}" >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install(filepath=addon_path) >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_enable(module="${pluginName}") >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref() >> registerRPRinBlender.py
