@@ -568,10 +568,6 @@ def executePreBuild(Map options)
         }
     }
 
-    if (env.BRANCH_NAME && options.githubNotificator) {
-        options.githubNotificator.initChecks(options, "${BUILD_URL}")
-    }
-
     def tests = []
     options.timeouts = [:]
     options.groupsUMS = []
@@ -667,7 +663,7 @@ def executePreBuild(Map options)
             options.tests = tests
         }
 
-        if (env.CHANGE_URL) {
+        if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
