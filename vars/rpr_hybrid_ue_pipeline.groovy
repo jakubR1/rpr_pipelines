@@ -101,6 +101,13 @@ def executeBuildWindows(String projectName, Map options) {
         bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
         makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
     }
+
+    dir("RPRHybrid-UE") {
+        String ARTIFACT_NAME = "${projectName}_editor.zip"
+        bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!.vs -xr!.git -xr!*@tmp*")
+        makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+        utils.removeFile(this, "Windows", ARTIFACT_NAME)
+    }
 }
 
 
@@ -170,7 +177,9 @@ def executePreBuild(Map options) {
 def call(String projectBranch = "",
          String ueBranch = "rpr_material_serialization_particles",
          String platforms = "Windows",
-         String projects = "ShooterGame,ToyShop") {
+         String projects = "ShooterGame,ToyShop",
+         Boolean saveEngine = "false"
+) {
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
@@ -195,11 +204,12 @@ def call(String projectBranch = "",
                                 executeTests:true,
                                 // TODO: ignore timeout in run_with_retries func. Need to implement more correct solution
                                 BUILD_TIMEOUT: 3000,
-                                PROJECT_BUILD_TIMEOUT: 210,
+                                PROJECT_BUILD_TIMEOUT: 360,
                                 retriesForTestStage:1,
                                 storeOnNAS: true,
                                 projects: projects.split(","),
-                                problemMessageManager: problemMessageManager])
+                                problemMessageManager: problemMessageManager,
+                                saveEngine:saveEngine])
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
