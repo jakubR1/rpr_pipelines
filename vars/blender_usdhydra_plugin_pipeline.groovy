@@ -471,10 +471,12 @@ def executePreBuild(Map options)
             options.executeBuild = true
             options.executeTests = true
             options.testsPackage = "regression.json"
-        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+        } else if (env.BRANCH_NAME == "master") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
            options['executeTests'] = true
+           options['rebuildDeps'] = true
+           options['updateDeps'] = true
            options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
@@ -543,14 +545,22 @@ def executePreBuild(Map options)
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
                     } else {
-                        if (options.commitMessage.contains("CIS:BUILD")) {
-                            options['executeBuild'] = true
+                        if (options.projectBranchName && options.projectBranchName.prDescription) {
+                            if (options.projectBranchName.prDescription.contains("CIS:BUILD")) {
+                                options['executeBuild'] = true
+                            }
+
+                            if (options.projectBranchName.prDescription.contains("CIS:TESTS")) {
+                                options['executeBuild'] = true
+                                options['executeTests'] = true
+                            }
+
+                            if (options.projectBranchName.prDescription.contains("CIS:REBUILD_DEPS")) {
+                                options['rebuildDeps'] = true
+                            }
                         }
 
-                        if (options.commitMessage.contains("CIS:TESTS")) {
-                            options['executeBuild'] = true
-                            options['executeTests'] = true
-                        }
+                        // TODO: replace by parsing of PR description
                         // get a list of tests from commit message for auto builds
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
