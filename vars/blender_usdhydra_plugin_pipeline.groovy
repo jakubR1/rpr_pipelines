@@ -545,17 +545,19 @@ def executePreBuild(Map options)
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
                     } else {
-                        if (options.projectBranchName && options.projectBranchName.prDescription) {
-                            if (options.projectBranchName.prDescription.contains("CIS:BUILD")) {
+                        if (options.githubNotificator && options.githubNotificator.prDescription) {
+                            println("[INFO] PR description: ${options.githubNotificator.prDescription}")
+
+                            if (options.githubNotificator.prDescription.contains("CIS:BUILD")) {
                                 options['executeBuild'] = true
                             }
 
-                            if (options.projectBranchName.prDescription.contains("CIS:TESTS")) {
+                            if (options.githubNotificator.prDescription.contains("CIS:TESTS")) {
                                 options['executeBuild'] = true
                                 options['executeTests'] = true
                             }
 
-                            if (options.projectBranchName.prDescription.contains("CIS:REBUILD_DEPS")) {
+                            if (options.githubNotificator.prDescription.contains("CIS:REBUILD_DEPS")) {
                                 options['rebuildDeps'] = true
                             }
                         }
