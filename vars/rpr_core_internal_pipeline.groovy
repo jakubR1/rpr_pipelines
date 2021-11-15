@@ -497,8 +497,20 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults") {
                 unstashCrashInfo(options['nodeRetry'])
+
                 testResultList.each() {
-                    dir("$it".replace("testResult-", "")) {
+                    def platformName = "$it".replace("testResult-", "")
+
+                    def platformNameParts = platformName.split("-")
+                    def asicName = platformNameParts[0]
+                    def osName = platformNameParts[1]
+
+                    // check that current platform is in list of platforms for which render should be executed
+                    if (!(options.renderPlatforms.contains(osName) && options.renderPlatforms.contains(asicName))) {
+                        return
+                    }
+
+                    dir(platformName) {
                         try {
                             makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
