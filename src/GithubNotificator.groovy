@@ -11,6 +11,7 @@ public class GithubNotificator {
     String commitSHA
     // original name of branch (instead of PR-*)
     String branchName
+    String prDescription
     GithubApiProvider githubApiProvider
     List buildCases = []
     List testCases = []
@@ -47,6 +48,7 @@ public class GithubNotificator {
             def pullRequestData = githubApiProvider.getPullRequest(context.env.CHANGE_URL)
             this.commitSHA = pullRequestData["head"]["sha"]
             this.branchName = pullRequestData["head"]["label"]
+            this.prDescription = pullRequestData["body"]
         } else {
             this.commitSHA = options["commitSHA"]
             this.branchName = context.env.BRANCH_NAME

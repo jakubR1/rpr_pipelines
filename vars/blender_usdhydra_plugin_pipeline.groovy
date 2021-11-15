@@ -471,7 +471,7 @@ def executePreBuild(Map options)
             options.executeBuild = true
             options.executeTests = true
             options.testsPackage = "regression.json"
-        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+        } else if (env.BRANCH_NAME == "master") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
            options['executeTests'] = true
@@ -542,15 +542,39 @@ def executePreBuild(Map options)
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
+
+                        def possiblePRNumber = (a =~ /#\d+/).findAll()
+                        
+                        if (possiblePRNumber.size() > 0) {
+                            GithubApiProvider apiProvider = new GithubApiProvider(this)
+
+                            def prNumber = possiblePRNumber[possiblePRNumber.size() - 1].replace("#", "")
+                            def prInfo = apiProvider.getPullRequest(options["projectRepo"].replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "") + "/pull/${prNumber}")
+
+                            if (prInfo["body"].contains("CIS:REBUILD_DEPS")) {
+                                options['rebuildDeps'] = true
+                                options['updateDeps'] = true
+                            }
+                        }
                     } else {
-                        if (options.commitMessage.contains("CIS:BUILD")) {
-                            options['executeBuild'] = true
+                        if (options.githubNotificator && options.githubNotificator.prDescription) {
+                            println("[INFO] PR description: ${options.githubNotificator.prDescription}")
+
+                            if (options.githubNotificator.prDescription.contains("CIS:BUILD")) {
+                                options['executeBuild'] = true
+                            }
+
+                            if (options.githubNotificator.prDescription.contains("CIS:TESTS")) {
+                                options['executeBuild'] = true
+                                options['executeTests'] = true
+                            }
+
+                            if (options.githubNotificator.prDescription.contains("CIS:REBUILD_DEPS")) {
+                                options['rebuildDeps'] = true
+                            }
                         }
 
-                        if (options.commitMessage.contains("CIS:TESTS")) {
-                            options['executeBuild'] = true
-                            options['executeTests'] = true
-                        }
+                        // TODO: replace by parsing of PR description
                         // get a list of tests from commit message for auto builds
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
