@@ -475,8 +475,6 @@ def executePreBuild(Map options)
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
            options['executeTests'] = true
-           options['rebuildDeps'] = true
-           options['updateDeps'] = true
            options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
@@ -544,6 +542,20 @@ def executePreBuild(Map options)
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
+
+                        def possiblePRNumber = (a =~ /#\d+/).findAll()
+                        
+                        if (possiblePRNumber.size() > 0) {
+                            GithubApiProvider apiProvider = new GithubApiProvider(this)
+
+                            def prNumber = possiblePRNumber[possiblePRNumber.size() - 1].replace("#", "")
+                            def prInfo = apiProvider.getPullRequest(options["projectRepo"].replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "") + "/pull/${prNumber}")
+
+                            if (prInfo["body"].contains("CIS:REBUILD_DEPS")) {
+                                options['rebuildDeps'] = true
+                                options['updateDeps'] = true
+                            }
+                        }
                     } else {
                         if (options.githubNotificator && options.githubNotificator.prDescription) {
                             println("[INFO] PR description: ${options.githubNotificator.prDescription}")
