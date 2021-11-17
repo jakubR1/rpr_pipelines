@@ -552,6 +552,32 @@ def initAndroidDevice() {
 }
 
 
+def installAndroidClient() {
+    try {
+        utils.copyFile(this, "Windows", "%STREAMING_SCRIPTS_LOCATION%\\*", ".")
+    } catch(Exception e) {
+        println("[ERROR] Failed to copy installation scripts")
+        throw e
+    }
+
+    try {
+        bat "uninstall.bat"
+        println "[INFO] Android client was uninstalled"
+    } catch (Exception e) {
+        println "[ERROR] Failed to uninstall Android client"
+        println(e)
+    }
+
+    try {
+        bat "install.bat"
+        println "[INFO] Android client was installed"
+    } catch (Exception e) {
+        println "[ERROR] Failed to install Android client"
+        throw e
+    }
+}
+
+
 def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
@@ -587,6 +613,8 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
                 dir("StreamingSDKAndroid") {
                     prepareTool("Android", options)
                 }
+
+                installAndroidClient()
             }
         }
 
