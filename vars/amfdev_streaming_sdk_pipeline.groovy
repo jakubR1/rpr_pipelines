@@ -570,6 +570,7 @@ def installAndroidClient() {
 
     try {
         bat "install.bat"
+        sleep(15)
         println "[INFO] Android client was installed"
     } catch (Exception e) {
         println "[ERROR] Failed to install Android client"
