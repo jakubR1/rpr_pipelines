@@ -613,9 +613,8 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
                 }
                 dir("StreamingSDKAndroid") {
                     prepareTool("Android", options)
+                    installAndroidClient()
                 }
-
-                installAndroidClient()
             }
         }
 
