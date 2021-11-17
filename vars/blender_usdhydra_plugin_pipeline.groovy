@@ -1098,7 +1098,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:180,
+                        TEST_TIMEOUT:360,
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:30,
