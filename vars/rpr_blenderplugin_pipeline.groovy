@@ -152,19 +152,21 @@ def executeTests(String osName, String asicName, Map options)
                 }
             }
         
-            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
-                if (newPluginInstalled) {                         
-                    timeout(time: "12", unit: "MINUTES") {
-                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
-                        String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
-                        if(!fileExists(cacheImgPath)){
-                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
-                        } else {
-                            verifyMatlib("Blender", cacheImgPath, 70, osName, options)
+            if (osName != "MacOS_ARM") {
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
+                    if (newPluginInstalled) {                         
+                        timeout(time: "12", unit: "MINUTES") {
+                            buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
+                            String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
+                            if(!fileExists(cacheImgPath)){
+                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                            } else {
+                                verifyMatlib("Blender", cacheImgPath, 70, osName, options)
+                            }
                         }
                     }
                 }
-            }  
+            }
         } catch(e) {
             println(e.toString())
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
@@ -380,7 +382,7 @@ def executeBuildWindows(Map options)
     }
 }
 
-def executeBuildOSX(Map options, String isx86 = true)
+def executeBuildOSX(Map options, Boolean isx86 = true)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
         GithubNotificator.updateStatus("Build", "OSX", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
@@ -396,7 +398,7 @@ def executeBuildOSX(Map options, String isx86 = true)
 
         dir('.build') {
             sh """
-                mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "ARM"}.zip
+                mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "_ARM"}.zip
             """
 
             if (options.branch_postfix) {
@@ -405,7 +407,7 @@ def executeBuildOSX(Map options, String isx86 = true)
                 """
             }
 
-            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "ARM"}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "ARM"}.zip"
+            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "_ARM"}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "_ARM"}.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
@@ -415,10 +417,12 @@ def executeBuildOSX(Map options, String isx86 = true)
             }
 
             sh """
-                mv RadeonProRender*zip RadeonProRenderBlender_MacOS${isx86 ? "" : "ARM"}.zip
+                mv RadeonProRender*zip RadeonProRenderBlender_MacOS${isx86 ? "" : "_ARM"}.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_MacOS${isx86 ? "" : "ARM"}.zip", name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
+            String stashName = isx86 ? getProduct.getStashName("OSX") : getProduct.getStashName("MacOS_ARM")
+
+            makeStash(includes: "RadeonProRenderBlender_MacOS${isx86 ? "" : "_ARM"}.zip", name: stashName, preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
