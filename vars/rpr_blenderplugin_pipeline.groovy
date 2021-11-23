@@ -12,8 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20Blender"
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
-    supportedOS: ["Windows", "OSX", "Ubuntu18", "Ubuntu20"],
-    productExtensions: ["Windows": "zip", "OSX": "zip", "Ubuntu18": "zip", "Ubuntu20": "zip"],
+    supportedOS: ["Windows", "OSX", "MacOS_ARM", "Ubuntu18", "Ubuntu20"],
+    productExtensions: ["Windows": "zip", "OSX": "zip", "MacOS_ARM": "zip" "Ubuntu18": "zip", "Ubuntu20": "zip"],
     artifactNameBase: "RadeonProRender"
 )
 
@@ -380,19 +380,23 @@ def executeBuildWindows(Map options)
     }
 }
 
-def executeBuildOSX(Map options)
+def executeBuildOSX(Map options, String isx86 = true)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
         GithubNotificator.updateStatus("Build", "OSX", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
+
+        String buildScriptName = isx86 ? "build_osx.sh" : "build_osx-arm64.sh"
+
         sh """
             cd ..
-            ./build_osx.sh >> ../../${STAGE_NAME}.log  2>&1
+            ./${buildScriptName} >> ../../${STAGE_NAME}.log  2>&1
         """
+
         python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
             sh """
-                mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_MacOS.zip
+                mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "ARM"}.zip
             """
 
             if (options.branch_postfix) {
@@ -401,7 +405,7 @@ def executeBuildOSX(Map options)
                 """
             }
 
-            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.zip"
+            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "ARM"}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "ARM"}.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
@@ -411,10 +415,10 @@ def executeBuildOSX(Map options)
             }
 
             sh """
-                mv RadeonProRender*zip RadeonProRenderBlender_MacOS.zip
+                mv RadeonProRender*zip RadeonProRenderBlender_MacOS${isx86 ? "" : "ARM"}.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "RadeonProRenderBlender_MacOS${isx86 ? "" : "ARM"}.zip", name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
@@ -484,11 +488,12 @@ def executeBuild(String osName, Map options)
                     executeBuildWindows(options)
                     break
                 case "OSX":
+                case "MacOS_ARM":
                     if(!fileExists("python3")) {
                         sh "ln -s /usr/local/bin/python3.7 python3"
                     }
                     withEnv(["PATH=$WORKSPACE:$PATH"]) {
-                        executeBuildOSX(options)
+                        executeBuildOSX(options, osName == "OSX")
                     }
                     break
                 default:
