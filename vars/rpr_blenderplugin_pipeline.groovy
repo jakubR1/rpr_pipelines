@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows", "OSX", "MacOS_ARM", "Ubuntu18", "Ubuntu20"],
-    productExtensions: ["Windows": "zip", "OSX": "zip", "MacOS_ARM": "zip" "Ubuntu18": "zip", "Ubuntu20": "zip"],
+    productExtensions: ["Windows": "zip", "OSX": "zip", "MacOS_ARM": "zip", "Ubuntu18": "zip", "Ubuntu20": "zip"],
     artifactNameBase: "RadeonProRender"
 )
 
