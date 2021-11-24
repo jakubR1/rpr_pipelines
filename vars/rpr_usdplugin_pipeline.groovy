@@ -16,8 +16,7 @@ def installHoudiniPlugin(String osName, Map options) {
         case 'Windows':
             makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
             bat """
-                %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
-                %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
+                bash.exe -c "tar -xzf hdRpr_${osName}.tar.gz"
                 cd hdRpr*
                 echo y | activateHoudiniPlugin.exe >> \"..\\${options.stageName}_${options.currentTry}.install.log\"  2>&1
             """
