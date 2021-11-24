@@ -99,10 +99,18 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 mkdir -p "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
                                 set RIF_TRACING_ENABLED=1
                                 set RIF_TRACING_PATH=${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace
+                                set PXR_PLUGIN_PATH_NAME=
+                                set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
+                                echo %PXR_PLUGIN_PATH_NAME%
+                                echo %MATERIALX_SEARCH_PATH%
                                 run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         } else {
                             bat """
+                                set PXR_PLUGIN_PATH_NAME=
+                                set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
+                                echo %PXR_PLUGIN_PATH_NAME%
+                                echo %MATERIALX_SEARCH_PATH%
                                 run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
@@ -115,11 +123,19 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 export RIF_TRACING_ENABLED=1
                                 export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
                                 chmod +x run.sh
+                                export PXR_PLUGIN_PATH_NAME=
+                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                                echo \$PXR_PLUGIN_PATH_NAME
+                                echo \$MATERIALX_SEARCH_PATH
                                 ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         } else {
                             sh """
                                 chmod +x run.sh
+                                export PXR_PLUGIN_PATH_NAME=
+                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                                echo \$PXR_PLUGIN_PATH_NAME
+                                echo \$MATERIALX_SEARCH_PATH
                                 ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
@@ -133,12 +149,20 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
                                 export LD_LIBRARY_PATH="/home/\$(eval whoami)/Houdini/hfs19.0.383/dsolib"
                                 chmod +x run.sh
+                                export PXR_PLUGIN_PATH_NAME=
+                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                                echo \$PXR_PLUGIN_PATH_NAME
+                                echo \$MATERIALX_SEARCH_PATH
                                 ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         } else {
                             sh """
                                 export LD_LIBRARY_PATH="/home/\$(eval whoami)/Houdini/hfs19.0.383/dsolib"
                                 chmod +x run.sh
+                                export PXR_PLUGIN_PATH_NAME=
+                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                                echo \$PXR_PLUGIN_PATH_NAME
+                                echo \$MATERIALX_SEARCH_PATH
                                 ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
