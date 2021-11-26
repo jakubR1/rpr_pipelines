@@ -9,6 +9,7 @@ import universe.*
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDPlugin"
+@Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git"
 
 
 def installHoudiniPlugin(String osName, Map options) {
@@ -384,6 +385,13 @@ def executeBuildWindows(String osName, Map options) {
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+        }
+    }
+
+    if (env.BRANCH_NAME) {
+        if (env.BRANCH_NAME == "master") {
+            // if something was merged into master branch it could trigger build in master branch of autojob
+            hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO)
         }
     }
 }
@@ -875,6 +883,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 }
             }
         }
+
+        if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+            hybrid_to_blender_workflow.createBlenderBranch(options)
+        }
     } catch (e) {
         println e.toString()
         throw e
@@ -882,7 +894,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 
-def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
+def call(String projectRepo = PROJECT_REPO,
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
@@ -947,7 +959,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         sendToUMS: false,
                         universePlatforms: convertPlatforms(platforms),
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        finishedBuildStages: new ConcurrentHashMap()
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

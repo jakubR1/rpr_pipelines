@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger
     artifactNameBase: "BlenderUSDHydraAddon"
 )
 
+@Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git"
+
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
     dir('scripts') {
@@ -408,7 +410,6 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-
         if (!options.rebuildDeps) {
             downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin/*", "bin")
         }
@@ -417,6 +418,9 @@ def executeBuild(String osName, Map options) {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
+        }
+
+        if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
         }
 
         outputEnvironmentInfo(osName)
@@ -700,6 +704,13 @@ def executePreBuild(Map options)
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
+
+    if (env.BRANCH_NAME) {
+        if (env.BRANCH_NAME == "master") {
+            // if something was merged into master branch it could trigger build in master branch of autojob
+            hybrid_to_blender_workflow.clearOldBranches("BlenderUSDHydraAddon", PROJECT_REPO)
+        }
+    }
 }
 
 
@@ -902,7 +913,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 }
 
 
-def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git",
+def call(String projectRepo = PROJECT_REPO,
     String projectBranch = "",
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;Ubuntu20:AMD_RadeonVII',

@@ -90,7 +90,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
 
                         if (stageName == 'Build') {
                             if (options.containsKey("finishedBuildStages")) {
-                                options["finishedBuildStages"][osName] = true
+                                options["finishedBuildStages"][osName] = [successfully: true]
                             }
                         }
                     }
@@ -207,7 +207,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         GithubNotificator.failPluginBuilding(options, osName)
 
                         if (options.containsKey("finishedBuildStages")) {
-                            options["finishedBuildStages"][osName] = true
+                            options["finishedBuildStages"][osName] = [successfully: false]
                         }
                     }
                     if (setBuildStatus) {
@@ -234,7 +234,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     GithubNotificator.failPluginBuilding(options, osName)
 
                     if (options.containsKey("finishedBuildStages")) {
-                        options["finishedBuildStages"][osName] = true
+                        options["finishedBuildStages"][osName] = [successfully: false]
                     }
                 }
                 println "[ERROR] All nodes on ${stageName} stage with labels ${labels} failed."
