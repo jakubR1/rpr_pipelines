@@ -479,12 +479,14 @@ def executePreBuild(Map options)
             options.executeTests = true
             options.testsPackage = "regression.json"
         } else if (env.BRANCH_NAME == "master") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options['executeBuild'] = true
-           options['executeTests'] = true
-           options['testsPackage'] = "regression.json"
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options['executeBuild'] = true
+            options['executeTests'] = true
+            options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options['executeBuild'] = true
+            options['executeTests'] = true
             options['testsPackage'] = "regression.json"
         }
     }
