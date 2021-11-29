@@ -24,7 +24,7 @@ def createUSDBranch(Map options) {
         String targetRepoUrl = rpr_usdplugin_pipeline.PROJECT_REPO
 
         dir("RadeonProRenderUSD") {
-            checkoutScm(branchName: "master", repositoryUrl: targetRepoUrl, disableSubmodules: true)
+            checkoutScm(branchName: "develop", repositoryUrl: targetRepoUrl, disableSubmodules: true)
 
             String message = "Triggered by Build #${env.BUILD_NUMBER}. Tag - ${env.TAG_NAME}"
 
@@ -43,7 +43,7 @@ def createUSDBranch(Map options) {
 
 def createBlenderBranch(Map options) {
     try {
-        if (!isBuildSuccessful("Windows", options) || !isBuildSuccessful("Ubuntu20", options) || !isBuildSuccessful("OSX", options)) {
+        if (!isBuildSuccessful("Windows", options) || !isBuildSuccessful("Ubuntu20", options)) {
             return
         }
 

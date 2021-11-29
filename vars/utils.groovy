@@ -319,8 +319,8 @@ class utils {
         try {
             switch(osName) {
                 case 'Windows':
-                    source = source.replace('/', '\\\\')
-                    destination = destination.replace('/', '\\\\')
+                    source = source.replace('/', '\\')
+                    destination = destination.replace('/', '\\')
                     self.bat """
                         echo F | xcopy /s/y/i \"${source}\" \"${destination}\"
                     """
