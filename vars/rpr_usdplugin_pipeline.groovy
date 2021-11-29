@@ -561,7 +561,7 @@ def executeBuild(String osName, Map options) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
             }
 
-            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX) && osName != "OSX") {
                 dir("deps/RPR") {
                     hybrid_to_blender_workflow.replaceHybrid(osName, options)
                 }
