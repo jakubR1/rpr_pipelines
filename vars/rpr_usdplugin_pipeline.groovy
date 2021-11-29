@@ -390,8 +390,8 @@ def executeBuildWindows(String osName, Map options) {
     }
 
     if (env.BRANCH_NAME) {
-        if (env.BRANCH_NAME == "master") {
-            // if something was merged into master branch it could trigger build in master branch of autojob
+        if (env.BRANCH_NAME == "develop") {
+            // if something was merged into develop branch it could trigger build in master branch of autojob
             hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO)
         }
     }
