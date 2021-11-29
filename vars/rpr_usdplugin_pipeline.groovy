@@ -563,7 +563,7 @@ def executeBuild(String osName, Map options) {
 
             if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
                 dir("deps/RPR") {
-                    replaceHybrid(osName, options)
+                    hybrid_to_blender_workflow.replaceHybrid(osName, options)
                 }
             }
         }
@@ -637,12 +637,14 @@ def executePreBuild(Map options) {
             options.executeTests = true
             options.testsPackage = "Full.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeBuild = true
-           options.executeTests = true
-           options.testsPackage = "Full.json"
-        } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeBuild = true
+            options.executeTests = true
+            options.testsPackage = "Full.json"
+        } else  {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeBuild = true
+            options.executeTests = true
             options.testsPackage = "Full.json"
         }
     }
