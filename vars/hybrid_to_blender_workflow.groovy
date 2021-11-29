@@ -106,7 +106,7 @@ def clearOldBranches(String repositoryName, String repositoryUrl, Map options) {
 }
 
 
-def prepareHybrid(String osName, Map options) {
+def replaceHybrid(String osName, Map options) {
     def parts = options.commitMessage.replace("Triggered by Build #", "").replace("Tag - ", "").split(". ")
     def hybridBuildNumber = parts[0] as Integer
 
@@ -130,7 +130,19 @@ def prepareHybrid(String osName, Map options) {
 
     downloadFiles(artifactRemotePath, ".")
 
-    unzip(zipFile: archiveName)
+    switch(osName) {
+        case "Windows":
+            unzip(zipFile: archiveName)
+            utils.removeFile(this, osName, "RadeonProRender/binWin64/${libName}")
+            utils.copyFile(this, osName, "BaikalNext/bin/${libName}", "RadeonProRender/binWin64/${libName}")
+            break
 
-    String hybridPath = "${WORKSPACE}/BaikalNext/bin/${libName}"
+        default:
+            sh("tar -xf ${archiveName}")
+            utils.removeFile(this, osName, "RadeonProRender/binUbuntu18/${libName}")
+            utils.copyFile(this, osName, "BaikalNext/bin/${libName}", "RadeonProRender/binUbuntu18/${libName}")
+    }
+
+    utils.removeFile(this, osName, archiveName)
+    utils.removeDir(this, osName, "BaikalNext")
 }

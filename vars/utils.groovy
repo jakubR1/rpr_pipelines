@@ -359,6 +359,28 @@ class utils {
         }
     }
 
+    //TODO unite with removeFile function
+    static def removeDir(Object self, String osName, String dirName) {
+        try {
+            switch(osName) {
+                case 'Windows':
+                    self.bat """
+                        if exist \"${dirName}\" rmdir /Q /S \"${dirName}\"
+                    """
+                    break
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        rm -rf \"${dirName}\"
+                    """
+            }
+        } catch(Exception e) {
+            self.println("[ERROR] Can't remove directory")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
     @NonCPS
     static def parseJson(Object self, String jsonString) {
         try {

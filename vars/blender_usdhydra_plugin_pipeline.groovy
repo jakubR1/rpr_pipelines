@@ -418,9 +418,12 @@ def executeBuild(String osName, Map options) {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
-        }
 
-        if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+                dir("deps/HdRPR/deps/RPR") {
+                    replaceHybrid(osName, options)
+                }
+            }
         }
 
         outputEnvironmentInfo(osName)

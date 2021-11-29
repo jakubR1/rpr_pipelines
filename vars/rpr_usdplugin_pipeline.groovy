@@ -555,9 +555,15 @@ def executeBuild(String osName, Map options) {
     }
 
     try {
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            dir ("RadeonProRenderUSD") {
+        dir ("RadeonProRenderUSD") {
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+            }
+
+            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+                dir("deps/RPR") {
+                    replaceHybrid(osName, options)
+                }
             }
         }
 
