@@ -1,6 +1,7 @@
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import java.util.concurrent.ConcurrentHashMap
 
 
 def executeGenTestRefCommand(String asicName, String osName, Map options) {

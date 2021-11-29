@@ -6,6 +6,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 import universe.*
+import java.util.concurrent.ConcurrentHashMap
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDPlugin"
