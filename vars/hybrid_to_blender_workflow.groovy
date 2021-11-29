@@ -4,7 +4,7 @@ import groovy.transform.Field
 
 
 def isBuildSuccessful(String osName, Map options) {
-    if (!options["finishedBuildStages"][osName]["status"]) {
+    if (!options["finishedBuildStages"][osName]["successfully"]) {
         println("[ERROR] Build on ${osName} failed. Branch in RadeonProRenderUSD repo won't be created")
 
         return false
