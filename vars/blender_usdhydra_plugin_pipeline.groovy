@@ -489,6 +489,11 @@ def executePreBuild(Map options)
         }
     }
 
+    if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+        // rebuild deps if new HybridPro is being tested
+        options['rebuildDeps'] = true
+    }
+
     // branch postfix
     options["branch_postfix"] = ""
     if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
