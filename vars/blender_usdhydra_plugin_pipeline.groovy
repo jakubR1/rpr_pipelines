@@ -713,7 +713,7 @@ def executePreBuild(Map options)
     if (env.BRANCH_NAME) {
         if (env.BRANCH_NAME == "master") {
             // if something was merged into master branch it could trigger build in master branch of autojob
-            hybrid_to_blender_workflow.clearOldBranches("BlenderUSDHydraAddon", PROJECT_REPO)
+            hybrid_to_blender_workflow.clearOldBranches("BlenderUSDHydraAddon", PROJECT_REPO, options)
         }
     }
 }
