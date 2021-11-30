@@ -37,7 +37,7 @@ def updateMap(def keyName, String installationType, String status) {
 
 
 def checkExistenceOfPlugin(String osName, Map options) {
-    String defaultUninstallerPath = "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\UsdConvertor\\unins000.exe"
+    String defaultUninstallerPath = "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\RadeonProRender\\unins000.exe"
 
     return fileExists(defaultUninstallerPath)
 }
