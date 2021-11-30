@@ -738,11 +738,9 @@ def executePreBuild(Map options) {
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
 
-    if (env.BRANCH_NAME) {
-        if (env.BRANCH_NAME == "develop") {
-            // if something was merged into develop branch it could trigger build in master branch of autojob
-            hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO, options)
-        }
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "develop") {
+        // if something was merged into develop branch it could trigger build in master branch of autojob
+        hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO, options)
     }
 }
 
