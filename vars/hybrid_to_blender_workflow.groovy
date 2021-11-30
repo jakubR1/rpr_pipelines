@@ -69,39 +69,44 @@ def createBlenderBranch(Map options) {
 
 
 def clearOldBranches(String repositoryName, String repositoryUrl, Map options) {
-    def hybridJobInfo
+    try {
+        def hybridJobInfo
 
-    withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
-        // get name and color (~status) of each branch/PR in Hybrid autojob
-        hybridJobInfo = httpRequest(
-            url: "${JENKINS_URL}/job/RadeonProRender-Hybrid/view/tags/api/json?tree=jobs[name,color]",
-            authentication: "jenkinsCredentials",
-            httpMode: "GET"
-        )
-    }
+        withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
+            // get name and color (~status) of each branch/PR in Hybrid autojob
+            hybridJobInfo = httpRequest(
+                url: "${JENKINS_URL}/job/RadeonProRender-Hybrid/view/tags/api/json?tree=jobs[name,color]",
+                authentication: "jenkinsCredentials",
+                httpMode: "GET"
+            )
+        }
 
-    def hybridJobInfoParsed = github_release_pipeline.parseResponse(hybridJobInfo.content)["jobs"]
+        def hybridJobInfoParsed = github_release_pipeline.parseResponse(hybridJobInfo.content)["jobs"]
 
-    dir(repositoryName) {
-        checkoutScm(branchName: "master", repositoryUrl: repositoryUrl, disableSubmodules: true)
+        dir(repositoryName) {
+            checkoutScm(branchName: "master", repositoryUrl: repositoryUrl, disableSubmodules: true)
 
-        hybridJobInfoParsed.each { item ->
-            if (item["color"] == "notbuilt") {
-                String branchName = "${BRANCH_NAME_PREFIX}_${item.name}"
+            hybridJobInfoParsed.each { item ->
+                if (item["color"] == "notbuilt") {
+                    String branchName = "${BRANCH_NAME_PREFIX}_${item.name}"
 
-                Boolean branchExists = bat(script: "git ls-remote --heads ${PROJECT_REPO} ${branchName}",returnStdout: true)
-                    .split('\r\n').length > 2
+                    Boolean branchExists = bat(script: "git ls-remote --heads ${repositoryUrl} ${branchName}",returnStdout: true)
+                        .split('\r\n').length > 2
 
-                if (branchExists) {
-                    // branch/PR doesn't exist. Remove remote branch
-                    bat """
-                        git push -d origin ${branchName}
-                    """
+                    if (branchExists) {
+                        // branch/PR doesn't exist. Remove remote branch
+                        bat """
+                            git push -d origin ${branchName}
+                        """
 
-                    println("[INFO] branch ${branchName} was removed")
+                        println("[INFO] branch ${branchName} was removed")
+                    }
                 }
             }
         }
+    } catch (e) {
+        println("[ERROR] Failed to delete old branches")
+        println(e)
     }
 }
 

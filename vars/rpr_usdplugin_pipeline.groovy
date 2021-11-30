@@ -388,13 +388,6 @@ def executeBuildWindows(String osName, Map options) {
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
-
-    if (env.BRANCH_NAME) {
-        if (env.BRANCH_NAME == "develop") {
-            // if something was merged into develop branch it could trigger build in master branch of autojob
-            hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO)
-        }
-    }
 }
 
 
@@ -743,6 +736,13 @@ def executePreBuild(Map options) {
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
+    }
+
+    if (env.BRANCH_NAME) {
+        if (env.BRANCH_NAME == "develop") {
+            // if something was merged into develop branch it could trigger build in master branch of autojob
+            hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO, options)
+        }
     }
 }
 
