@@ -105,7 +105,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
             if (checkExistenceOfPlugin(osName, options)) {
                 println "[INFO] Uninstalling Inventor Plugin"
                 bat """
-                    start "" /wait "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\UsdConvertor\\unins000.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall_Plugin.log
+                    start "" /wait "C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Autodesk\\ApplicationPlugins\\RadeonProRender\\unins000.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall_Plugin.log
                 """
             }
         } catch (e) {
