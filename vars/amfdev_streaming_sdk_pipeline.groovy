@@ -1306,13 +1306,21 @@ def call(String projectBranch = "",
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             // Anroid tests required built Windows Streaming SDK to run server side
-            if ((platforms.contains("Android:") && !platforms.contains("Windows")) || tests.contains("Multiconnection")) {
+            if (platforms.contains("Android:") && !platforms.contains("Windows")) {
                 platforms = platforms + ";Windows"
 
                 winBuildConfiguration = "debug"
                 winVisualStudioVersion = "2019"
                 winTestingBuildName = "debug_vs2019"
             }
+
+            // Multiconnection group required Android client
+            if (!!platforms.contains("Windows") && tests.contains("Multiconnection")) {
+                platforms = platforms + ";Android"
+
+                androidBuildConfiguration = "debug"
+                androidTestingBuildName = "debug"
+            }   
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
