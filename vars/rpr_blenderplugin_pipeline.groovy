@@ -1064,8 +1064,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
             enginesNames.each {
-                 if (it.contains('Hybrid_')) {
-                    formattedEngines.add(it.relace('Hybrid_', '').toUpperCase())
+                 if (it.contains('Hybrid')) {
+                    formattedEngines.add(it.relace('Hybrid', '').toUpperCase())
                 } else {
                     formattedEngines.add((it == 'Northstar') ? 'FULL2' : 'FULL')
                 }
