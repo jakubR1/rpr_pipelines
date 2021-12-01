@@ -461,6 +461,15 @@ def executeTestsServer(String osName, String asicName, Map options) {
                 dir("StreamingSDK") {
                     prepareTool(osName, options)
                 }
+
+                if (options.parsedTests.contains("Multiconnection")) {
+                    initAndroidDevice()
+
+                    dir("StreamingSDKAndroid") {
+                        prepareTool("Android", options)
+                        installAndroidClient()
+                    }
+                }
             }
         }
 
@@ -1297,7 +1306,7 @@ def call(String projectBranch = "",
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             // Anroid tests required built Windows Streaming SDK to run server side
-            if (platforms.contains("Android:") && !platforms.contains("Windows")) {
+            if ((platforms.contains("Android:") && !platforms.contains("Windows")) || tests.contains("Multiconnection")) {
                 platforms = platforms + ";Windows"
 
                 winBuildConfiguration = "debug"
