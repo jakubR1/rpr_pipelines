@@ -333,8 +333,9 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
-                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.jpg,**/*.mp4', name: "${options.testResultsName}_android_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     }
                 }
@@ -1066,6 +1067,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                     """
 
                                     groupLost = true
+                                }
+
+                                try {
+                                    makeUnstash(name: "${it}_android_client", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_android_client
+                                        ${e.toString()}
+                                    """
                                 }
 
                                 try {
