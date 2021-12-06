@@ -463,7 +463,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                     prepareTool(osName, options)
                 }
 
-                if (options.parsedTests.contains("Multiconnection")) {
+                if (options.parsedTests.contains("MulticonnectionWA")) {
                     initAndroidDevice()
 
                     dir("StreamingSDKAndroid") {
@@ -1325,7 +1325,7 @@ def call(String projectBranch = "",
             }
 
             // Multiconnection group required Android client
-            if (!!platforms.contains("Windows") && tests.contains("Multiconnection")) {
+            if (!!platforms.contains("Windows") && tests.contains("MulticonnectionWA")) {
                 platforms = platforms + ";Android"
 
                 androidBuildConfiguration = "debug"
