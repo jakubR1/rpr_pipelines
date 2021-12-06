@@ -6,9 +6,11 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 import universe.*
+import java.util.concurrent.ConcurrentHashMap
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDPlugin"
+@Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git"
 
 
 def installHoudiniPlugin(String osName, Map options) {
@@ -547,9 +549,15 @@ def executeBuild(String osName, Map options) {
     }
 
     try {
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            dir ("RadeonProRenderUSD") {
+        dir ("RadeonProRenderUSD") {
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+            }
+
+            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX) && osName != "OSX") {
+                dir("deps/RPR") {
+                    hybrid_to_blender_workflow.replaceHybrid(osName, options)
+                }
             }
         }
 
@@ -622,12 +630,14 @@ def executePreBuild(Map options) {
             options.executeTests = true
             options.testsPackage = "Full.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeBuild = true
-           options.executeTests = true
-           options.testsPackage = "Full.json"
-        } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeBuild = true
+            options.executeTests = true
+            options.testsPackage = "Full.json"
+        } else  {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeBuild = true
+            options.executeTests = true
             options.testsPackage = "Full.json"
         }
     }
@@ -726,6 +736,11 @@ def executePreBuild(Map options) {
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
+    }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "develop") {
+        // if something was merged into develop branch it could trigger build in master branch of autojob
+        hybrid_to_blender_workflow.clearOldBranches("RadeonProRenderUSD", PROJECT_REPO, options)
     }
 }
 
@@ -875,6 +890,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 }
             }
         }
+
+        if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+            hybrid_to_blender_workflow.createBlenderBranch(options)
+        }
     } catch (e) {
         println e.toString()
         throw e
@@ -882,7 +901,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 
-def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
+def call(String projectRepo = PROJECT_REPO,
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
@@ -947,7 +966,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         sendToUMS: false,
                         universePlatforms: convertPlatforms(platforms),
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        finishedBuildStages: new ConcurrentHashMap()
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

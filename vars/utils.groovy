@@ -319,8 +319,8 @@ class utils {
         try {
             switch(osName) {
                 case 'Windows':
-                    source = source.replace('/', '\\\\')
-                    destination = destination.replace('/', '\\\\')
+                    source = source.replace('/', '\\')
+                    destination = destination.replace('/', '\\')
                     self.bat """
                         echo F | xcopy /s/y/i \"${source}\" \"${destination}\"
                     """
@@ -354,6 +354,28 @@ class utils {
             }
         } catch(Exception e) {
             self.println("[ERROR] Can't remove file")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
+    //TODO unite with removeFile function
+    static def removeDir(Object self, String osName, String dirName) {
+        try {
+            switch(osName) {
+                case 'Windows':
+                    self.bat """
+                        if exist \"${dirName}\" rmdir /Q /S \"${dirName}\"
+                    """
+                    break
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        rm -rf \"${dirName}\"
+                    """
+            }
+        } catch(Exception e) {
+            self.println("[ERROR] Can't remove directory")
             self.println(e.toString())
             self.println(e.getMessage())
         }

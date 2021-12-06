@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger
     artifactNameBase: "BlenderUSDHydraAddon"
 )
 
+@Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git"
+
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
     dir('scripts') {
@@ -408,7 +410,6 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-
         if (!options.rebuildDeps) {
             downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin/*", "bin")
         }
@@ -416,6 +417,12 @@ def executeBuild(String osName, Map options) {
         dir("BlenderUSDHydraAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
+            }
+
+            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+                dir("deps/HdRPR/deps/RPR") {
+                    hybrid_to_blender_workflow.replaceHybrid(osName, options)
+                }
             }
         }
 
@@ -472,12 +479,14 @@ def executePreBuild(Map options)
             options.executeTests = true
             options.testsPackage = "regression.json"
         } else if (env.BRANCH_NAME == "master") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options['executeBuild'] = true
-           options['executeTests'] = true
-           options['testsPackage'] = "regression.json"
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options['executeBuild'] = true
+            options['executeTests'] = true
+            options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options['executeBuild'] = true
+            options['executeTests'] = true
             options['testsPackage'] = "regression.json"
         }
     }
@@ -700,6 +709,16 @@ def executePreBuild(Map options)
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        // if something was merged into master branch it could trigger build in master branch of autojob
+        hybrid_to_blender_workflow.clearOldBranches("BlenderUSDHydraAddon", PROJECT_REPO, options)
+    }
+
+    if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+        // rebuild deps if new HybridPro is being tested
+        options["rebuildDeps"] = true
+    }
 }
 
 
@@ -902,7 +921,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 }
 
 
-def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git",
+def call(String projectRepo = PROJECT_REPO,
     String projectBranch = "",
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800,AMD_WX9100,AMD_RXVEGA;Ubuntu20:AMD_RadeonVII',
@@ -948,6 +967,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                 if (!enginesNames) {
                     throw new Exception()
                 }
+            }
+
+            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+                enginesNames = "Hybrid"
             }
 
             enginesNames = enginesNames.split(",") as List

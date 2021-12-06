@@ -1,6 +1,7 @@
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import java.util.concurrent.ConcurrentHashMap
 
 
 def executeGenTestRefCommand(String asicName, String osName, Map options) {
@@ -736,6 +737,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
         String commitUrl = "${options.githubNotificator.repositoryUrl}/commit/${options.githubNotificator.commitSHA}"
         GithubNotificator.sendPullRequestComment("Jenkins build for ${commitUrl} finished as ${status} ${commentMessage}", options)
     }
+
+    if (env.TAG_NAME) {
+        hybrid_to_blender_workflow.createUSDBranch(options)
+    }
 }
 
 def call(String projectBranch = "",
@@ -787,5 +792,6 @@ def call(String projectBranch = "",
                             successfulTests:successfulTests,
                             isLegacyBranch:isLegacyBranch,
                             failedConfigurations: [],
-                            storeOnNAS: true])
+                            storeOnNAS: true,
+                            finishedBuildStages: new ConcurrentHashMap()])
 }
