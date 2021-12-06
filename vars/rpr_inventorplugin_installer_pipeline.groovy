@@ -278,7 +278,7 @@ def executeTests(String osName, String asicName, Map options) {
             
 
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
-                    timeout(time: "10", unit: "MINUTES") {
+                    timeout(time: "15", unit: "MINUTES") {
                         try {
                             buildRenderCache(osName, "2022", options, false)
                         } catch (e) {
@@ -312,7 +312,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
     
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CLEAN) {                        
-            timeout(time: "10", unit: "MINUTES") {
+            timeout(time: "15", unit: "MINUTES") {
                 try {
                     buildRenderCache(osName, "2022", options, true)
                 } catch (e) {
