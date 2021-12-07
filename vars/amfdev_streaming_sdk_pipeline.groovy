@@ -15,19 +15,36 @@ String getClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.CLIENT_TAG}"
 }
 
+String getMulticonnectionClientLabels(Map options) {
+    return "${options.osName} && ${options.TESTER_TAG} && ${options.MULTICONNECTION_CLIENT_TAG}"
+}
+
 
 Boolean isIdleClient(Map options) {
     if (options["osName"] == "Windows") {
+        Boolean result = false
+
         // wait client machine
         def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
 
         for (node in suitableNodes) {
             if (utils.isNodeIdle(node)) {
-                return true
+                result = true
             }
         }
 
-        return false
+        if (tests.contains("MulticonnectionWW")) {
+            // wait multiconnection client machine
+            suitableNodes = nodesByLabel label: getMulticonnectionClientLabels(options), offline: false
+
+            for (node in suitableNodes) {
+                if (utils.isNodeIdle(node)) {
+                    result = true
+                }
+            }
+        }
+
+        return result
     } else if (options["osName"] == "Android") {
         // wait when Windows artifact will be built
         return options["finishedBuildStages"]["Windows"]
@@ -277,9 +294,13 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
     dir("scripts") {
         switch (osName) {
             case "Windows":
-                bat """
-                    run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
-                """
+                if (executionType == "mcClient") {
+                    // TODO call MC client script
+                } else {
+                    bat """
+                        run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    """
+                }
 
                 break
 
@@ -497,6 +518,16 @@ def executeTestsServer(String osName, String asicName, Map options) {
             sleep(5)
         }
 
+        if (options.tests.contains("MulticonnectionWW")) {
+            while (!options["mcClientInfo"]["ready"]) {
+                if (options["mcClientInfo"]["failed"]) {
+                    throw new Exception("Multiconnection client was failed")
+                }
+
+                sleep(5)
+            }
+        }
+
         println("Server is synchronized with state of client. Start tests")
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
@@ -527,6 +558,83 @@ def executeTestsServer(String osName, String asicName, Map options) {
         saveResults(osName, options, "server", stashResults, options["serverInfo"]["executeTestsFinished"])
 
         closeGames(osName, options, options.engine)
+    }
+}
+
+
+def executeTestsMulticonnectionClient(String osName, String asicName, Map options) {
+    Boolean stashResults = true
+
+    try {
+
+        utils.reboot(this, osName)
+
+        timeout(time: "10", unit: "MINUTES") {
+            cleanWS(osName)
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
+        }
+
+        timeout(time: "5", unit: "MINUTES") {
+            dir("jobs_launcher/install"){
+                bat """
+                    install_pylibs.bat
+                """
+            }
+
+            dir("scripts"){
+                bat """
+                    install_pylibs.bat
+                """
+            }
+
+            dir("StreamingSDK") {
+                prepareTool(osName, options)
+            }
+        }
+
+        options["mcClientInfo"]["screenWidth"] = getClientScreenWidth(osName, options)
+        println("[INFO] Screen width on multiconnection client machine: ${options.mcClientInfo.screenWidth}")
+
+        options["mcClientInfo"]["screenHeight"] = getClientScreenHeight(osName, options)
+        println("[INFO] Screen height on multiconnection client machine: ${options.mcClientInfo.screenHeight}")
+
+        options["mcClientInfo"]["ready"] = true
+        println("[INFO] Multiconnection client is ready to run tests")
+
+        while (!options["serverInfo"]["ready"]) {
+            if (options["serverInfo"]["failed"]) {
+                throw new Exception("Server was failed")
+            }
+
+            sleep(5)
+        }
+
+        println("Multiconnection client is synchronized with state of server. Start tests")
+        
+        executeTestCommand(osName, asicName, options, "mcClient")
+
+        options["mcClientInfo"]["executeTestsFinished"] = true
+
+    } catch (e) {
+        options["mcClientInfo"]["ready"] = false
+        options["mcClientInfo"]["failed"] = true
+        options["mcClientInfo"]["exception"] = e
+
+        if (options.currentTry < options.nodeReallocateTries - 1) {
+            stashResults = false
+        } else {
+            currentBuild.result = "FAILURE"
+        }
+
+        println "[ERROR] Failed during tests on multiconnection client"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+    } finally {
+        options["mcClientInfo"]["finished"] = true
+
+        saveResults(osName, options, "mcClient", stashResults, options["mcClientInfo"]["executeTestsFinished"])
     }
 }
 
@@ -675,6 +783,16 @@ def executeTests(String osName, String asicName, Map options) {
                     timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
                         ws("WS/${options.PRJ_NAME}_Test") {
                             executeTestsClient(osName, asicName, options)
+                        }
+                    }
+                }
+            }
+
+            threads["${options.stageName}-multiconnection-client"] = { 
+                node(getMulticonnectionClientLabels(options)) {
+                    timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                        ws("WS/${options.PRJ_NAME}_Test") {
+                            executeTestsMulticonnectionClient(osName, asicName, options)
                         }
                     }
                 }
@@ -1389,6 +1507,7 @@ def call(String projectBranch = "",
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
+                        MULTICONNECTION_CLIENT_TAG: "StreamingSDKClientMulticonnection && (${clientTag})",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
