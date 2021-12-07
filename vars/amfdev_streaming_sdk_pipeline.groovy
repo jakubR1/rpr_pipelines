@@ -72,10 +72,14 @@ def prepareTool(String osName, Map options) {
 }
 
 
-def getServerIpAddress(String osName, Map options) {
+def getServerIpAddress(String osName, Map options, Boolean isMulticonnection = false) {
     switch(osName) {
         case "Windows":
-            return bat(script: "echo %IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
+            if (isMulticonnection) {
+                return bat(script: "echo %MC_IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
+            } else {
+                return bat(script: "echo %IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
+            }
         case "OSX":
             println("Unsupported OS")
             break
@@ -123,10 +127,14 @@ def getOSName() {
 }
 
 
-def getCommunicationPort(String osName, Map options) {
+def getCommunicationPort(String osName, Map options, Boolean isMulticonnection = false) {
     switch(osName) {
         case "Windows":
-            return bat(script: "echo %COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
+            if (isMulticonnection) {
+                return bat(script: "echo %MC_COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
+            } else {
+                return bat(script: "echo %COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
+            }
         case "OSX":
             println("Unsupported OS")
             break
@@ -506,6 +514,14 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
         options["serverInfo"]["communicationPort"] = getCommunicationPort(osName, options)
         println("[INFO] Communication port: ${options.serverInfo.communicationPort}")
+
+        if (options.tests.contains("MulticonnectionWW")) {
+            options["serverInfo"]["mcIpAddress"] = getServerIpAddress(osName, options, true)
+            println("[INFO] IPv4 address of server: ${options.serverInfo.mcIpAddress}")
+
+            options["serverInfo"]["mcCommunicationPort"] = getCommunicationPort(osName, options, true)
+            println("[INFO] Communication port: ${options.serverInfo.mcCommunicationPort}")
+        }
         
         options["serverInfo"]["ready"] = true
         println("[INFO] Server is ready to run tests")
