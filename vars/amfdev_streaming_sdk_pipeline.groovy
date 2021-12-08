@@ -33,7 +33,9 @@ Boolean isIdleClient(Map options) {
             }
         }
 
-        if (tests.contains("MulticonnectionWW")) {
+        def parsedTests = options.tests.split("-")[0]
+
+        if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
             // wait multiconnection client machine
             suitableNodes = nodesByLabel label: getMulticonnectionClientLabels(options), offline: false
 
@@ -492,7 +494,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                     prepareTool(osName, options)
                 }
 
-                if (options.parsedTests.contains("MulticonnectionWA")) {
+                if (options.parsedTests.contains("MulticonnectionWA") || options.parsedTests.contains("MulticonnectionWWA")) {
                     initAndroidDevice()
 
                     dir("StreamingSDKAndroid") {
@@ -515,7 +517,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
         options["serverInfo"]["communicationPort"] = getCommunicationPort(osName, options)
         println("[INFO] Communication port: ${options.serverInfo.communicationPort}")
 
-        if (options.tests.contains("MulticonnectionWW")) {
+        if (options.tests.contains("MulticonnectionWW") || options.tests.contains("MulticonnectionWWA")) {
             options["serverInfo"]["mcIpAddress"] = getServerIpAddress(osName, options, true)
             println("[INFO] IPv4 address of server: ${options.serverInfo.mcIpAddress}")
 
@@ -534,7 +536,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
             sleep(5)
         }
 
-        if (options.tests.contains("MulticonnectionWW")) {
+        if (options.tests.contains("MulticonnectionWW") || options.tests.contains("MulticonnectionWWA")) {
             while (!options["mcClientInfo"]["ready"]) {
                 if (options["mcClientInfo"]["failed"]) {
                     throw new Exception("Multiconnection client was failed")
@@ -1459,7 +1461,7 @@ def call(String projectBranch = "",
             }
 
             // Multiconnection group required Android client
-            if (!!platforms.contains("Windows") && tests.contains("MulticonnectionWA")) {
+            if (!!platforms.contains("Windows") && (tests.contains("MulticonnectionWA") || tests.contains("MulticonnectionWWA"))) {
                 platforms = platforms + ";Android"
 
                 androidBuildConfiguration = "debug"
