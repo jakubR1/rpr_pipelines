@@ -419,7 +419,7 @@ def executeBuild(String osName, Map options) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
 
-            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
                 dir("deps/HdRPR/deps/RPR") {
                     hybrid_to_blender_workflow.replaceHybrid(osName, options)
                 }
@@ -715,7 +715,7 @@ def executePreBuild(Map options)
         hybrid_to_blender_workflow.clearOldBranches("BlenderUSDHydraAddon", PROJECT_REPO, options)
     }
 
-    if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+    if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
         // rebuild deps if new HybridPro is being tested
         options["rebuildDeps"] = true
     }
@@ -969,7 +969,7 @@ def call(String projectRepo = PROJECT_REPO,
                 }
             }
 
-            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
                 enginesNames = "Hybrid"
             }
 

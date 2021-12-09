@@ -554,7 +554,7 @@ def executeBuild(String osName, Map options) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
             }
 
-            if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX) && osName != "OSX") {
+            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX) && osName != "OSX") {
                 dir("deps/RPR") {
                     hybrid_to_blender_workflow.replaceHybrid(osName, options)
                 }
@@ -891,7 +891,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
         }
 
-        if (env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+        if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
             hybrid_to_blender_workflow.createBlenderBranch(options)
         }
     } catch (e) {
