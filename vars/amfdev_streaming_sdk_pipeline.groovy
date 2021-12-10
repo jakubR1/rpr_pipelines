@@ -36,6 +36,8 @@ Boolean isIdleClient(Map options) {
         def parsedTests = options.tests.split("-")[0]
 
         if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
+            result = false
+
             // wait multiconnection client machine
             suitableNodes = nodesByLabel label: getMulticonnectionClientLabels(options), offline: false
 
@@ -777,6 +779,7 @@ def executeTests(String osName, String asicName, Map options) {
         if (osName == "Windows") {
             options["clientInfo"] = new ConcurrentHashMap()
             options["serverInfo"] = new ConcurrentHashMap()
+            options["mcClientInfo"] = new ConcurrentHashMap()
 
             println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
             // create client and server threads and run them parallel
@@ -792,7 +795,7 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
 
-            if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
+            if (options.parsedTests.contains("MulticonnectionWW") || options.parsedTests.contains("MulticonnectionWWA")) {
                 threads["${options.stageName}-multiconnection-client"] = { 
                     node(getMulticonnectionClientLabels(options)) {
                         timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
@@ -1513,7 +1516,7 @@ def call(String projectBranch = "",
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
-                        MULTICONNECTION_CLIENT_TAG: "StreamingSDKClientMulticonnection && (${clientTag})",
+                        MULTICONNECTION_CLIENT_TAG: "StreamingSDKClientMulticonnection",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
