@@ -74,14 +74,10 @@ def prepareTool(String osName, Map options) {
 }
 
 
-def getServerIpAddress(String osName, Map options, Boolean isMulticonnection = false) {
+def getServerIpAddress(String osName, Map options) {
     switch(osName) {
         case "Windows":
-            if (isMulticonnection) {
-                return bat(script: "echo %MC_IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
-            } else {
-                return bat(script: "echo %IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
-            }
+            return bat(script: "echo %IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
         case "OSX":
             println("Unsupported OS")
             break
@@ -129,14 +125,10 @@ def getOSName() {
 }
 
 
-def getCommunicationPort(String osName, Map options, Boolean isMulticonnection = false) {
+def getCommunicationPort(String osName, Map options) {
     switch(osName) {
         case "Windows":
-            if (isMulticonnection) {
-                return bat(script: "echo %MC_COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
-            } else {
-                return bat(script: "echo %COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
-            }
+            return bat(script: "echo %COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
         case "OSX":
             println("Unsupported OS")
             break
@@ -305,7 +297,9 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         switch (osName) {
             case "Windows":
                 if (executionType == "mcClient") {
-                    // TODO call MC client script
+                    bat """
+                        run_mc.bat \"${testsPackageName}\" \"${testsNames}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    """
                 } else {
                     bat """
                         run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
@@ -516,14 +510,6 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
         options["serverInfo"]["communicationPort"] = getCommunicationPort(osName, options)
         println("[INFO] Communication port: ${options.serverInfo.communicationPort}")
-
-        if (options.tests.contains("MulticonnectionWW") || options.tests.contains("MulticonnectionWWA")) {
-            options["serverInfo"]["mcIpAddress"] = getServerIpAddress(osName, options, true)
-            println("[INFO] IPv4 address of server: ${options.serverInfo.mcIpAddress}")
-
-            options["serverInfo"]["mcCommunicationPort"] = getCommunicationPort(osName, options, true)
-            println("[INFO] Communication port: ${options.serverInfo.mcCommunicationPort}")
-        }
         
         options["serverInfo"]["ready"] = true
         println("[INFO] Server is ready to run tests")
@@ -806,11 +792,13 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
 
-            threads["${options.stageName}-multiconnection-client"] = { 
-                node(getMulticonnectionClientLabels(options)) {
-                    timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
-                        ws("WS/${options.PRJ_NAME}_Test") {
-                            executeTestsMulticonnectionClient(osName, asicName, options)
+            if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
+                threads["${options.stageName}-multiconnection-client"] = { 
+                    node(getMulticonnectionClientLabels(options)) {
+                        timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                            ws("WS/${options.PRJ_NAME}_Test") {
+                                executeTestsMulticonnectionClient(osName, asicName, options)
+                            }
                         }
                     }
                 }
