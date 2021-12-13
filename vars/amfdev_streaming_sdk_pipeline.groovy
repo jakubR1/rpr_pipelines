@@ -358,6 +358,10 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
 
                         println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
                         makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                    } else if (executionType == "mcClient") {
+                         println "Stashing results of multiconnection client"
+                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_second_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_second_client_json", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
@@ -1186,6 +1190,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 }
 
                                 try {
+                                    makeUnstash(name: "${it}_second_client", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_second_client
+                                        ${e.toString()}
+                                    """
+                                }
+
+                                try {
                                     makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println """
@@ -1242,9 +1255,28 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 }
             }
 
+            dir("secondClientTestResults") {
+                testResultList.each {
+                    if (it.endsWith(game)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        dir(testName.replace("testResult-", "")) {
+                            try {
+                                makeUnstash(name: "${it}_second_client_json", storeOnNAS: options.storeOnNAS)
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_second_client_json
+                                    ${e.toString()}
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+
             try {
                 dir ("scripts") {
-                    python3("unite_case_results.py --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\"")
+                    python3("unite_case_results.py --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\" --second_client_dir \"..\\secondClientTestResults\"")
                 }
             } catch (e) {
                 println "[ERROR] Can't unite server and client test results"
