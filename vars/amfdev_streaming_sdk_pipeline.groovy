@@ -300,7 +300,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
             case "Windows":
                 if (executionType == "mcClient") {
                     bat """
-                        run_mc.bat \"${testsPackageName}\" \"${testsNames}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                        run_mc.bat \"${testsPackageName}\" \"${testsNames}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                     """
                 } else {
                     bat """
