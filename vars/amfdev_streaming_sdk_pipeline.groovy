@@ -360,7 +360,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else if (executionType == "mcClient") {
                          println "Stashing results of multiconnection client"
-                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_second_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_sc_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_second_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_second_client_json", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
