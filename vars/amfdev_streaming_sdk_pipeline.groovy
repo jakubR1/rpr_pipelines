@@ -577,8 +577,6 @@ def executeTestsMulticonnectionClient(String osName, String asicName, Map option
 
     try {
 
-        utils.reboot(this, osName)
-
         timeout(time: "10", unit: "MINUTES") {
             cleanWS(osName)
             checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
