@@ -102,11 +102,13 @@ def executeBuildWindows(String projectName, Map options) {
         makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
     }
 
-    dir("RPRHybrid-UE") {
-        String ARTIFACT_NAME = "${projectName}_editor.zip"
-        bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!.vs -xr!.git -xr!*@tmp*")
-        makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
-        utils.removeFile(this, "Windows", ARTIFACT_NAME)
+    if (options.saveEngine) {
+        dir("RPRHybrid-UE") {
+            String ARTIFACT_NAME = "${projectName}_editor.zip"
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!.vs -xr!.git -xr!*@tmp*")
+            makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+            utils.removeFile(this, "Windows", ARTIFACT_NAME)
+        }
     }
 }
 
@@ -180,7 +182,7 @@ def call(String projectBranch = "",
          String ueBranch = "rpr_material_serialization_particles",
          String platforms = "Windows",
          String projects = "ShooterGame,ToyShop",
-         Boolean saveEngine = "false"
+         Boolean saveEngine = false
 ) {
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
