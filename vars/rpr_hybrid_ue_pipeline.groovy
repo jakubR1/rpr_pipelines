@@ -120,6 +120,8 @@ def executeBuild(String osName, Map options) {
 
         timeout(time: options["PROJECT_BUILD_TIMEOUT"], unit: "MINUTES") {
             try {
+                utils.reboot(this, osName)
+
                 outputEnvironmentInfo(osName)
                 
                 withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
