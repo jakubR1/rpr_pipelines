@@ -25,7 +25,7 @@ def executeBuildWindows(Map options) {
 
             String buildPlatformPath = (options.buildPlatform == 'Any CPU') ? "" : options.buildPlatform
             bat """
-                xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${buildPlatformPath}\\${options.buildConfiguration}\\UsdConvertor.dll" buildResults
+                xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${buildPlatformPath}\\${options.buildConfiguration}\\RadeonProRender.dll" buildResults
             """
 
             // copy thirdparty libraries and necessary files from repository in results directory
@@ -33,7 +33,7 @@ def executeBuildWindows(Map options) {
                 xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\USD.NET.dll buildResults
                 xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\UsdCs.dll buildResults
                 xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\libusd_ms.dll buildResults
-                xcopy /y/i RadeonProRenderInventorPlugin\\Autodesk.UsdConvertor.Inventor.addin  buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\Autodesk.RadeonProRender.Inventor.addin  buildResults
             """
 
             zip archive: true, dir: "buildResults", glob: '', zipFile: "Windows_${buildName}.zip"
