@@ -289,20 +289,18 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         collectTraces = options.collectTracesType
     }
 
-    def screenResolution 
-
-    if (osName != "Android") {
-        screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
-    }
-
     dir("scripts") {
         switch (osName) {
             case "Windows":
                 if (executionType == "mcClient") {
+                    def screenResolution = "${options.mcClientInfo.screenWidth}x${options.mcClientInfo.screenHeight}"
+
                     bat """
                         run_mc.bat \"${testsPackageName}\" \"${testsNames}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                     """
                 } else {
+                    def screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+
                     bat """
                         run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                     """
