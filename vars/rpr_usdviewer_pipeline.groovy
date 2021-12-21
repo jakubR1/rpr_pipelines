@@ -1072,6 +1072,10 @@ def call(String projectBranch = "",
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
 
+            if (env.BRANCH_NAME && (env.BRANCH_NAME == "PR-265" || env.BRANCH_NAME == "PR-276" || env.BRANCH_NAME == "PR-277")) {
+                testsBranch = "inemankov/update_render_device"
+            }
+
             Boolean isPreBuilt = customBuildLinkWindows
 
             Integer testStageTimeout
