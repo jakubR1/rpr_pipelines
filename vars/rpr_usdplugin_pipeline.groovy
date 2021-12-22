@@ -92,25 +92,35 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
 def executeTestCommand(String osName, String asicName, Map options) {
     timeout(time: options.TEST_TIMEOUT, unit: 'MINUTES') {
         dir('scripts') {
+            String rprTracesRoot = "none" 
+
+            if (options.enableRPRTracing) {
+                if (isUnix()) {
+                    rprTracesRoot = "${env.WORKSPACE}/${env.STAGE_NAME}_RPR_Trace"
+                } else {
+                    rprTracesRoot = "${env.WORKSPACE}\\${env.STAGE_NAME}_RPR_Trace"
+                }
+            }
+
             UniverseManager.executeTests(osName, asicName, options) {
                 switch(osName) {
                     case 'Windows':
                         if (options.enableRIFTracing) {
                             bat """
-                                mkdir -p "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
+                                mkdir "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
                                 set RIF_TRACING_ENABLED=1
                                 set RIF_TRACING_PATH=${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace
                                 set PXR_PLUGINPATH_NAME=
                                 set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
                                 echo %MATERIALX_SEARCH_PATH%
-                                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         } else {
                             bat """
                                 set PXR_PLUGINPATH_NAME=
                                 set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
                                 echo %MATERIALX_SEARCH_PATH%
-                                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
                         break
@@ -125,7 +135,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 export PXR_PLUGINPATH_NAME=
                                 export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
                                 echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         } else {
                             sh """
@@ -133,7 +143,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 export PXR_PLUGINPATH_NAME=
                                 export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
                                 echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
                         break
@@ -149,7 +159,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 export PXR_PLUGINPATH_NAME=
                                 export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
                                 echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         } else {
                             sh """
@@ -158,7 +168,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                                 export PXR_PLUGINPATH_NAME=
                                 export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
                                 echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
                 }
@@ -262,6 +272,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             archiveArtifacts artifacts: "${env.STAGE_NAME}_RIF_Trace/**/*.*", allowEmptyArchive: true
+            archiveArtifacts artifacts: "${env.STAGE_NAME}_RPR_Trace/**/*.*", allowEmptyArchive: true
             if (options.sendToUMS) {
                 options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
@@ -913,6 +924,7 @@ def call(String projectRepo = PROJECT_REPO,
         String testsPackage = "Full.json",
         String tests = "",
         Boolean enableRIFTracing = false,
+        Boolean enableRPRTracing = false,
         String width = "0",
         String height = "0",
         String tester_tag = "Houdini",
@@ -959,6 +971,7 @@ def call(String projectRepo = PROJECT_REPO,
                         gpusCount: gpusCount,
                         height: height,
                         enableRIFTracing:enableRIFTracing,
+                        enableRPRTracing:enableRPRTracing,
                         nodeRetry: [],
                         problemMessageManager: problemMessageManager,
                         platforms: platforms,
