@@ -271,6 +271,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
 
+            Boolean isPreBuilt = customBuildLinkWindows
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
