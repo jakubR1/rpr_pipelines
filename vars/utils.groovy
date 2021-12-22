@@ -433,7 +433,7 @@ class utils {
     }
 
     static String escapeCharsByUnicode(String text) {
-        def unsafeCharsRegex = /['"\\&$ <>|:\n\t]/
+        def unsafeCharsRegex = /['"\\&$ <>|:\n\t\r]/
 
         return text.replaceAll(unsafeCharsRegex, {
             "\\u${Integer.toHexString(it.codePointAt(0)).padLeft(4, '0')}"
