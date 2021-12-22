@@ -92,7 +92,7 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
 def executeTestCommand(String osName, String asicName, Map options) {
     timeout(time: options.TEST_TIMEOUT, unit: 'MINUTES') {
         dir('scripts') {
-            String rprTracesRoot = "" 
+            String rprTracesRoot = "none" 
 
             if (options.enableRPRTracing) {
                 if (isUnix()) {
