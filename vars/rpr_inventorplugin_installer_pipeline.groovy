@@ -12,6 +12,7 @@ import universe.*
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
 @Field final String CUSTOM_INSTALL_PATH = "C:\\Program Files\\testRPRViewer\\subdir"
 @Field final def installsPerformedMap = new ConcurrentHashMap()
+@Field final String devicesConfigPath = "%APPDATA%\\RPRViewer\\config\\devicesConfig.txt"
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows"],
@@ -132,7 +133,10 @@ def buildRenderCache(String osName, String toolVersion, Map options, Boolean cle
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_usd_cache.bat Inventor ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
+                bat """
+                    if exist ${devicesConfigPath} del ${devicesConfigPath}
+                    build_usd_cache.bat Inventor ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1
+                """
                 break
             case "OSX":
                 println "OSX isn't supported"
