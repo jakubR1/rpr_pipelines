@@ -36,9 +36,9 @@ def executeBuildWindows(Map options) {
             // vcvars64.bat sets VS/msbuild env
             withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
                 bat """
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ..\\${STAGE_NAME}.EnvVariables.log 2>&1
 
-                    build.bat >> ${STAGE_NAME}.log 2>&1
+                    build.bat >> ..\\${STAGE_NAME}.log 2>&1
                 """
             }
             dir('installation') {
@@ -232,7 +232,7 @@ def executePreBuild(Map options) {
     // }
 }
 
-def executeDeploy(Map options, List platformList, List testResultList, String engine) {
+def executeDeploy(Map options, List platformList, List testResultList) {
     
 }
 
