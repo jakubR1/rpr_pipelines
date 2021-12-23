@@ -99,6 +99,7 @@ def getReportBuildArgs(String engineName, Map options) {
 }
 
 def executePreBuild(Map options) {
+    cleanWs()
     println "[DEBUG] Execute prebuild"
 
 
