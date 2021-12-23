@@ -226,6 +226,7 @@ def executePreBuild(Map options) {
     }
 
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        println "[DEBUG] Flexible updates"
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
