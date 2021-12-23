@@ -60,6 +60,7 @@ def executeBuildWindows(Map options) {
 }
 
 def executeBuild(String osName, Map options) {
+    println "[DEBUG] Execute build"
     if (options.sendToUMS){
         options.universeManager.startBuildStage(osName)
     }
@@ -98,6 +99,9 @@ def getReportBuildArgs(String engineName, Map options) {
 }
 
 def executePreBuild(Map options) {
+    println "[DEBUG] Execute prebuild"
+
+
     if (env.BRANCH_NAME && env.BRANCH_NAME.contains("PR-208")) {
         options.toolVersion = "2022"
     }
@@ -161,6 +165,8 @@ def executePreBuild(Map options) {
 
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss", 'AppVersion=')
+
+                println "[DEBUG] Version read: ${options.pluginVersion}"
 
                 if (options['incrementVersion']) {
                     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
