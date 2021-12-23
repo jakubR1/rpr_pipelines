@@ -98,10 +98,6 @@ def getReportBuildArgs(String engineName, Map options) {
 }
 
 def executePreBuild(Map options) {
-    if (env.BRANCH_NAME && env.BRANCH_NAME.contains("PR-208")) {
-        options.toolVersion = "2022"
-    }
-
     // manual job with prebuilt plugin
     if (options.isPreBuilt) {
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
@@ -183,11 +179,11 @@ def executePreBuild(Map options) {
                         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss", 'AppVersion=')
                         println "[INFO] Updated build version: ${options.pluginVersion}"
 
-                        bat """
-                          git add ${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss
-                          git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                          git push origin HEAD:develop
-                        """
+                        // bat """
+                        //  git add ${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss
+                        //  git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                        //  git push origin HEAD:develop
+                        // """
 
                         //get commit's sha which have to be build
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
