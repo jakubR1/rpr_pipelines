@@ -485,9 +485,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 }
 
                 Map tasks = [:]
-
+                println "[DEBUG] Platforms: ${platforms}"
                 platforms.split(';').each() {
                     if (it) {
+                        println "[DEBUG] ${it}"
                         List tokens = it.tokenize(':')
                         String osName = tokens.get(0)
                         String gpuNames = ""
@@ -526,7 +527,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                 }
                             }
                         }
-
+                        println "[DEBUG] Before execute platform"
                         tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, newOptions, testsLeft)
                     }
                 }
