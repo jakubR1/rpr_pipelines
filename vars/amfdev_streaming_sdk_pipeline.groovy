@@ -467,6 +467,8 @@ def executeTestsServer(String osName, String asicName, Map options) {
     try {
         utils.reboot(this, osName)
 
+        initAndroidDevice()
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
@@ -493,8 +495,6 @@ def executeTestsServer(String osName, String asicName, Map options) {
                 }
 
                 if (options.parsedTests.contains("MulticonnectionWA") || options.parsedTests.contains("MulticonnectionWWA")) {
-                    initAndroidDevice()
-
                     dir("StreamingSDKAndroid") {
                         prepareTool("Android", options)
                         installAndroidClient()
@@ -672,6 +672,14 @@ def initAndroidDevice() {
     } catch (Exception e) {
         println "[ERROR] Failed to clear Android device"
         throw e
+    }
+
+    try {
+        bat "adb shell am force-stop com.amd.remotegameclient"
+        println "[INFO] Android client is closed"
+    } catch (Exception e) {
+        println "[ERROR] Failed to close Android client"
+        println(e)
     }
 }
 
