@@ -54,7 +54,7 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
             runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     } else if (customBuildLink.startsWith("https://rpr.cis")) {
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     } else if (customBuildLink.startsWith("/CIS/")) {
