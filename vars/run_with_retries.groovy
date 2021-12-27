@@ -11,7 +11,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     while (nodesList.size() == 0) {
         println "[INFO] Couldn't find suitable nodes. Search will be retried after pause"
         if (!options.nodeNotFoundMessageSent) {
-            node ("master") {
+            node ("Windows") {
                 SlackUtils.sendMessageToWorkspaceChannel(this, '', "Failed to find any node with labels '${labels}'", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                 options.nodeNotFoundMessageSent = true
             }
@@ -151,14 +151,14 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             } else if (exceptionClassName.contains("RemotingSystemException")) {
                 
                 try {
-                    // take master node for send exception in Slack channel
-                    node ("master") {
+                    // take Windows node for send exception in Slack channel
+                    node ("Windows") {
                         SlackUtils.sendMessageToWorkspaceChannel(this, '', "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                         utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
                         SlackUtils.sendMessageToWorkspaceChannel(this, '', "${nodeName}: Node was marked as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                     }
                 } catch (e2) {
-                    node ("master") {
+                    node ("Windows") {
                         SlackUtils.sendMessageToWorkspaceChannel(this, '', "Failed to mark node '${nodeName}' as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                     }
                 }
