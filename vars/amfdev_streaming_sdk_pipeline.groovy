@@ -15,19 +15,40 @@ String getClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.CLIENT_TAG}"
 }
 
+String getMulticonnectionClientLabels(Map options) {
+    return "${options.osName} && ${options.TESTER_TAG} && ${options.MULTICONNECTION_CLIENT_TAG}"
+}
+
 
 Boolean isIdleClient(Map options) {
     if (options["osName"] == "Windows") {
+        Boolean result = false
+
         // wait client machine
         def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
 
         for (node in suitableNodes) {
             if (utils.isNodeIdle(node)) {
-                return true
+                result = true
             }
         }
 
-        return false
+        def parsedTests = options.tests.split("-")[0]
+
+        if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
+            result = false
+
+            // wait multiconnection client machine
+            suitableNodes = nodesByLabel label: getMulticonnectionClientLabels(options), offline: false
+
+            for (node in suitableNodes) {
+                if (utils.isNodeIdle(node)) {
+                    result = true
+                }
+            }
+        }
+
+        return result
     } else if (options["osName"] == "Android") {
         // wait when Windows artifact will be built
         return options["finishedBuildStages"]["Windows"]
@@ -268,18 +289,22 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         collectTraces = options.collectTracesType
     }
 
-    def screenResolution 
-
-    if (osName != "Android") {
-        screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
-    }
-
     dir("scripts") {
         switch (osName) {
             case "Windows":
-                bat """
-                    run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
-                """
+                if (executionType == "mcClient") {
+                    def screenResolution = "${options.mcClientInfo.screenWidth}x${options.mcClientInfo.screenHeight}"
+
+                    bat """
+                        run_mc.bat \"${testsPackageName}\" \"${testsNames}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    """
+                } else {
+                    def screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+
+                    bat """
+                        run_windows.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    """
+                }
 
                 break
 
@@ -331,10 +356,15 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
 
                         println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
                         makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                    } else if (executionType == "mcClient") {
+                         println "Stashing results of multiconnection client"
+                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_second_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_second_client_json", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
-                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.jpg,**/*.mp4', name: "${options.testResultsName}_android_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     }
                 }
@@ -437,6 +467,8 @@ def executeTestsServer(String osName, String asicName, Map options) {
     try {
         utils.reboot(this, osName)
 
+        initAndroidDevice()
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
@@ -460,6 +492,13 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
                 dir("StreamingSDK") {
                     prepareTool(osName, options)
+                }
+
+                if (options.parsedTests.contains("MulticonnectionWA") || options.parsedTests.contains("MulticonnectionWWA")) {
+                    dir("StreamingSDKAndroid") {
+                        prepareTool("Android", options)
+                        installAndroidClient()
+                    }
                 }
             }
         }
@@ -485,6 +524,16 @@ def executeTestsServer(String osName, String asicName, Map options) {
             }
 
             sleep(5)
+        }
+
+        if (options.tests.contains("MulticonnectionWW") || options.tests.contains("MulticonnectionWWA")) {
+            while (!options["mcClientInfo"]["ready"]) {
+                if (options["mcClientInfo"]["failed"]) {
+                    throw new Exception("Multiconnection client was failed")
+                }
+
+                sleep(5)
+            }
         }
 
         println("Server is synchronized with state of client. Start tests")
@@ -521,6 +570,81 @@ def executeTestsServer(String osName, String asicName, Map options) {
 }
 
 
+def executeTestsMulticonnectionClient(String osName, String asicName, Map options) {
+    Boolean stashResults = true
+
+    try {
+
+        timeout(time: "10", unit: "MINUTES") {
+            cleanWS(osName)
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
+        }
+
+        timeout(time: "5", unit: "MINUTES") {
+            dir("jobs_launcher/install"){
+                bat """
+                    install_pylibs.bat
+                """
+            }
+
+            dir("scripts"){
+                bat """
+                    install_pylibs.bat
+                """
+            }
+
+            dir("StreamingSDK") {
+                prepareTool(osName, options)
+            }
+        }
+
+        options["mcClientInfo"]["screenWidth"] = getClientScreenWidth(osName, options)
+        println("[INFO] Screen width on multiconnection client machine: ${options.mcClientInfo.screenWidth}")
+
+        options["mcClientInfo"]["screenHeight"] = getClientScreenHeight(osName, options)
+        println("[INFO] Screen height on multiconnection client machine: ${options.mcClientInfo.screenHeight}")
+
+        options["mcClientInfo"]["ready"] = true
+        println("[INFO] Multiconnection client is ready to run tests")
+
+        while (!options["serverInfo"]["ready"]) {
+            if (options["serverInfo"]["failed"]) {
+                throw new Exception("Server was failed")
+            }
+
+            sleep(5)
+        }
+
+        println("Multiconnection client is synchronized with state of server. Start tests")
+        
+        executeTestCommand(osName, asicName, options, "mcClient")
+
+        options["mcClientInfo"]["executeTestsFinished"] = true
+
+    } catch (e) {
+        options["mcClientInfo"]["ready"] = false
+        options["mcClientInfo"]["failed"] = true
+        options["mcClientInfo"]["exception"] = e
+
+        if (options.currentTry < options.nodeReallocateTries - 1) {
+            stashResults = false
+        } else {
+            currentBuild.result = "FAILURE"
+        }
+
+        println "[ERROR] Failed during tests on multiconnection client"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+    } finally {
+        options["mcClientInfo"]["finished"] = true
+
+        saveResults(osName, options, "mcClient", stashResults, options["mcClientInfo"]["executeTestsFinished"])
+    }
+}
+
+
 def rebootAndroidDevice() {
     try {
         bat "adb reboot"
@@ -548,6 +672,14 @@ def initAndroidDevice() {
     } catch (Exception e) {
         println "[ERROR] Failed to clear Android device"
         throw e
+    }
+
+    try {
+        bat "adb shell am force-stop com.amd.remotegameclient"
+        println "[INFO] Android client is closed"
+    } catch (Exception e) {
+        println "[ERROR] Failed to close Android client"
+        println(e)
     }
 }
 
@@ -655,6 +787,7 @@ def executeTests(String osName, String asicName, Map options) {
         if (osName == "Windows") {
             options["clientInfo"] = new ConcurrentHashMap()
             options["serverInfo"] = new ConcurrentHashMap()
+            options["mcClientInfo"] = new ConcurrentHashMap()
 
             println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
             // create client and server threads and run them parallel
@@ -665,6 +798,18 @@ def executeTests(String osName, String asicName, Map options) {
                     timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
                         ws("WS/${options.PRJ_NAME}_Test") {
                             executeTestsClient(osName, asicName, options)
+                        }
+                    }
+                }
+            }
+
+            if (options.parsedTests.contains("MulticonnectionWW") || options.parsedTests.contains("MulticonnectionWWA")) {
+                threads["${options.stageName}-multiconnection-client"] = { 
+                    node(getMulticonnectionClientLabels(options)) {
+                        timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                            ws("WS/${options.PRJ_NAME}_Test") {
+                                executeTestsMulticonnectionClient(osName, asicName, options)
+                            }
                         }
                     }
                 }
@@ -1049,6 +1194,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 }
 
                                 try {
+                                    makeUnstash(name: "${it}_second_client", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_second_client
+                                        ${e.toString()}
+                                    """
+                                }
+
+                                try {
                                     makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println """
@@ -1057,6 +1211,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                     """
 
                                     groupLost = true
+                                }
+
+                                try {
+                                    makeUnstash(name: "${it}_android_client", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_android_client
+                                        ${e.toString()}
+                                    """
                                 }
 
                                 try {
@@ -1096,9 +1259,28 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 }
             }
 
+            dir("secondClientTestResults") {
+                testResultList.each {
+                    if (it.endsWith(game)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        dir(testName.replace("testResult-", "")) {
+                            try {
+                                makeUnstash(name: "${it}_second_client_json", storeOnNAS: options.storeOnNAS)
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_second_client_json
+                                    ${e.toString()}
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+
             try {
                 dir ("scripts") {
-                    python3("unite_case_results.py --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\"")
+                    python3("unite_case_results.py --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\" --second_client_dir \"..\\secondClientTestResults\"")
                 }
             } catch (e) {
                 println "[ERROR] Can't unite server and client test results"
@@ -1305,6 +1487,14 @@ def call(String projectBranch = "",
                 winTestingBuildName = "debug_vs2019"
             }
 
+            // Multiconnection group required Android client
+            if (!!platforms.contains("Windows") && (tests.contains("MulticonnectionWA") || tests.contains("MulticonnectionWWA"))) {
+                platforms = platforms + ";Android"
+
+                androidBuildConfiguration = "debug"
+                androidTestingBuildName = "debug"
+            }   
+
             gpusCount = 0
             platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
@@ -1362,6 +1552,7 @@ def call(String projectBranch = "",
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
+                        MULTICONNECTION_CLIENT_TAG: "StreamingSDKClientMulticonnection",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
