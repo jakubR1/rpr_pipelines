@@ -109,7 +109,6 @@ def call(String jobName,
                             machineConfiguration = "${gpuName}-${osName}"
                         }
 
-                        def resultPathParts = resultPath.split("/")[0].split("-")
                         String platform = resultPathParts[0] + "-" + resultPathParts[1]
                         currentBuild.description = "<b>Configuration:</b> ${PROJECT_MAPPING[toolName]} (${engine ? platform + '-' + ENGINE_REPORT_MAPPING[engine.toLowerCase()] : platform})<br/>"
                     } else {
