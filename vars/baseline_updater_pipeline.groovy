@@ -97,7 +97,7 @@ def call(String jobName,
                     String groupName = resultPath.split("/")[-1]
                     String reportComparePath = "results/${groupName}/report_compare.json"
 
-                    String platform = resultPath.split('-')[0]
+                    String platform = resultPathParts[0] + "-" + resultPathParts[1]
                     currentBuild.description = "<b>Configuration:</b> ${PROJECT_MAPPING[toolName]} (${engine ? platform + '-' + ENGINE_REPORT_MAPPING[engine.toLowerCase()] : platform})<br/>"
                     if (caseName) {
                         currentBuild.description += "<b>Group:</b> ${groupName} / <b>Case:</b> ${caseName}<br/>"
