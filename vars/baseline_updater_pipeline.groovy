@@ -184,7 +184,7 @@ def call(String jobName,
 
                             for (currentGrouppedDir in grouppedDirs) {
                                 if (currentGrouppedDir.directory) {
-                                    dir("${currentGrouppedDir.name}/Results/") {
+                                    dir("${currentGrouppedDir.name}/Results") {
                                         // find next dir name (e.g. Blender, Maya)
                                         String nextDirName = findFiles(glob: "*")[0].name
 
@@ -212,7 +212,9 @@ def call(String jobName,
                             def grouppedDirs = findFiles(glob: "${resultPath}*")
 
                             for (currentGrouppedDir in grouppedDirs) {
-                                if (currentGrouppedDir.directory) {
+                                if (currentGrouppedDir.directory && 
+                                    (currentGrouppedDir.name.startsWith("NVIDIA_") || currentGrouppedDir.name.startsWith("AppleM1") || currentGrouppedDir.name.startsWith("AMD_"))) {
+
                                     def resultPathParts = currentGrouppedDir.name.split("-")
                                     String gpuName = resultPathParts[0]
                                     String osName = resultPathParts[1]
@@ -226,7 +228,7 @@ def call(String jobName,
 
                                     String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
 
-                                    dir("${currentGrouppedDir.name}/Results/") {
+                                    dir("${currentGrouppedDir.name}/Results") {
                                         // find next dir name (e.g. Blender, Maya)
                                         String nextDirName = findFiles(glob: "*")[0].name
 
