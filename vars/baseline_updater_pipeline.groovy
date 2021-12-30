@@ -91,10 +91,11 @@ def call(String jobName,
                     String reportName = engine ? "Test_Report_${ENGINE_REPORT_MAPPING[engine.toLowerCase()]}" : "Test_Report"
 
                     String baselinesPath = "/Baselines/${baselineDirName}"
-                    String reportComparePath = "results/${groupName}/report_compare.json"
+                    String reportComparePath
 
                     if (updateType == "Case" || updateType == "Group") {
                         groupName = resultPath.split("/")[-1]
+                        reportComparePath = "results/${groupName}/report_compare.json"
                     }
 
                     if (updateType != "Build") {
