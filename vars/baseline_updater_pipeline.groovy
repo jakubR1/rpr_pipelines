@@ -125,11 +125,11 @@ def call(String jobName,
                             break
 
                         case "Platform":
-                            currentBuild.description += "<b>Update all groups of platform</b>"
+                            currentBuild.description += "Update all groups of platform<br/>"
                             break
 
                         case "Build":
-                            currentBuild.description += "<b>Update all baselines</b>"
+                            currentBuild.description += "Update all baselines<br/>"
 
                             break
 
@@ -178,24 +178,16 @@ def call(String jobName,
                             String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
                             downloadFiles(remoteResultPath, "results")
 
-                            // one directory can contain test results of multiple groups
-                            def grouppedDirs = findFiles(glob: "${resultPath}*")
+                            dir("results") {
+                                // one directory can contain test results of multiple groups
+                                def grouppedDirs = findFiles()
 
-                            for (currentGrouppedDir in grouppedDirs) {
-                                if (currentGrouppedDir.directory) {
-                                    dir("${currentGrouppedDir.name}/Results") {
-                                        // find next dir name (e.g. Blender, Maya)
-                                        String nextDirName = findFiles(glob: "*")[0].name
-
-                                        dir(nextDirName) {
-                                            // find directories of each test group
-                                            def groupsDirs = findFiles(glob: "*")
-
-                                            for (currentDir in groupsDirs) {
-                                                if (currentDir.directory) {
-                                                    saveBaselines(refPathProfile, currentDir.name)
-                                                }
-                                            }
+                                for (currentDir in grouppedDirs) {
+                                    if (currentDir.directory && currentDir.name.startsWith(resultPath)) {
+                                        dir("${currentDir.name}/Results") {
+                                            // find next dir name (e.g. Blender, Maya)
+                                            String nextDirName = findFiles()[0].name
+                                            saveBaselines(refPathProfile, nextDirName)
                                         }
                                     }
                                 }
@@ -207,39 +199,31 @@ def call(String jobName,
                             String remoteResultPath = "/volume1/web/${jobName}/${buildID}/${reportName}/"
                             downloadFiles(remoteResultPath, "results")
 
-                            // one directory can contain test results of multiple groups
-                            def grouppedDirs = findFiles(glob: "${resultPath}*")
+                            dir("results") {
+                                // one directory can contain test results of multiple groups
+                                def grouppedDirs = findFiles()
 
-                            for (currentGrouppedDir in grouppedDirs) {
-                                if (currentGrouppedDir.directory && 
-                                    (currentGrouppedDir.name.startsWith("NVIDIA_") || currentGrouppedDir.name.startsWith("AppleM1") || currentGrouppedDir.name.startsWith("AMD_"))) {
+                                for (currentDir in grouppedDirs) {
+                                    if (currentDir.directory && 
+                                        (currentDir.name.startsWith("NVIDIA_") || currentDir.name.startsWith("AppleM1") || currentDir.name.startsWith("AMD_"))) {
 
-                                    def resultPathParts = currentGrouppedDir.name.split("-")
-                                    String gpuName = resultPathParts[0]
-                                    String osName = resultPathParts[1]
+                                        def resultPathParts = currentGrouppedDir.name.split("-")
+                                        String gpuName = resultPathParts[0]
+                                        String osName = resultPathParts[1]
 
-                                    if (engine) {
-                                        String engineBaselineName = ENGINE_BASELINES_MAPPING[engine.toLowerCase()]
-                                        machineConfiguration = engineBaselineName ? "${gpuName}-${osName}-${engineBaselineName}" : "${gpuName}-${osName}"
-                                    } else {
-                                        machineConfiguration = "${gpuName}-${osName}"
-                                    }
+                                        if (engine) {
+                                            String engineBaselineName = ENGINE_BASELINES_MAPPING[engine.toLowerCase()]
+                                            machineConfiguration = engineBaselineName ? "${gpuName}-${osName}-${engineBaselineName}" : "${gpuName}-${osName}"
+                                        } else {
+                                            machineConfiguration = "${gpuName}-${osName}"
+                                        }
 
-                                    String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
+                                        String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
 
-                                    dir("${currentGrouppedDir.name}/Results") {
-                                        // find next dir name (e.g. Blender, Maya)
-                                        String nextDirName = findFiles(glob: "*")[0].name
-
-                                        dir(nextDirName) {
-                                            // find directories of each test group
-                                            def groupsDirs = findFiles(glob: "*")
-
-                                            for (currentDir in groupsDirs) {
-                                                if (currentDir.directory) {
-                                                    saveBaselines(refPathProfile, currentDir.name)
-                                                }
-                                            }
+                                        dir("${currentDir.name}/Results") {
+                                            // find next dir name (e.g. Blender, Maya)
+                                            String nextDirName = findFiles()[0].name
+                                            saveBaselines(refPathProfile, nextDirName)
                                         }
                                     }
                                 }
@@ -251,14 +235,18 @@ def call(String jobName,
                             throw new Exception("Unknown updateType ${updateType}")
                     }
 
+                    //TODO: actualize updating of baselines on UMS
                     def testCaseInfo
-                    dir ("results/${groupName}") {
-                        // read information about some test case to reach UMS entities ids
-                        testCaseInfo = readJSON(file: findFiles(glob: "*_RPR.json")[0].name)[0]
+
+                    if (updateType == "Case" || updateType == "Group") {
+                        dir ("results/${groupName}") {
+                            // read information about some test case to reach UMS entities ids
+                            testCaseInfo = readJSON(file: findFiles(glob: "*_RPR.json")[0].name)[0]
+                        }
                     }
 
                     // Update baselines on UMS
-                    if (testCaseInfo.job_id_prod || testCaseInfo.job_id_dev) {
+                    if (testCaseInfo && (testCaseInfo.job_id_prod || testCaseInfo.job_id_dev)) {
                         List umsInstances = [
                             [urlCredential: "prodUniverseURL", jobIdKey: "job_id_prod", buildIdKey: "build_id_prod", instanceName: "Production"],
                             [urlCredential: "devUniverseURL", jobIdKey: "job_id_dev", buildIdKey: "build_id_dev", instanceName: "Testing"]
@@ -362,6 +350,7 @@ def call(String jobName,
                     println("[ERROR] Failed to update baselines on NAS")
                     problemMessageManager.saveGlobalFailReason(NotificationConfiguration.FAILED_UPDATE_BASELINES_NAS)
                     currentBuild.result = "FAILURE"
+                    throw e
                 }
 
                 problemMessageManager.publishMessages()
