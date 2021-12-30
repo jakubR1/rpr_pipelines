@@ -207,7 +207,7 @@ def call(String jobName,
                                     if (currentDir.directory && 
                                         (currentDir.name.startsWith("NVIDIA_") || currentDir.name.startsWith("AppleM1") || currentDir.name.startsWith("AMD_"))) {
 
-                                        def resultPathParts = currentGrouppedDir.name.split("-")
+                                        def resultPathParts = currentDir.name.split("-")
                                         String gpuName = resultPathParts[0]
                                         String osName = resultPathParts[1]
 
