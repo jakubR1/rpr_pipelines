@@ -238,13 +238,6 @@ def call(String jobName,
                     //TODO: actualize updating of baselines on UMS
                     def testCaseInfo
 
-                    if (updateType == "Case" || updateType == "Group") {
-                        dir ("results/${groupName}") {
-                            // read information about some test case to reach UMS entities ids
-                            testCaseInfo = readJSON(file: findFiles(glob: "*_RPR.json")[0].name)[0]
-                        }
-                    }
-
                     // Update baselines on UMS
                     if (testCaseInfo && (testCaseInfo.job_id_prod || testCaseInfo.job_id_dev)) {
                         List umsInstances = [
@@ -350,7 +343,6 @@ def call(String jobName,
                     println("[ERROR] Failed to update baselines on NAS")
                     problemMessageManager.saveGlobalFailReason(NotificationConfiguration.FAILED_UPDATE_BASELINES_NAS)
                     currentBuild.result = "FAILURE"
-                    throw e
                 }
 
                 problemMessageManager.publishMessages()
