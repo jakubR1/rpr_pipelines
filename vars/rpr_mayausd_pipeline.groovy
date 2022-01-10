@@ -307,7 +307,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
-                        PRJ_NAME:"RadeonProRenderMayaUSD",
+                        PRJ_NAME:"RPRMayaUSD",
                         PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
                         renderDevice:renderDevice,
