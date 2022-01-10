@@ -29,7 +29,7 @@ def executeTests(String osName, String asicName, Map options) {
 }
 
 def executeBuildWindows(Map options) {
-    dir('RadeonProRenderMayaUSD') {
+    dir('RPRMayaUSD') {
         withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;C:\\Program Files (x86)\\Inno Setup 6\\;${PATH}"]) {
             outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
@@ -65,7 +65,7 @@ def executeBuild(String osName, Map options) {
     }
 
     try {
-        dir("RadeonProRenderMayaUSD") {
+        dir("RPRMayaUSD") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
@@ -138,7 +138,7 @@ def executePreBuild(Map options) {
     }
 
     if (!options['isPreBuilt']) {
-        dir('RadeonProRenderMayaUSD') {
+        dir('RPRMayaUSD') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
@@ -156,7 +156,7 @@ def executePreBuild(Map options) {
             println "Branch name: ${options.branchName}"
 
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss", 'AppVersion=')
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RPRMayaUSD\\installation\\installation.iss", 'AppVersion=')
 
                 if (options['incrementVersion']) {
                     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -174,13 +174,13 @@ def executePreBuild(Map options) {
 
                         def new_version = version_inc(options.pluginVersion, 3)
                         println "[INFO] New build version: ${new_version}"
-                        version_write("${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss", 'AppVersion=', new_version)
+                        version_write("${env.WORKSPACE}\\RPRMayaUSD\\installation\\installation.iss", 'AppVersion=', new_version)
 
-                        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss", 'AppVersion=')
+                        options.pluginVersion = version_read("${env.WORKSPACE}\\RPRMayaUSD\\installation\\installation.iss", 'AppVersion=')
                         println "[INFO] Updated build version: ${options.pluginVersion}"
 
                         // bat """
-                        //  git add ${env.WORKSPACE}\\RadeonProRenderMayaUSD\\installation\\installation.iss
+                        //  git add ${env.WORKSPACE}\\RPRMayaUSD\\installation\\installation.iss
                         //  git commit -m "buildmaster: version update to ${options.pluginVersion}"
                         //  git push origin HEAD:develop
                         // """
@@ -307,7 +307,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
-                        PRJ_NAME:"RadeonProRenderMayaUSD",
+                        PRJ_NAME:"RPRMayaUSD",
                         PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
                         renderDevice:renderDevice,
@@ -327,6 +327,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         ADDITIONAL_XML_TIMEOUT:15,
                         NON_SPLITTED_PACKAGE_TIMEOUT:75,
                         DEPLOY_TIMEOUT:180,
+                        BUILDER_TAG:"MayaUSDBuilder",
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,
                         resX: resX,
