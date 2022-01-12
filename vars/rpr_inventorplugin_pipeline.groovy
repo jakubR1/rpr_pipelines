@@ -130,7 +130,7 @@ def executePreBuild(Map options) {
         """
 
         if (options.incrementVersion) {
-            if ((env.BRANCH_NAME == "master" || env.CHANGE_URL) && options.commitAuthor != "radeonprorender") {
+            if ((env.BRANCH_NAME == "master") {
                 println("[INFO] Incrementing version of change made by ${options.commitAuthor}.")
 
                 dir("../inc") {
@@ -174,7 +174,9 @@ def executePreBuild(Map options) {
                         println("[INFO] New commit weren't found. Version incrementing won't run")
                     }
                 }
+            }
 
+            if ((env.BRANCH_NAME == "master" || env.CHANGE_URL) && options.commitAuthor != "radeonprorender") {
                 // update RadeonProRenderInventorPlugin submodule in Inventor installer repository
                 dir("../Inst") {
                     checkoutScm(branchName: "master", repositoryUrl: INSTALLER_REPO, submoduleDepth: 1)

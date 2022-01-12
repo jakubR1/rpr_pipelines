@@ -716,7 +716,7 @@ def executePreBuild(Map options) {
                     options.projectBranchName = githubNotificator.branchName
                 }
                 
-                if (env.BRANCH_NAME == "init" && options.commitAuthor != "radeonprorender") {
+                if (env.BRANCH_NAME == "master" && !options.commitMessage.contains("buildmaster: version update to")) {
 
                     println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                     println "[INFO] Current build version: ${options.pluginVersion}"
@@ -731,7 +731,7 @@ def executePreBuild(Map options) {
                     bat """
                         git add ${env.WORKSPACE}\\rprplugin_installer.iss
                         git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                        git push origin HEAD:init
+                        git push origin HEAD:master
                     """
 
                     // Get commit's sha which have to be build
