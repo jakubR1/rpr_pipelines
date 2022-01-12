@@ -130,25 +130,44 @@ def executePreBuild(Map options) {
         """
 
         if (options.incrementVersion) {
-            if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+            if ((env.BRANCH_NAME == "master" || env.CHANGE_URL) && options.commitAuthor != "radeonprorender") {
                 println("[INFO] Incrementing version of change made by ${options.commitAuthor}.")
 
                 // update RadeonProRenderInventorPlugin submodule in Inventor installer repository
                 dir("../Inst") {
                     checkoutScm(branchName: "master", repositoryUrl: INSTALLER_REPO, submoduleDepth: 1)
 
+                    String branchName
+
+                    if (env.BRANCH_NAME == "master") {
+                        branchName = "autoupdate_${options.pluginVersion}"
+                    } else {
+                        branchName = "inventor_auto_${env.BRANCH_NAME}"
+
+                        //delete remote branch if it exists
+                        try {
+                            bat "git push origin --delete ${branchName}"
+
+                            println("[INFO] Remote branch deleted")
+                        } catch (e) {
+                            println("[WARNING] Failed to delete remote branch")
+                        }
+                    }
+
                     bat """
                         cd RadeonProRenderInventorPlugin
-                        git checkout master
+                        git pull
+                        git checkout ${options.commitSHA}
                         cd ..
-                        git checkout -b autoupdate_${options.pluginVersion}
                         git add RadeonProRenderInventorPlugin
                         git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}"
-                        git push origin autoupdate_${options.pluginVersion}
+                        git push origin HEAD:refs/heads/${branchName}
                     """
 
-                    def githubApiProvider = new GithubApiProvider(this)
-                    githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
+                    if (env.BRANCH_NAME == "master") {
+                        def githubApiProvider = new GithubApiProvider(this)
+                        githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
+                    }
                 }
             }
         }
