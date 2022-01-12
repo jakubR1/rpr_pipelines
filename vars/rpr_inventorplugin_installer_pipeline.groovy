@@ -716,7 +716,7 @@ def executePreBuild(Map options) {
                     options.projectBranchName = githubNotificator.branchName
                 }
                 
-                if (env.BRANCH_NAME == "init" && options.commitAuthor != "radeonprorender") {
+                if (env.BRANCH_NAME == "master" && !options.commitMessage.contains("buildmaster: version update to")) {
 
                     println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                     println "[INFO] Current build version: ${options.pluginVersion}"
