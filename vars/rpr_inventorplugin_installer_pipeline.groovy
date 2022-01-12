@@ -731,7 +731,7 @@ def executePreBuild(Map options) {
                     bat """
                         git add ${env.WORKSPACE}\\rprplugin_installer.iss
                         git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                        git push origin HEAD:init
+                        git push origin HEAD:master
                     """
 
                     // Get commit's sha which have to be build
