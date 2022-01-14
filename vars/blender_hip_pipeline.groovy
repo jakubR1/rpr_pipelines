@@ -43,9 +43,15 @@ def downloadBlender(String osName, String blenderLink, String blenderVersion) {
             packageName = "Blender_${osName}_${blenderVersion}.tar.xz"
     }
 
-    bat """
-        curl --retry 5 -L -J -o "${packageName}" "${blenderLink}"
-    """
+    if (isUnix()) {
+        sh """
+            curl --retry 5 -L -J -o "${packageName}" "${blenderLink}"
+        """
+    } else {
+        bat """
+            curl --retry 5 -L -J -o "${packageName}" "${blenderLink}"
+        """
+    }
 
     return packageName
 }
