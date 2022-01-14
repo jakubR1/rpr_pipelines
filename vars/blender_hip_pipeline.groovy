@@ -20,11 +20,34 @@ def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
     }
 }
 
+def installBlender() {
+    switch(osName) {
+        case "Windows":
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"Blender_*.zip\"")
+            bat(script: "move blender-* daily_blender_build")
+            break
+        default:
+            throw new Exception("Unexpected OS name ${osName}")
+    }
+}
+
 def executeTestCommand(String osName, String asicName, Map options) {
     // TODO: to be implemented
 }
 
 def executeTests(String osName, String asicName, Map options) {
+    withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        timeout(time: "5", unit: "MINUTES") {
+            cleanWS(osName)
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+        }
+    }
+
+    withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_BLENDER) {
+        makeUnstash(name: getProduct.getStashName(osName), unzip: false, storeOnNAS: options.storeOnNAS)
+        installBlender()
+    }
+
     // TODO: to be implemented
 }
 
@@ -70,6 +93,8 @@ def executeBuild(String osName, Map options) {
         String packageName = downloadBlender(osName, blenderLink, blenderVersion)
 
         String artifactURL = makeArchiveArtifacts(name: packageName, storeOnNAS: options.storeOnNAS)
+
+        makeStash(includes: ARTIFACT_NAME, name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
     }
 }
 
