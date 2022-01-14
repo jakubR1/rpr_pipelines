@@ -28,19 +28,19 @@ def executeTests(String osName, String asicName, Map options) {
     // TODO: to be implemented
 }
 
-def downloadBlender(String osName, String blenderLink) {
+def downloadBlender(String osName, String blenderLink, String blenderVersion) {
     String packageName
 
     switch(osName) {
         case "Windows":
-            packageName = "${osName}.zip"
+            packageName = "Blender_${osName}_${blenderVersion}.zip"
             break
         case "MacOS":
         case "MacOS_ARM":
-            packageName = "${osName}.dmg"
+            packageName = "Blender_${osName}_${blenderVersion}.dmg"
             break
         default:
-            packageName = "${osName}.tar.xz"
+            packageName = "Blender_${osName}_${blenderVersion}.tar.xz"
     }
 
     bat """
@@ -54,14 +54,14 @@ def executeBuild(String osName, Map options) {
     outputEnvironmentInfo(osName)
 
     withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_BLENDER) {
-        String blenderLink = python3("${CIS_TOOLS}/find_daily_blender_link.py --os_name ${osName}")
+        String blenderLink = python3("${CIS_TOOLS}/find_daily_blender_link.py --os_name ${osName}").trim().split("\n")[-1]
 
         String blenderVersion = blenderLink.split("-")[1]
-        String blenderHash = blenderLink.split("-")[3].split("\\.")[1]
+        String blenderHash = blenderLink.split("-")[2].split("\\.")[1]
 
         saveBlenderInfo(osName, blenderVersion, blenderHash)
 
-        String packageName = downloadBlender(osName, blenderLink)
+        String packageName = downloadBlender(osName, blenderLink, blenderVersion)
 
         String artifactURL = makeArchiveArtifacts(name: packageName, storeOnNAS: options.storeOnNAS)
     }
