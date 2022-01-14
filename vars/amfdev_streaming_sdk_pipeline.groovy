@@ -467,7 +467,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
     try {
         utils.reboot(this, osName)
 
-        initAndroidDevice()
+        //initAndroidDevice()
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
