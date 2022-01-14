@@ -20,7 +20,7 @@ def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
     }
 }
 
-def installBlender() {
+def installBlender(String osName) {
     switch(osName) {
         case "Windows":
             bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"Blender_*.zip\"")
@@ -45,7 +45,7 @@ def executeTests(String osName, String asicName, Map options) {
 
     withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_BLENDER) {
         makeUnstash(name: getProduct.getStashName(osName), unzip: false, storeOnNAS: options.storeOnNAS)
-        installBlender()
+        installBlender(osName)
     }
 
     // TODO: to be implemented
@@ -94,7 +94,7 @@ def executeBuild(String osName, Map options) {
 
         String artifactURL = makeArchiveArtifacts(name: packageName, storeOnNAS: options.storeOnNAS)
 
-        makeStash(includes: ARTIFACT_NAME, name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+        makeStash(includes: packageName, name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
     }
 }
 
@@ -211,7 +211,7 @@ def call(String testsBranch = "master",
                         ]
         }
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
