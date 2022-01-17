@@ -389,7 +389,7 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
     try {
 
-        utils.reboot(this, osName)
+        //utils.reboot(this, osName)
 
         timeout(time: "10", unit: "MINUTES") {
             cleanWS(osName)
@@ -465,7 +465,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
-        utils.reboot(this, osName)
+        //utils.reboot(this, osName)
 
         initAndroidDevice()
 
@@ -663,7 +663,7 @@ def initAndroidDevice() {
         }
     } catch (Exception e) {
         println "[ERROR] Failed to connect to Android device"
-        throw e
+        //throw e
     }
 
     try {
@@ -715,7 +715,7 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
-        utils.reboot(this, "Windows")
+        //utils.reboot(this, "Windows")
 
         initAndroidDevice()
 
@@ -948,7 +948,7 @@ def executeBuildAndroid(Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-        utils.reboot(this, osName != "Android" ? osName : "Windows")
+        //utils.reboot(this, osName != "Android" ? osName : "Windows")
 
         dir("StreamingSDK") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
