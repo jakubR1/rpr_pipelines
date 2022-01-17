@@ -32,7 +32,9 @@ import groovy.json.JsonSlurperClassic
     "tahoe": "tahoe",
     "northstar": "Northstar",
     "hdrprplugin": "RPR",
-    "hdstormrendererplugin": "GL"
+    "hdstormrendererplugin": "GL",
+    "rpr": "RPR",
+    "gl": "GL"
 ]
 
 @Field final Map ENGINE_BASELINES_MAPPING = [
@@ -186,6 +188,11 @@ def call(String jobName,
                                 for (currentDir in grouppedDirs) {
                                     if (currentDir.directory && currentDir.name.startsWith(resultPath)) {
                                         dir("${currentDir.name}/Results") {
+                                            // skip empty directories
+                                            if (findFiles().length == 0) {
+                                                return
+                                            }
+
                                             // find next dir name (e.g. Blender, Maya)
                                             String nextDirName = findFiles()[0].name
                                             saveBaselines(refPathProfile, nextDirName)
@@ -222,6 +229,11 @@ def call(String jobName,
                                         String refPathProfile = "/volume1/${baselinesPath}/${machineConfiguration}" 
 
                                         dir("${currentDir.name}/Results") {
+                                            // skip empty directories
+                                            if (findFiles().length == 0) {
+                                                return
+                                            }
+
                                             // find next dir name (e.g. Blender, Maya)
                                             String nextDirName = findFiles()[0].name
                                             saveBaselines(refPathProfile, nextDirName)
@@ -344,6 +356,7 @@ def call(String jobName,
                     println("[ERROR] Failed to update baselines on NAS")
                     problemMessageManager.saveGlobalFailReason(NotificationConfiguration.FAILED_UPDATE_BASELINES_NAS)
                     currentBuild.result = "FAILURE"
+                    throw e
                 }
 
                 problemMessageManager.publishMessages()
