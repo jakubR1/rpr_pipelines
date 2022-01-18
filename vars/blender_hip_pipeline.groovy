@@ -32,46 +32,15 @@ String installBlender(String osName) {
     }
 }
 
-def selectCyclesDevice(String osName, String blenderLoaction, String optionName, Map options) {
-    dir('scripts/hip') {
-        try {
-            timeout(time: 5, unit: 'MINUTES') {
-                switch(osName) {
-                    case 'Windows':
-                        dir('scripts') {
-                            bat """
-                                set_cycles_option.bat ${blenderLoaction} ${optionName} 1>> \"..\\${options.stageName}_${optionName}.log\"  2>&1
-                            """
-                        }
-                    case 'OSX':
-                        println("Unsupported OS")
-                        break
-
-                    default:
-                        println("Unsupported OS")
-                }
-            }
-        } catch (e) {
-            throw e
-        } finally {
-            dir("scripts") {
-                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${optionName}")
-                archiveArtifacts artifacts: "${options.stageName}_${optionName}/*.jpg", allowEmptyArchive: true
-            }
-        }
-    }
-}
-
 def executeTestCommand(String osName, String asicName, String blenderLocation, String optionName, Map options) {
     timeout(time: options.TEST_TIMEOUT, unit: 'MINUTES') {
         dir('scripts') {
             switch(osName) {
                 case 'Windows':
-                    dir('scripts') {
-                        bat """
-                            run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} ${blenderLocation} 1>> \"..\\${options.stageName}_${optionName}_${options.currentTry}.log\"  2>&1
-                        """
-                    }
+                    bat """
+                        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} Cycles_${optionName}  ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} ${blenderLocation} 1>> \"..\\${options.stageName}_${optionName}_${options.currentTry}.log\"  2>&1
+                    """
+                    break
                 case 'OSX':
                     println("Unsupported OS")
                     break
@@ -107,11 +76,9 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            selectCyclesDevice(osName, blenderLoaction, "None", options)
             executeTestCommand(osName, asicName, blenderLocation, "None", options)
             utils.moveFiles(this, osName, "../Work", "../Work-None")
 
-            selectCyclesDevice(osName, blenderLoaction, "HIP", options)
             executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
             utils.moveFiles(this, osName, "../Work", "../Work-HIP")
         }
