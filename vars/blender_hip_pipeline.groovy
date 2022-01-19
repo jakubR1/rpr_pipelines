@@ -258,7 +258,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["FIRST_ENGINE_NAME=CPU", "SECOND_ENGINE_NAME=HIP", "SHOW_SYNC_TIME=false", 
+                withEnv(["FIRST_ENGINE_NAME=${options.cyclesDevices[1]}", "SECOND_ENGINE_NAME=${options.cyclesDevices[0]}", "SHOW_SYNC_TIME=false", 
                     "SHOW_RENDER_LOGS=true", "REPORT_TOOL=BlenderHIP", "USE_BASELINES=false"]) {
 
                     bat """
