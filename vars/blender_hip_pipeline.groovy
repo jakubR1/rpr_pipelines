@@ -77,10 +77,10 @@ def executeTests(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
             executeTestCommand(osName, asicName, blenderLocation, "None", options)
-            utils.moveFiles(this, osName, "../Work", "../Work-None")
+            utils.moveFiles(this, osName, "Work", "Work-None")
 
             executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
-            utils.moveFiles(this, osName, "../Work", "../Work-HIP")
+            utils.moveFiles(this, osName, "Work", "Work-HIP")
         }
 
         options.executeTestsFinished = true
@@ -107,10 +107,10 @@ def executeTests(String osName, String asicName, Map options) {
 
             if (stashResults) {
                 dir("Work-None/Results/Blender") {
-                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-None", allowEmpty: true
+                    makeStash(includes: "**/*", name: "${options.testResultsName}-None", storeOnNAS: options.storeOnNAS)
                 }
                 dir("Work-HIP/Results/Blender") {
-                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-HIP", allowEmpty: true
+                    makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
@@ -229,7 +229,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: "northstar_baselines_compare", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
+                checkoutScm(branchName: "northstar_baselines_compare_dev", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
             }
 
             dir("summaryTestResults") {
@@ -237,7 +237,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     dir("RPR") {
                         dir(it.replace("testResult-", "")) {
                             try {
-                                unstash("${it}-None")
+                                makeUnstash(name: "${it}-None", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
                                 println("Can't unstash ${it}-None")
                                 println(e.toString())
@@ -248,7 +248,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     dir("NorthStar") {
                         dir(it.replace("testResult-", "")) {
                             try {
-                                unstash("${it}-HIP")
+                                makeUnstash(name: "${it}-HIP", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
                                 println("Can't unstash ${it}-HIP")
                                 println(e.toString())
