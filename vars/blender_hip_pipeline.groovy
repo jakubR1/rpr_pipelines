@@ -235,9 +235,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     dir("RPR") {
                         dir(it.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "${it}-${options.cyclesDevices[1]}", storeOnNAS: options.storeOnNAS)
+                                makeUnstash(name: "${it}-HIP", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
-                                println("Can't unstash ${it}-${options.cyclesDevices[1]}")
+                                println("Can't unstash ${it}-HIP")
                                 println(e.toString())
                             }
                         }
@@ -246,9 +246,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     dir("NorthStar") {
                         dir(it.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "${it}-HIP", storeOnNAS: options.storeOnNAS)
+                                makeUnstash(name: "${it}-${options.cyclesDevices[1]}", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
-                                println("Can't unstash ${it}-HIP")
+                                println("Can't unstash ${it}-${options.cyclesDevices[1]}")
                                 println(e.toString())
                             }
                         }
@@ -258,7 +258,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["FIRST_ENGINE_NAME=${options.cyclesDevices[1]}", "SECOND_ENGINE_NAME=${options.cyclesDevices[0]}", "SHOW_SYNC_TIME=false", 
+                withEnv(["FIRST_ENGINE_NAME=${options.cyclesDevices[0]}", "SECOND_ENGINE_NAME=${options.cyclesDevices[1]}", "SHOW_SYNC_TIME=false", 
                     "SHOW_RENDER_LOGS=true", "REPORT_TOOL=BlenderHIP", "USE_BASELINES=false"]) {
 
                     bat """
