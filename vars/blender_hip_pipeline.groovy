@@ -76,11 +76,10 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            executeTestCommand(osName, asicName, blenderLocation, "None", options)
-            utils.moveFiles(this, osName, "Work", "Work-None")
-
-            executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
-            utils.moveFiles(this, osName, "Work", "Work-HIP")
+            options.cyclesDevices.each { device ->
+                executeTestCommand(osName, asicName, blenderLocation, device, options)
+                utils.moveFiles(this, osName, "Work", "Work-${device}")
+            }
         }
 
         options.executeTestsFinished = true
@@ -106,11 +105,10 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
 
             if (stashResults) {
-                dir("Work-None/Results/Blender") {
-                    makeStash(includes: "**/*", name: "${options.testResultsName}-None", storeOnNAS: options.storeOnNAS)
-                }
-                dir("Work-HIP/Results/Blender") {
-                    makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
+                options.cyclesDevices.each { device ->
+                    dir("Work-${device}/Results/Blender") {
+                        makeStash(includes: "**/*", name: "${options.testResultsName}-${device}", storeOnNAS: options.storeOnNAS)
+                    }
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
@@ -237,9 +235,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     dir("RPR") {
                         dir(it.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "${it}-None", storeOnNAS: options.storeOnNAS)
+                                makeUnstash(name: "${it}-${options.cyclesDevices[1]}", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
-                                println("Can't unstash ${it}-None")
+                                println("Can't unstash ${it}-${options.cyclesDevices[1]}")
                                 println(e.toString())
                             }
                         }
@@ -346,6 +344,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String testsBranch = "master",
     String platforms = 'Windows',
+    String configuration = 'AMD_HIP_CPU',
     Boolean enableNotifications = true,
     String testsPackage = "",
     String tests = "",
@@ -373,9 +372,12 @@ def call(String testsBranch = "master",
                 }
             }
 
+            List cyclesDevices = configuration.split("_", 2)[1].split("_") as List
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
+            println "Cycles render devices: ${cyclesDevices}"
 
             options << [testRepo:"git@github.com:luxteam/jobs_test_blender.git",
                         testsBranch:testsBranch,
@@ -383,6 +385,7 @@ def call(String testsBranch = "master",
                         testsPackage:testsPackage,
                         testsPackageOriginal:testsPackage,
                         tests:tests,
+                        cyclesDevices:cyclesDevices,
                         PRJ_NAME:"BlenderHIP",
                         PRJ_ROOT:"rpr-plugins",
                         reportName:'Test_20Report',
