@@ -349,7 +349,7 @@ def call(String testsBranch = "master",
     String testsPackage = "",
     String tests = "",
     String testerTag = "Blender",
-    Integer testCaseRetries = 3)
+    Integer testCaseRetries = 2)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
