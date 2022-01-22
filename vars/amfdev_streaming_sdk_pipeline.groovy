@@ -339,8 +339,10 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        println "Stashing all test results to : ${options.testResultsName}_client"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        String stashPostfix = executionType == "client" ? "_client" : ""
+
+                        println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
+                        makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else if (executionType == "mcClient") {
                          println "Stashing results of multiconnection client"
                         makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_sec_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
