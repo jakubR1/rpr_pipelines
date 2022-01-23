@@ -1255,16 +1255,18 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("secondClientTestResults") {
                 testResultList.each {
                     if (it.endsWith(game)) {
-                        List testNameParts = it.split("-") as List
-                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}_sec_cl_j", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_sec_cl_j
-                                    ${e.toString()}
-                                """
+                        if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                            List testNameParts = it.split("-") as List
+                            String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                            dir(testName.replace("testResult-", "")) {
+                                try {
+                                    makeUnstash(name: "${it}_sec_cl_j", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_sec_cl_j
+                                        ${e.toString()}
+                                    """
+                                }
                             }
                         }
                     }
