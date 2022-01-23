@@ -256,19 +256,6 @@ def closeGames(String osName, Map options, String gameName) {
 }
 
 
-def closeAndroidTools(Map options) {
-    try {
-        bat """
-            taskkill /f /im \"qemu-system-x86_64.exe\"
-            taskkill /f /im \"node.exe\"
-        """
-    } catch (e) {
-        println("[ERROR] Failed to Android tools")
-        println(e)
-    }
-}
-
-
 def executeTestCommand(String osName, String asicName, Map options, String executionType = "") {
     String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
@@ -358,14 +345,14 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else if (executionType == "mcClient") {
                          println "Stashing results of multiconnection client"
-                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_second_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_second_client_json", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_sec_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_sec_cl_j", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
-                        makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_serv_l", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                        makeStash(includes: '**/*.jpg,**/*.mp4', name: "${options.testResultsName}_android_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                        makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.jpg,**/*.mp4', name: "${options.testResultsName}_and_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_ser_t", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     }
                 }
             }
@@ -658,12 +645,20 @@ def rebootAndroidDevice() {
 def initAndroidDevice() {
     try {
         withCredentials([string(credentialsId: "androidDeviceIp", variable: "ANDROID_DEVICE_IP")]) {
+            bat "adb kill-server"
+            println "[INFO] ADB server is killed"
+        }
+    } catch (Exception e) {
+        println "[ERROR] Failed to kill adb server"
+    }
+
+    try {
+        withCredentials([string(credentialsId: "androidDeviceIp", variable: "ANDROID_DEVICE_IP")]) {
             bat "adb connect " + ANDROID_DEVICE_IP + ":5555"
             println "[INFO] Connected to Android device"
         }
     } catch (Exception e) {
         println "[ERROR] Failed to connect to Android device"
-        //throw e
     }
 
     try {
@@ -671,7 +666,6 @@ def initAndroidDevice() {
         println "[INFO] Android deviced is cleared"
     } catch (Exception e) {
         println "[ERROR] Failed to clear Android device"
-        throw e
     }
 
     try {
@@ -679,7 +673,6 @@ def initAndroidDevice() {
         println "[INFO] Android client is closed"
     } catch (Exception e) {
         println "[ERROR] Failed to close Android client"
-        println(e)
     }
 }
 
@@ -767,8 +760,6 @@ def executeTestsAndroid(String osName, String asicName, Map options) {
         println "Exception cause: ${e.getCause()}"
         println "Exception stack trace: ${e.getStackTrace()}"
     } finally {
-        closeAndroidTools(options)
-
         saveResults("Windows", options, "android", stashResults, true)
 
         closeGames(osName, options, options.engine)
@@ -1183,23 +1174,25 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 }
                             } else {
                                 try {
-                                    makeUnstash(name: "${it}_server_logs", storeOnNAS: options.storeOnNAS)
+                                    makeUnstash(name: "${it}_serv_l", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println """
-                                        [ERROR] Failed to unstash ${it}_server_logs
+                                        [ERROR] Failed to unstash ${it}_serv_l
                                         ${e.toString()}
                                     """
 
                                     groupLost = true
                                 }
 
-                                try {
-                                    makeUnstash(name: "${it}_second_client", storeOnNAS: options.storeOnNAS)
-                                } catch (e) {
-                                    println """
-                                        [ERROR] Failed to unstash ${it}_second_client
-                                        ${e.toString()}
-                                    """
+                                if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                                    try {
+                                        makeUnstash(name: "${it}_sec_cl", storeOnNAS: options.storeOnNAS)
+                                    } catch (e) {
+                                        println """
+                                            [ERROR] Failed to unstash ${it}_sec_cl
+                                            ${e.toString()}
+                                        """
+                                    }
                                 }
 
                                 try {
@@ -1214,19 +1207,19 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 }
 
                                 try {
-                                    makeUnstash(name: "${it}_android_client", storeOnNAS: options.storeOnNAS)
+                                    makeUnstash(name: "${it}_and_cl", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println """
-                                        [ERROR] Failed to unstash ${it}_android_client
+                                        [ERROR] Failed to unstash ${it}_and_cl
                                         ${e.toString()}
                                     """
                                 }
 
                                 try {
-                                    makeUnstash(name: "${it}_server_traces", storeOnNAS: options.storeOnNAS)
+                                    makeUnstash(name: "${it}_ser_t", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println """
-                                        [ERROR] Failed to unstash ${it}_server_traces
+                                        [ERROR] Failed to unstash ${it}_ser_t
                                         ${e.toString()}
                                     """
                                 }
@@ -1262,16 +1255,18 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("secondClientTestResults") {
                 testResultList.each {
                     if (it.endsWith(game)) {
-                        List testNameParts = it.split("-") as List
-                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}_second_client_json", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println """
-                                    [ERROR] Failed to unstash ${it}_second_client_json
-                                    ${e.toString()}
-                                """
+                        if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                            List testNameParts = it.split("-") as List
+                            String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                            dir(testName.replace("testResult-", "")) {
+                                try {
+                                    makeUnstash(name: "${it}_sec_cl_j", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_sec_cl_j
+                                        ${e.toString()}
+                                    """
+                                }
                             }
                         }
                     }
@@ -1488,7 +1483,7 @@ def call(String projectBranch = "",
             }
 
             // Multiconnection group required Android client
-            if (!!platforms.contains("Windows") && (tests.contains("MulticonnectionWA") || tests.contains("MulticonnectionWWA"))) {
+            if (!platforms.contains("Android") && (tests.contains("MulticonnectionWA") || tests.contains("MulticonnectionWWA"))) {
                 platforms = platforms + ";Android"
 
                 androidBuildConfiguration = "debug"
