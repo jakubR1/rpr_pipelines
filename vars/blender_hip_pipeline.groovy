@@ -261,7 +261,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 dir ("jobs_launcher") {
                     withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
                         bat """
-                            remove local_report.py
+                            del local_report.py
                             move local_report_hip_cpy.py local_report.py
                             build_comparison_reports.bat ..\\\\summaryTestResults
                         """
