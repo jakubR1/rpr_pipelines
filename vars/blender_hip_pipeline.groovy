@@ -227,7 +227,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: "inemankov/comparison_reports_refactor", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             dir("summaryTestResults") {
@@ -258,10 +258,14 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
-                    bat """
-                        build_comparison_reports.bat summaryTestResults
-                    """
+                dir ("jobs_launcher") {
+                    withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
+                        bat """
+                            remove local_report.py
+                            move local_report_hip_cpy.py local_report.py
+                            build_comparison_reports.bat ..\\\\summaryTestResults
+                        """
+                    }
                 }
             } catch (e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
