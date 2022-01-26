@@ -192,6 +192,9 @@ def executeTests(String osName, String asicName, Map options)
             case 'HIGH':
                 enginePostfix = "HybridHigh"
                 break
+            case 'HYBRIDPRO':
+                enginePostfix = "HybridPro"
+                break
         }
         REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
@@ -1064,10 +1067,12 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
             enginesNames.each {
-                 if (it.contains('Hybrid')) {
+                if (it == 'HybridPro') {
+                    formattedEngines.add('HYBRIDPRO')
+                } else if (it.contains('Hybrid')) {
                     formattedEngines.add(it.replace('Hybrid', '').toUpperCase())
                 } else {
-                    formattedEngines.add((it == 'Northstar') ? 'FULL2' : 'FULL')
+                    formattedEngines.add('FULL2')
                 }
             }
 
