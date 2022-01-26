@@ -438,7 +438,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
                     }
 
-                    dir("Northstar") {
+                    dir("Northstar64") {
                         dir(it.replace("testResult-", "")) {
                             try {
                                 unstash("${it}-Northstar64")
