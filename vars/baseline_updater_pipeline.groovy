@@ -29,6 +29,7 @@ import groovy.json.JsonSlurperClassic
 @Field final Map ENGINE_REPORT_MAPPING = [
     "full": "Tahoe",
     "full2": "Northstar",
+    "hybridpro": "HybridPro",
     "tahoe": "tahoe",
     "northstar": "Northstar",
     "hdrprplugin": "RPR",
@@ -40,6 +41,7 @@ import groovy.json.JsonSlurperClassic
 @Field final Map ENGINE_BASELINES_MAPPING = [
     "full": "",
     "full2": "NorthStar",
+    "hybridpro": "HybridPro",
     "tahoe": "",
     "northstar": "NorthStar",
     "hdrprplugin": "RPR",
