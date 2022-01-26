@@ -227,12 +227,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: "northstar_baselines_compare_dev", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
+                checkoutScm(branchName: "inemankov/comparison_reports_refactor", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
             }
 
             dir("summaryTestResults") {
                 testResultList.each {
-                    dir("RPR") {
+                    dir("HIP") {
                         dir(it.replace("testResult-", "")) {
                             try {
                                 makeUnstash(name: "${it}-HIP", storeOnNAS: options.storeOnNAS)
@@ -243,7 +243,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
                     }
 
-                    dir("NorthStar") {
+                    dir("${options.cyclesDevices[1]}") {
                         dir(it.replace("testResult-", "")) {
                             try {
                                 makeUnstash(name: "${it}-${options.cyclesDevices[1]}", storeOnNAS: options.storeOnNAS)
@@ -258,11 +258,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["FIRST_ENGINE_NAME=${options.cyclesDevices[0]}", "SECOND_ENGINE_NAME=${options.cyclesDevices[1]}", "SHOW_SYNC_TIME=false", 
-                    "SHOW_RENDER_LOGS=true", "REPORT_TOOL=BlenderHIP", "USE_BASELINES=false"]) {
-
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
                     bat """
-                        build_performance_comparison_report.bat summaryTestResults\\\\RPR summaryTestResults\\\\NorthStar summaryTestResults
+                        build_comparison_reports.bat summaryTestResults
                     """
                 }
             } catch (e) {
