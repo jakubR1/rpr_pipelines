@@ -36,6 +36,28 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
+def uninstallRPRMayaUSDPlugin(String osName, Map options) {
+    println "[INFO] Uninstalling RPR Maya USD plugin"
+    switch(osName) {
+        case "Windows":
+            String defaultUninstallerPath = "C:\\Program Files\\RPRMayaUSD\\unins000.exe"
+
+            try {
+                if (fileExists(defaultUninstallerPath)) {
+                    bat """
+                        start "" /wait "${defaultUninstallerPath}" /SILENT
+                    """
+                } else {
+                    println "[INFO] RPR Maya USD plugin not found"
+                }
+            } catch (e) {
+                throw new Exception("Failed to uninstall RPR Maya USD plugin")
+            }
+            break
+        default:
+            println "[WARNING] ${osName} is not supported for RPR Maya USD"
+    }
+}
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine)
 {
@@ -161,6 +183,10 @@ def executeTests(String osName, String asicName, Map options)
         try {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+                timeout(time: "15", unit: "MINUTES") {
+                    uninstallRPRMayaUSDPlugin(osName, options)
+                }
+
                 timeout(time: "15", unit: "MINUTES") {
                     getProduct(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, "Maya", options)

@@ -16,6 +16,36 @@ import java.util.concurrent.atomic.AtomicInteger
     artifactNameBase: "RPRMayaUSD_Setup"
 )
 
+def uninstallRPRMayaPlugin(String osName, Map options) {
+    println "[INFO] Uninstalling RPR Maya plugin"
+    switch(osName) {
+        case 'Windows':
+            uninstallMSI("Radeon%Maya%", options.stageName, options.currentTry)
+            break
+        default:
+            println "[WARNING] ${osName} is not supported"
+    }
+}
+
+def installRPRMayaUSDPlugin() {
+
+    if (options['isPreBuilt']) {
+        installerName = "${options[getProduct.getIdentificatorKey('Windows')]}.exe"
+    } else {
+        installerName = "${options.commitSHA}.exe"
+    }
+
+    try {
+        println "[INFO] Install RPR Maya USD Plugin"
+
+        bat """
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}_${options.currentTry}.install.log
+        """
+    } catch (e) {
+        throw new Exception("Failed to install plugin")
+    } 
+}
+
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine) {
     
 }
@@ -25,7 +55,21 @@ def executeTestCommand(String osName, String asicName, Map options) {
 }
 
 def executeTests(String osName, String asicName, Map options) {
-    
+    withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
+        timeout(time: "40", unit: "MINUTES") {
+            getProduct(osName, options)
+        }
+    }
+
+    timeout(time: "15", unit: "MINUTES") {
+        uninstallRPRMayaPlugin(osName, options)
+    }
+
+    println "Start plugin installation"
+
+    timeout(time: "15", unit: "MINUTES") {
+        installRPRMayaUSDPlugin(osName, options)
+    }
 }
 
 def executeBuildWindows(Map options) {
@@ -82,6 +126,8 @@ def executeBuild(String osName, Map options) {
                     println "[WARNING] ${osName} is not supported"
             }
         }
+
+        options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
     } catch (e) {
         throw e
     } finally {
