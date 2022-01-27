@@ -124,8 +124,9 @@ def executeTests(String osName, String asicName, Map options) {
                         }
                     }
                 } else {
-                    executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
-                    utils.moveFiles(this, osName, "Work", "Work-CUDA")
+                    dir("Work-CUDA/Results/Blender") {
+                        makeStash(includes: "**/*", name: "${options.testResultsName}-CUDA", storeOnNAS: options.storeOnNAS)
+                    }
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
@@ -346,7 +347,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             Map summaryTestResults = ["passed": 0, "failed": 0, "error": 0]
             try {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_report.json'
+                def summaryReport = readJSON file: 'summaryTestResults/compared_configurations_info.json'
 
                 summaryReport.each { configuration ->
                     summaryTestResults["passed"] += configuration.value["summary"]["passed"]
