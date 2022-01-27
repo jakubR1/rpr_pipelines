@@ -188,10 +188,10 @@ def executeTests(String osName, String asicName, Map options) {
 
             if (stashResults) {
                 dir("Work-HybridPro/Results/HybridVsNs") {
-                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-HybridPro", allowEmpty: true
+                    stash includes: "**/*", name: "${options.testResultsName}-HybridPro", allowEmpty: true
                 }
                 dir("Work-Northstar64/Results/HybridVsNs") {
-                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-Northstar64", allowEmpty: true
+                    stash includes: "**/*", name: "${options.testResultsName}-Northstar64", allowEmpty: true
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
