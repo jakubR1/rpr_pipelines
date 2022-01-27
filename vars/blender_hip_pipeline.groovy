@@ -76,17 +76,17 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
-            utils.moveFiles(this, osName, "Work", "Work-HIP")
+            if (asicName.contains("AMD")) {
+                executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
+                utils.moveFiles(this, osName, "Work", "Work-HIP")
 
-            if (configuration == "AMD_HIP_CPU") {
-                executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
-                utils.moveFiles(this, osName, "Work", "Work-CPU")
-            } else if (configuration == "Nvidia_HIP_CUDA") {
-                if (asicName.contains("Nvidia")) {
-                    executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
-                    utils.moveFiles(this, osName, "Work", "Work-CUDA")
+                if (configuration == "AMD_HIP_CPU") {
+                    executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
+                    utils.moveFiles(this, osName, "Work", "Work-CPU")
                 }
+            } else {
+                executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
+                utils.moveFiles(this, osName, "Work", "Work-CUDA")
             }
         }
 
@@ -113,19 +113,19 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
 
             if (stashResults) {
-                dir("Work-HIP/Results/Blender") {
-                    makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
-                }
+                if (asicName.contains("AMD")) {
+                    dir("Work-HIP/Results/Blender") {
+                        makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
+                    }
 
-                if (configuration == "AMD_HIP_CPU") {
-                    dir("Work-CPU/Results/Blender") {
-                        makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
+                    if (configuration == "AMD_HIP_CPU") {
+                        dir("Work-CPU/Results/Blender") {
+                            makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
+                        }
                     }
-                } else if (configuration == "Nvidia_HIP_CUDA") {
-                    if (asicName.contains("Nvidia")) {
-                        executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
-                        utils.moveFiles(this, osName, "Work", "Work-CUDA")
-                    }
+                } else {
+                    executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
+                    utils.moveFiles(this, osName, "Work", "Work-CUDA")
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
@@ -298,7 +298,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 } else {
                     bat """
                         del local_config.py
-                        move local_config_hip_cpu.py local_config.py
+                        move local_config_hip_cuda.py local_config.py
                     """
                 }
 
