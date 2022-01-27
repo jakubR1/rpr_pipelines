@@ -491,7 +491,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             Map summaryTestResults = ["passed": 0, "failed": 0, "error": 0]
             try {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_report.json'
+                def summaryReport = readJSON file: 'summaryTestResults/compared_configurations_info.json'
 
                 summaryReport.each { configuration ->
                     summaryTestResults["passed"] += configuration.value["summary"]["passed"]
