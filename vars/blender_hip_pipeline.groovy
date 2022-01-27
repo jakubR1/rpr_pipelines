@@ -412,11 +412,11 @@ def call(String testsBranch = "master",
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             // set necessary GPUs
-            if (platform.contains("Windows")) {
+            if (platforms.contains("Windows")) {
                 if (configuration == "AMD_HIP_CPU") {
-                    platform = platform.replace("Windows", "Windows:AMD_RX6800")
+                    platforms = platforms.replace("Windows", "Windows:AMD_RX6800")
                 } else if (configuration == "Nvidia_HIP_CUDA") {
-                    platform = platform.replace("Windows", "Windows:AMD_RX6800,NVIDIA_RTX3070")
+                    platforms = platforms.replace("Windows", "Windows:AMD_RX6800,NVIDIA_RTX3070")
                 }
             }
 
