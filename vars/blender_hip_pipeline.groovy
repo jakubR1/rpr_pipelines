@@ -290,18 +290,26 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                dir ("jobs_launcher") {
+                if (configuration == "AMD_HIP_CPU") {
+                    bat """
+                        del local_config.py
+                        move local_config_hip_cpu.py local_config.py
+                    """
+                } else {
+                    bat """
+                        del local_config.py
+                        move local_config_hip_cpu.py local_config.py
+                    """
+                }
+
+                dir("jobs_launcher") {
                     withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
                         if (configuration == "AMD_HIP_CPU") {
                             bat """
-                                del local_report.py
-                                move local_report_hip_cpu.py local_report.py
                                 build_comparison_reports.bat ..\\\\summaryTestResults
                             """
                         } else {
                             bat """
-                                del local_report.py
-                                move local_report_hip_cuda.py local_report.py
                                 build_comparison_reports.bat ..\\\\summaryTestResults
                             """
                         }
