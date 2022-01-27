@@ -76,9 +76,17 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            options.cyclesDevices.each { device ->
-                executeTestCommand(osName, asicName, blenderLocation, device, options)
-                utils.moveFiles(this, osName, "Work", "Work-${device}")
+            executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
+            utils.moveFiles(this, osName, "Work", "Work-HIP")
+
+            if (configuration == "AMD_HIP_CPU") {
+                executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
+                utils.moveFiles(this, osName, "Work", "Work-CPU")
+            } else if (configuration == "Nvidia_HIP_CUDA") {
+                if (asicName.contains("Nvidia")) {
+                    executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
+                    utils.moveFiles(this, osName, "Work", "Work-CUDA")
+                }
             }
         }
 
@@ -105,9 +113,18 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
 
             if (stashResults) {
-                options.cyclesDevices.each { device ->
-                    dir("Work-${device}/Results/Blender") {
-                        makeStash(includes: "**/*", name: "${options.testResultsName}-${device}", storeOnNAS: options.storeOnNAS)
+                dir("Work-HIP/Results/Blender") {
+                    makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
+                }
+
+                if (configuration == "AMD_HIP_CPU") {
+                    dir("Work-CPU/Results/Blender") {
+                        makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
+                    }
+                } else if (configuration == "Nvidia_HIP_CUDA") {
+                    if (asicName.contains("Nvidia")) {
+                        executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
+                        utils.moveFiles(this, osName, "Work", "Work-CUDA")
                     }
                 }
             } else {
@@ -232,24 +249,39 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             dir("summaryTestResults") {
                 testResultList.each {
-                    dir("HIP") {
-                        dir(it.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}-HIP", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println("Can't unstash ${it}-HIP")
-                                println(e.toString())
+                    if (it.contains("AMD")) {
+                        dir("HIP") {
+                            dir(it.replace("testResult-", "")) {
+                                try {
+                                    makeUnstash(name: "${it}-HIP", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println("Can't unstash ${it}-HIP")
+                                    println(e.toString())
+                                }
                             }
                         }
-                    }
 
-                    dir("${options.cyclesDevices[1]}") {
-                        dir(it.replace("testResult-", "")) {
-                            try {
-                                makeUnstash(name: "${it}-${options.cyclesDevices[1]}", storeOnNAS: options.storeOnNAS)
-                            } catch (e) {
-                                println("Can't unstash ${it}-${options.cyclesDevices[1]}")
-                                println(e.toString())
+                        if (configuration == "AMD_HIP_CPU") {
+                            dir("CPU") {
+                                dir(it.replace("testResult-", "")) {
+                                    try {
+                                        makeUnstash(name: "${it}-CPU", storeOnNAS: options.storeOnNAS)
+                                    } catch (e) {
+                                        println("Can't unstash ${it}-CPU")
+                                        println(e.toString())
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        dir("CUDA") {
+                            dir(it.replace("testResult-", "")) {
+                                try {
+                                    makeUnstash(name: "${it}-CUDA", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println("Can't unstash ${it}-CUDA")
+                                    println(e.toString())
+                                }
                             }
                         }
                     }
@@ -260,11 +292,19 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 dir ("jobs_launcher") {
                     withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
-                        bat """
-                            del local_report.py
-                            move local_report_hip_cpy.py local_report.py
-                            build_comparison_reports.bat ..\\\\summaryTestResults
-                        """
+                        if (configuration == "AMD_HIP_CPU") {
+                            bat """
+                                del local_report.py
+                                move local_report_hip_cpu.py local_report.py
+                                build_comparison_reports.bat ..\\\\summaryTestResults
+                            """
+                        } else {
+                            bat """
+                                del local_report.py
+                                move local_report_hip_cuda.py local_report.py
+                                build_comparison_reports.bat ..\\\\summaryTestResults
+                            """
+                        }
                     }
                 }
             } catch (e) {
@@ -363,6 +403,15 @@ def call(String testsBranch = "master",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+            // set necessary GPUs
+            if (platform.contains("Windows")) {
+                if (configuration == "AMD_HIP_CPU") {
+                    platform = platform.replace("Windows", "Windows:AMD_RX6800")
+                } else if (configuration == "Nvidia_HIP_CUDA") {
+                    platform = platform.replace("Windows", "Windows:AMD_RX6800,NVIDIA_RTX3070")
+                }
+            }
+
             gpusCount = 0
             platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
@@ -374,12 +423,10 @@ def call(String testsBranch = "master",
                 }
             }
 
-            List cyclesDevices = configuration.split("_", 2)[1].split("_") as List
-
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
-            println "Cycles render devices: ${cyclesDevices}"
+            println "Configuration: ${configuration}"
 
             options << [testRepo:"git@github.com:luxteam/jobs_test_blender.git",
                         testsBranch:testsBranch,
@@ -387,7 +434,7 @@ def call(String testsBranch = "master",
                         testsPackage:testsPackage,
                         testsPackageOriginal:testsPackage,
                         tests:tests,
-                        cyclesDevices:cyclesDevices,
+                        configuration:configuration,
                         PRJ_NAME:"BlenderHIP",
                         PRJ_ROOT:"rpr-plugins",
                         reportName:'Test_20Report',
