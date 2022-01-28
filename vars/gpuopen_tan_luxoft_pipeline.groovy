@@ -508,7 +508,7 @@ def executeBuildLinux(String osName, Map options) {
                     options.ub18_portaudio = "../../../../../thirdparty/portaudio"
 
                     sh """
-                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                     """
 
                     sh """
