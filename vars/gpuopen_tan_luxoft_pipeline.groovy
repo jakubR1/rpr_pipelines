@@ -776,7 +776,8 @@ def call(String projectBranch = "",
                                 tests:tests,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
-                                DEPLOY_TIMEOUT:150
+                                DEPLOY_TIMEOUT:150,
+                                BUILDER_TAG:"BuilderTAN"
                                 ])
     } catch (e) {
         currentBuild.result = "FAILED"
