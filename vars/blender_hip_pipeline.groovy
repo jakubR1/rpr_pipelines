@@ -80,7 +80,7 @@ def executeTests(String osName, String asicName, Map options) {
                 executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
                 utils.moveFiles(this, osName, "Work", "Work-HIP")
 
-                if (configuration == "AMD_HIP_CPU") {
+                if (options.configuration == "AMD_HIP_CPU") {
                     executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
                     utils.moveFiles(this, osName, "Work", "Work-CPU")
                 }
@@ -118,7 +118,7 @@ def executeTests(String osName, String asicName, Map options) {
                         makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
                     }
 
-                    if (configuration == "AMD_HIP_CPU") {
+                    if (options.configuration == "AMD_HIP_CPU") {
                         dir("Work-CPU/Results/Blender") {
                             makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
                         }
@@ -262,7 +262,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             }
                         }
 
-                        if (configuration == "AMD_HIP_CPU") {
+                        if (options.configuration == "AMD_HIP_CPU") {
                             dir("CPU") {
                                 dir(it.replace("testResult-", "")) {
                                     try {
@@ -291,7 +291,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                if (configuration == "AMD_HIP_CPU") {
+                if (options.configuration == "AMD_HIP_CPU") {
                     bat """
                         del local_config.py
                         move local_config_hip_cpu.py local_config.py
@@ -305,7 +305,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
                 dir("jobs_launcher") {
                     withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
-                        if (configuration == "AMD_HIP_CPU") {
+                        if (options.configuration == "AMD_HIP_CPU") {
                             bat """
                                 build_comparison_reports.bat ..\\\\summaryTestResults
                             """
