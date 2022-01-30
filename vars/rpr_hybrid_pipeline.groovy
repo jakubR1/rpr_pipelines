@@ -646,7 +646,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                                 if (!options.storeOnNAS) {
                                     makeUnstash(name: "${it}-${quality}", storeOnNAS: options.storeOnNAS)
                                     reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
-                                } else if (options["failedConfigurations"].contains("${it}-${quality}")) {
+                                } else if (options["failedConfigurations"].contains(it + "-" + quality)) {
                                     reportFiles += ",../${it}-${quality}_failures/report.html".replace("testResult-", "Test-")
                                 }
                             }
@@ -674,7 +674,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             if (!options.storeOnNAS) {
                                 makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
                                 reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
-                            } else if (options["failedConfigurations"].contains("${it}")) {
+                            } else if (options["failedConfigurations"].contains(it)) {
                                 reportFiles += ",../${it}_Failures/report.html".replace("testResult-", "Test-")
                             }
                         }
