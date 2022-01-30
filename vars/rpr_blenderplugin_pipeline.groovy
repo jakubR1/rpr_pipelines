@@ -109,6 +109,16 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
+        // FIXME: remove this ducktape when CPUs on that machines will be changes
+        if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
+            if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("regression.0")) {
+                throw new ExpectedExceptionWrapper(
+                    "System doesn't support CPU_Mode group", 
+                    new Exception("System doesn't support CPU_Mode group")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "15", unit: "MINUTES") {
                 cleanWS(osName)
