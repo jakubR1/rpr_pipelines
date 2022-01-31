@@ -837,6 +837,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 testResultList.each() {
                     if (it.endsWith(engine)) {
                         List testNameParts = it.split("-") as List
+
+                        if (hybridProFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2)), engine) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
