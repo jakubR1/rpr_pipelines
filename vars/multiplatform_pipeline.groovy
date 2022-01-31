@@ -110,6 +110,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                     if (engine) {
                                         // remove engine name from testName
+                                        List testNameParts = it.split("-") as List
                                         String rawTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                                         skip = options["skipCallback"](options, asicName, osName, rawTestName, engine)
                                     } else {
