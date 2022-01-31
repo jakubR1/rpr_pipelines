@@ -17,6 +17,11 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git"
 
 
+Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+    return (engine == "Hybrid" && (asicName.contains("RTX") || asicName == "AMD_RX6800"))
+}
+
+
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
     dir('scripts') {
         switch(osName) {
@@ -1081,7 +1086,8 @@ def call(String projectRepo = PROJECT_REPO,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS:true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        skipCallback: this.&hybridProFilter
                         ]
         }
 

@@ -104,6 +104,24 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                     continue
                                 }
 
+                                // check that the current configuration shouldn't be skipped
+                                if (options.containsKey("skipCallback")) {
+                                    Boolean skip = false
+
+                                    if (engine) {
+                                        skip = options["skipCallback"](options, asicName, osName, testName, engine)
+                                    } else {
+                                        skip = options["skipCallback"](options, asicName, osName, testName)
+                                    }
+
+                                    if (skip) {
+                                        println("Test group ${testName} on ${asicName}-${osName} is skipped on pipeline's layer")
+                                        testName = getNextTest(testsIterator)
+                                        changeTestsCount(testsLeft, -1, engine)
+                                        continue
+                                    }
+                                }
+
                                 println("Scheduling ${osName}:${asicName} ${testName}")
 
                                 Map newOptions = options.clone()

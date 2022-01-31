@@ -18,6 +18,11 @@ import java.util.concurrent.atomic.AtomicInteger
 )
 
 
+Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+    return (engine == "HYBRIDPRO" && (asicName.contains("RTX") || asicName == "AMD_RX6800"))
+}
+
+
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
     dir('scripts') {
@@ -1200,7 +1205,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        skipCallback: this.&hybridProFilter
                         ]
 
             if (sendToUMS) {
