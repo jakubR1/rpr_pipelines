@@ -16,34 +16,32 @@ import java.util.concurrent.atomic.AtomicInteger
 def executeBuildWindows(Map options) {
     GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
 
-    utils.removeDir(this, "Windows", '%ProgramFiles(x86)%' + "\\anari")
+    utils.removeDir(this, "Windows", "%ProgramFiles(x86)%\\anari")
 
     dir("AnariSDK\\build") {
         bat """
             set BUILD_TESTING=ON
-            echo "<<< BUILD ANARI SDK >>>" >> ../../${STAGE_NAME}.log 
             cmake .. >> ../../${STAGE_NAME}.log 2>&1
-            cmake --build . -t install .. >> ../../${STAGE_NAME}.log 2>&1
+            cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
         """
 
-        zip(dir: '%ProgramFiles(x86)%' + "\\anari", zipFile: "Anari_SDK_Windows.zip")
-        makeArchiveArtifacts(name: "Anari_SDK_Windows", storeOnNAS: options.storeOnNAS)
-        makeStash(includes: "Anari_SDK_Windows.zip", name: getProduct.getStashName("Windows") + "_SDK", storeOnNAS: options.storeOnNAS)
+        bat(script: "%CIS_TOOLS%\\7-Zip\\7z.exe a Anari_SDK_Windows.zip \"%ProgramFiles(x86)%\\anari\"")
+        makeArchiveArtifacts(name: "Anari_SDK_Windows.zip", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "Anari_SDK_Windows.zip", name: getProduct.getStashName("Windows") + "_SDK", preZip: false, storeOnNAS: options.storeOnNAS)
     }
 
     dir("RadeonProRenderAnari\\build") {
         bat """
-            echo "<<< BUILD RPR ANDRI >>>" >> ../../${STAGE_NAME}.log 
             cmake .. >> ../../${STAGE_NAME}.log 2>&1
             cmake --build . >> ../../${STAGE_NAME}.log 2>&1
         """
 
-        zip(dir: "Debug", zipFile: "RPR_Anari_Windows.zip")
-        makeArchiveArtifacts(name: "RPR_Anari_Windows", storeOnNAS: options.storeOnNAS)
-        makeStash(includes: "RPR_Anari_Windows.zip", name: getProduct.getStashName("Windows") + "_RPR", storeOnNAS: options.storeOnNAS)
+        bat(script: "%CIS_TOOLS%\\7-Zip\\7z.exe a RPR_Anari_Windows.zip Debug")
+        makeArchiveArtifacts(name: "RPR_Anari_Windows.zip", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "RPR_Anari_Windows.zip", name: getProduct.getStashName("Windows") + "_RPR", preZip: false, storeOnNAS: options.storeOnNAS)
     }
 
-    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
 }
 
 
@@ -51,10 +49,10 @@ def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir('AnariSDK') {
-                checkoutScm(branchName: ANARI_SDK_REPO, repositoryUrl: options.anariSdkBranch)
+                checkoutScm(branchName: options.anariSdkBranch, repositoryUrl: ANARI_SDK_REPO)
             }
             dir('RadeonProRenderAnari') {
-                checkoutScm(branchName: RPR_ANARI_REPO, repositoryUrl: options.rprAnariBranch)
+                checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO)
             }
         }
 
@@ -68,8 +66,10 @@ def executeBuild(String osName, Map options) {
                 case "OSX":
                 case "MacOS_ARM":
                     // TODO: add building on MacOS
+                    println("Do not support")
                 default:
                     // TODO: add building on Linux
+                    println("Do not support")
             }
         }
 
@@ -110,7 +110,7 @@ def executePreBuild(Map options) {
 
     dir('RadeonProRenderAnari') {
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkoutScm(branchName: RPR_ANARI_REPO, repositoryUrl: options.rprAnariBranch, disableSubmodules: true)
+            checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO, disableSubmodules: true)
         }
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -132,8 +132,8 @@ def executePreBuild(Map options) {
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
 
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
-        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description = "<b>Anari SDK branch:</b> ${options.anariSdkBranch}<br/>"
+        currentBuild.description = "<b>RPR Anari branch:</b> ${options.rprAnariBranch}<br/>"
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
@@ -148,8 +148,9 @@ def executePreBuild(Map options) {
     }
 
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
-        options.reportUpdater = new ReportUpdater(this, env, options)
-        options.reportUpdater.init(this.&getReportBuildArgs)
+        // TODO: support flexible updating
+        //options.reportUpdater = new ReportUpdater(this, env, options)
+        //options.reportUpdater.init(this.&getReportBuildArgs)
     }
 }
 
@@ -202,8 +203,6 @@ def call(String anariSdkBranch = "main",
                         ADDITIONAL_XML_TIMEOUT:15,
                         NON_SPLITTED_PACKAGE_TIMEOUT:30,
                         DEPLOY_TIMEOUT:20,
-                        engines: formattedEngines,
-                        enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
                         platforms:platforms,
                         storeOnNAS: true,
