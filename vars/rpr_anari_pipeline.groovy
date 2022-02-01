@@ -48,6 +48,30 @@ def executeBuildWindows(Map options) {
 }
 
 
+def executeBuildLinux(String osName, Map options) {
+    GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
+
+    dir("AnariSDK/build") {
+        sh """
+            export BUILD_TESTING=ON
+            cmake -DBUILD_VIEWER=ON .. >> ../../${STAGE_NAME}.log 2>&1
+            cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
+        """
+    }
+
+    dir("RadeonProRenderAnari/build") {
+        sh """
+            cmake .. >> ../../${STAGE_NAME}.log 2>&1
+            cmake --build . >> ../../${STAGE_NAME}.log 2>&1
+        """
+
+        // TODO: save Linux binaries
+    }
+
+    GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
+}
+
+
 def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -71,8 +95,7 @@ def executeBuild(String osName, Map options) {
                     // TODO: add building on MacOS
                     println("Do not support")
                 default:
-                    // TODO: add building on Linux
-                    println("Do not support")
+                    executeBuildLinux(osName, options)
             }
         }
 
