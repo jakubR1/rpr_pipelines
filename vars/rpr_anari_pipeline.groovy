@@ -24,10 +24,6 @@ def executeBuildWindows(Map options) {
             cmake .. >> ../../${STAGE_NAME}.log 2>&1
             cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
         """
-
-        bat(script: "%CIS_TOOLS%\\7-Zip\\7z.exe a Anari_SDK_Windows.zip \"%ProgramFiles(x86)%\\anari\"")
-        makeArchiveArtifacts(name: "Anari_SDK_Windows.zip", storeOnNAS: options.storeOnNAS)
-        makeStash(includes: "Anari_SDK_Windows.zip", name: getProduct.getStashName("Windows") + "_SDK", preZip: false, storeOnNAS: options.storeOnNAS)
     }
 
     dir("RadeonProRenderAnari\\build") {
@@ -36,9 +32,15 @@ def executeBuildWindows(Map options) {
             cmake --build . >> ../../${STAGE_NAME}.log 2>&1
         """
 
-        bat(script: "%CIS_TOOLS%\\7-Zip\\7z.exe a RPR_Anari_Windows.zip Debug")
-        makeArchiveArtifacts(name: "RPR_Anari_Windows.zip", storeOnNAS: options.storeOnNAS)
-        makeStash(includes: "RPR_Anari_Windows.zip", name: getProduct.getStashName("Windows") + "_RPR", preZip: false, storeOnNAS: options.storeOnNAS)
+        dir("Debug") {
+            bat """
+                copy "%ProgramFiles(x86)%\\anari\\bin" .
+                %CIS_TOOLS%\\7-Zip\\7z.exe a Anari_Windows.zip .
+            """
+
+            makeArchiveArtifacts(name: "Anari_Windows.zip", storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "Anari_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
+        }
     }
 
     GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
