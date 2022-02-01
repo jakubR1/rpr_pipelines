@@ -21,7 +21,7 @@ def executeBuildWindows(Map options) {
     dir("AnariSDK\\build") {
         bat """
             set BUILD_TESTING=ON
-            cmake .. >> ../../${STAGE_NAME}.log 2>&1
+            cmake -DBUILD_VIEWER=ON .. >> ../../${STAGE_NAME}.log 2>&1
             cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
         """
     }
@@ -35,6 +35,7 @@ def executeBuildWindows(Map options) {
         dir("Debug") {
             bat """
                 copy "%ProgramFiles(x86)%\\anari\\bin" .
+                copy C:\\vcpkg\\packages\\glfw3_x64-windows\\bin\\glfw3.dll .
                 %CIS_TOOLS%\\7-Zip\\7z.exe a Anari_Windows.zip .
             """
 
