@@ -140,7 +140,7 @@ def executeBuild(String osName, Map options) {
                     break
                 case "MacOS":
                 case "MacOS_ARM":
-                    executeBuildMacOS(options, osName == "MacOS_ARM")
+                    executeBuildMacOS(options, osName == "MacOS")
                     break
                 default:
                     executeBuildLinux(osName, options)
