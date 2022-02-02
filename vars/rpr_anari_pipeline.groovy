@@ -84,8 +84,8 @@ def executeBuildLinux(String osName, Map options) {
 }
 
 
-def executeBuildMacOS(Map options) {
-    GithubNotificator.updateStatus("Build", "MacOS", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
+def executeBuildMacOS(Map options, Boolean isx86 = true) {
+    GithubNotificator.updateStatus("Build", isx86 ? "MacOS" : "MacOS_ARM", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
 
     sh('$CIS_TOOLS' + "/uninstall_anari_sdk.sh")
 
@@ -108,15 +108,15 @@ def executeBuildMacOS(Map options) {
                 cp /usr/local/lib/*anari* .
                 cp /usr/local/bin/*anari* .
                 cp ../*.dylib .
-                tar cf Anari_${osName}.tar *
+                tar cf Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar *
             """
 
-            makeArchiveArtifacts(name: "Anari_MacOS.tar", storeOnNAS: options.storeOnNAS)
-            makeStash(includes: "Anari_MacOS.tar", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+            makeArchiveArtifacts(name: "Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar", storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
         }
     }
 
-    GithubNotificator.updateStatus("Build", "MacOS", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
+    GithubNotificator.updateStatus("Build", isx86 ? "MacOS" : "MacOS_ARM", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
 }
 
 
@@ -140,7 +140,7 @@ def executeBuild(String osName, Map options) {
                     break
                 case "MacOS":
                 case "MacOS_ARM":
-                    executeBuildMacOS(options)
+                    executeBuildMacOS(options, osName == "MacOS_ARM")
                     break
                 default:
                     executeBuildLinux(osName, options)
