@@ -84,6 +84,42 @@ def executeBuildLinux(String osName, Map options) {
 }
 
 
+def executeBuildMacOS(Map options) {
+    GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
+
+    sh('$CIS_TOOLS' + "/uninstall_anari_sdk.sh")
+
+    dir("AnariSDK/build") {
+        sh """
+            export BUILD_TESTING=ON
+            cmake -DBUILD_VIEWER=ON .. >> ../../${STAGE_NAME}.log 2>&1
+            cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
+        """
+    }
+
+    dir("RadeonProRenderAnari/build") {
+        sh """
+            cmake .. >> ../../${STAGE_NAME}.log 2>&1
+            cmake --build . >> ../../${STAGE_NAME}.log 2>&1
+        """
+
+        dir("results") {
+            sh """
+                cp /usr/local/lib/*anari* .
+                cp /usr/local/bin/*anari* .
+                cp ../*.dylib .
+                tar cf Anari_${osName}.tar *
+            """
+
+            makeArchiveArtifacts(name: "Anari_MacOS.tar", storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "Anari_MacOS.tar", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+        }
+    }
+
+    GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
+}
+
+
 def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -104,8 +140,7 @@ def executeBuild(String osName, Map options) {
                     break
                 case "OSX":
                 case "MacOS_ARM":
-                    // TODO: add building on MacOS
-                    println("Do not support")
+                    executeBuildMacOS(options)
                 default:
                     executeBuildLinux(osName, options)
             }
