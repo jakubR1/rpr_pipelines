@@ -85,7 +85,7 @@ def executeBuildLinux(String osName, Map options) {
 
 
 def executeBuildMacOS(Map options) {
-    GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
+    GithubNotificator.updateStatus("Build", "MacOS", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
 
     sh('$CIS_TOOLS' + "/uninstall_anari_sdk.sh")
 
@@ -116,7 +116,7 @@ def executeBuildMacOS(Map options) {
         }
     }
 
-    GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
+    GithubNotificator.updateStatus("Build", "MacOS", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
 }
 
 
@@ -138,11 +138,13 @@ def executeBuild(String osName, Map options) {
                 case "Windows":
                     executeBuildWindows(options)
                     break
-                case "OSX":
+                case "MacOS":
                 case "MacOS_ARM":
                     executeBuildMacOS(options)
+                    break
                 default:
                     executeBuildLinux(osName, options)
+                    break
             }
         }
 
