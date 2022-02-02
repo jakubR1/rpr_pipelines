@@ -51,11 +51,13 @@ def executeBuildWindows(Map options) {
 def executeBuildLinux(String osName, Map options) {
     GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
 
+    sh("sudo " + '$CIS_TOOLS' + "/uninstall_anari_sdk.sh")
+
     dir("AnariSDK/build") {
         sh """
             export BUILD_TESTING=ON
             cmake -DBUILD_VIEWER=ON .. >> ../../${STAGE_NAME}.log 2>&1
-            cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
+            sudo cmake --build . -t install >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 
@@ -65,7 +67,17 @@ def executeBuildLinux(String osName, Map options) {
             cmake --build . >> ../../${STAGE_NAME}.log 2>&1
         """
 
-        // TODO: save Linux binaries
+        dir("results") {
+            sh """
+                cp /usr/local/lib/*anari* .
+                cp /usr/local/bin/*anari* .
+                cp ../*.so .
+                tar cf Anari_${osName}.tar *
+            """
+
+            makeArchiveArtifacts(name: "Anari_${osName}.tar", storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "Anari_${osName}.tar", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+        }
     }
 
     GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
