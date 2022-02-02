@@ -69,9 +69,9 @@ def executeBuildLinux(String osName, Map options) {
 
         dir("results") {
             sh """
-                cp /usr/local/lib/*anari* .
-                cp /usr/local/bin/*anari* .
-                cp ../*.so .
+                cp -d /usr/local/lib/*anari* .
+                cp -d /usr/local/bin/*anari* .
+                cp -d ../*.so .
                 tar cf Anari_${osName}.tar *
             """
 
@@ -105,9 +105,9 @@ def executeBuildMacOS(Map options, Boolean isx86 = true) {
 
         dir("results") {
             sh """
-                cp /usr/local/lib/*anari* .
-                cp /usr/local/bin/*anari* .
-                cp ../*.dylib .
+                cp -R /usr/local/lib/*anari* .
+                cp -R /usr/local/bin/*anari* .
+                cp -R ../*.dylib .
                 tar cf Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar *
             """
 
