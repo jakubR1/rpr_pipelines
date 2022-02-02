@@ -878,7 +878,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
                 if (useTrackedMetrics) {
-                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics/${engine}", "${metricsRemoteDir}/")
                 }
 
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
@@ -922,7 +922,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 }
 
                 if (saveTrackedMetrics) {
-                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics/${engine}", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
