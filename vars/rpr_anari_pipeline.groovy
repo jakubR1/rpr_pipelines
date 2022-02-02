@@ -112,7 +112,7 @@ def executeBuildMacOS(Map options, Boolean isx86 = true) {
             """
 
             makeArchiveArtifacts(name: "Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar", storeOnNAS: options.storeOnNAS)
-            makeStash(includes: "Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar", name: getProduct.getStashName(isx86 ? "MacOS" : "MacOS_ARM"), preZip: false, storeOnNAS: options.storeOnNAS)
         }
     }
 
