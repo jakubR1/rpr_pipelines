@@ -190,10 +190,6 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
             }
         }
     } finally {
-        archiveArtifacts "*.log"
-        archiveArtifacts "*.gtest.xml"
-        junit "*.gtest.xml"
-
         if (options['RENDER_QUALITY']) {
             options['processedQualities'] << options['RENDER_QUALITY']
         }
@@ -201,18 +197,21 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
         if (options.testsQuality) {
             String title = "${asicName}-${osName}-${options.RENDER_QUALITY}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
-            String status = error_message ? "failure" : "success"
+            String status = error_message ? "action_required" : "success"
             String url = error_message ? "${env.BUILD_URL}/${STAGE_NAME}_${options.RENDER_QUALITY}_failures" : "${env.BUILD_URL}/artifact/${STAGE_NAME}.${options.RENDER_QUALITY}.log"
             GithubNotificator.updateStatus('Test', title, status, options, description, url)
 
         } else {
             String title = "${asicName}-${osName}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
-            String status = error_message ? "failure" : "success"
+            String status = error_message ? "action_required" : "success"
             String url = error_message ? "${env.BUILD_URL}/${STAGE_NAME}_Failures" : "${env.BUILD_URL}/artifact/${STAGE_NAME}.log"
             GithubNotificator.updateStatus('Test', title, status, options, description, url)
         }
 
+        archiveArtifacts "*.log"
+        archiveArtifacts "*.gtest.xml"
+        junit "*.gtest.xml"
     }
 }
 
@@ -378,7 +377,7 @@ def executePerfTests(String osName, String asicName, Map options) {
         if (env.BRANCH_NAME) {
             String title = "${asicName}-${osName}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
-            String status = error_message ? "failure" : "success"
+            String status = error_message ? "action_required" : "success"
             String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.perf.log"
             GithubNotificator.updateStatus('Test-Perf', title, status, options, description, url)
         }
@@ -387,6 +386,8 @@ def executePerfTests(String osName, String asicName, Map options) {
 
 
 def executeTests(String osName, String asicName, Map options) {
+    GithubNotificator.updateStatus("Test", "${asicName}-${osName}", "in_progress", options, "In progress...")
+
     Boolean someStageFail = false 
     if (options.testsQuality) {
         options['testsQuality'].split(",").each() {
@@ -540,7 +541,7 @@ def executeBuild(String osName, Map options) {
             makeArchiveArtifacts(name: artifactName, storeOnNAS: options.storeOnNAS)
         }
 
-        String status = error_message ? "failure" : "success"
+        String status = error_message ? "action_required" : "success"
         GithubNotificator.updateStatus("Build", osName, status, options, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
     }
 }
