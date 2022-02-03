@@ -36,6 +36,7 @@ def executeBuildWindows(Map options) {
             bat """
                 copy "%ProgramFiles(x86)%\\anari\\bin" .
                 copy C:\\vcpkg\\packages\\glfw3_x64-windows\\bin\\glfw3.dll .
+                copy C:\\Windows\\System32\\ucrtbase.dll .
                 %CIS_TOOLS%\\7-Zip\\7z.exe a Anari_Windows.zip .
             """
 
@@ -233,7 +234,7 @@ def executePreBuild(Map options) {
 def call(String anariSdkBranch = "main",
     String rprAnariBranch = "",
     String testsBranch = "master",
-    String platforms = "Windows;Ubuntu20;OSX",
+    String platforms = "Windows;Ubuntu20;MacOS",
     String updateRefs = "No",
     String testsPackage = "",
     String tests = "")
