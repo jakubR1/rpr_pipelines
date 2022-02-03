@@ -156,6 +156,9 @@ def executeTests(String osName, String asicName, Map options) {
             case 'HdStormRendererPlugin':
                 enginePostfix = "GL"
                 break
+            case 'Hybrid':
+                enginePostfix = "Hybrid"
+                break
         }
         REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
 
