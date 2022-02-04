@@ -35,7 +35,7 @@ Boolean isIdleClient(Map options) {
 
         def parsedTests = options.tests.split("-")[0]
 
-        if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
+        if (parsedTests.any { options.multiconnectionConfiguration.second_win_client }) {
             result = false
 
             // wait multiconnection client machine
@@ -481,7 +481,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                     prepareTool(osName, options)
                 }
 
-                if (options.parsedTests.contains("MulticonnectionWA") || options.parsedTests.contains("MulticonnectionWWA")) {
+                if (options.parsedTests.any { options.multiconnectionConfiguration.android_client }) {
                     dir("StreamingSDKAndroid") {
                         prepareTool("Android", options)
                         installAndroidClient()
@@ -513,7 +513,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
             sleep(5)
         }
 
-        if (options.tests.contains("MulticonnectionWW") || options.tests.contains("MulticonnectionWWA")) {
+        if (options.tests.any { options.multiconnectionConfiguration.second_win_client }) {
             while (!options["mcClientInfo"]["ready"]) {
                 if (options["mcClientInfo"]["failed"]) {
                     throw new Exception("Multiconnection client was failed")
@@ -794,7 +794,7 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
 
-            if (options.parsedTests.contains("MulticonnectionWW") || options.parsedTests.contains("MulticonnectionWWA")) {
+            if (options.parsedTests.any { options.multiconnectionConfiguration.second_win_client }) {
                 threads["${options.stageName}-multiconnection-client"] = { 
                     node(getMulticonnectionClientLabels(options)) {
                         timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
@@ -1131,6 +1131,21 @@ def executePreBuild(Map options) {
 
         println "Groups: ${options.testsList}"
 
+        options.multiconnectionConfiguration = readJSON file: "jobs/multiconnection.json"
+
+        // Multiconnection group required Android client
+        if (!options.platforms.contains("Android") && (options.testsList.any { options.multiconnectionConfiguration.android_client })) {
+            options.platforms = platforms + ";Android"
+
+            options.androidBuildConfiguration = "debug"
+            options.androidTestingBuildName = "debug"
+
+            println """
+                Android build configuration was updated: ${androidBuildConfiguration}"
+                Android testing build name was updated: ${androidTestingBuildName}"
+            """
+        }
+
         if (!options.tests && options.testsPackage == "none") {
             options.executeTests = false
         }
@@ -1184,7 +1199,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                     groupLost = true
                                 }
 
-                                if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                                if (it.any { options.multiconnectionConfiguration.second_win_client }) {
                                     try {
                                         makeUnstash(name: "${it}_sec_cl", storeOnNAS: options.storeOnNAS)
                                     } catch (e) {
@@ -1255,7 +1270,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("secondClientTestResults") {
                 testResultList.each {
                     if (it.endsWith(game)) {
-                        if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                        if (it.any { options.multiconnectionConfiguration.second_win_client }) {
                             List testNameParts = it.split("-") as List
                             String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                             dir(testName.replace("testResult-", "")) {
@@ -1480,15 +1495,7 @@ def call(String projectBranch = "",
                 winBuildConfiguration = "debug"
                 winVisualStudioVersion = "2019"
                 winTestingBuildName = "debug_vs2019"
-            }
-
-            // Multiconnection group required Android client
-            if (!platforms.contains("Android") && (tests.contains("MulticonnectionWA") || tests.contains("MulticonnectionWWA"))) {
-                platforms = platforms + ";Android"
-
-                androidBuildConfiguration = "debug"
-                androidTestingBuildName = "debug"
-            }   
+            }  
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
