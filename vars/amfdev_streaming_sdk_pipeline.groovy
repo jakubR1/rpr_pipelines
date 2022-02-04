@@ -35,7 +35,7 @@ Boolean isIdleClient(Map options) {
 
         def parsedTests = options.tests.split("-")[0]
 
-        if (parsedTests.any { options.multiconnectionConfiguration.second_win_client }) {
+        if (options.multiconnectionConfiguration.second_win_client.any { parsedTests.contains(it) }) {
             result = false
 
             // wait multiconnection client machine
@@ -481,7 +481,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                     prepareTool(osName, options)
                 }
 
-                if (options.parsedTests.any { options.multiconnectionConfiguration.android_client }) {
+                if (options.multiconnectionConfiguration.android_client.any { options.parsedTests.contains(it) }) {
                     dir("StreamingSDKAndroid") {
                         prepareTool("Android", options)
                         installAndroidClient()
@@ -513,7 +513,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
             sleep(5)
         }
 
-        if (options.tests.any { options.multiconnectionConfiguration.second_win_client }) {
+        if (options.multiconnectionConfiguration.second_win_client.any { options.tests.contains(it) }) {
             while (!options["mcClientInfo"]["ready"]) {
                 if (options["mcClientInfo"]["failed"]) {
                     throw new Exception("Multiconnection client was failed")
@@ -794,7 +794,7 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
 
-            if (options.parsedTests.any { options.multiconnectionConfiguration.second_win_client }) {
+            if (options.multiconnectionConfiguration.second_win_client.any { options.parsedTests.contains(it) }) {
                 threads["${options.stageName}-multiconnection-client"] = { 
                     node(getMulticonnectionClientLabels(options)) {
                         timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
@@ -1131,19 +1131,21 @@ def executePreBuild(Map options) {
 
         println "Groups: ${options.testsList}"
 
-        options.multiconnectionConfiguration = readJSON file: "jobs/multiconnection.json"
+        dir("jobs_test_streaming_sdk") {
+            options.multiconnectionConfiguration = readJSON file: "jobs/multiconnection.json"
 
-        // Multiconnection group required Android client
-        if (!options.platforms.contains("Android") && (options.testsList.any { options.multiconnectionConfiguration.android_client })) {
-            options.platforms = platforms + ";Android"
+            // Multiconnection group required Android client
+            if (!options.platforms.contains("Android") && (options.multiconnectionConfiguration.android_client.any { options.testsList.join("").contains(it) })) {
+                options.platforms = options.platforms + ";Android"
 
-            options.androidBuildConfiguration = "debug"
-            options.androidTestingBuildName = "debug"
+                options.androidBuildConfiguration = "debug"
+                options.androidTestingBuildName = "debug"
 
-            println """
-                Android build configuration was updated: ${androidBuildConfiguration}"
-                Android testing build name was updated: ${androidTestingBuildName}"
-            """
+                println """
+                    Android build configuration was updated: ${androidBuildConfiguration}"
+                    Android testing build name was updated: ${androidTestingBuildName}"
+                """
+            }
         }
 
         if (!options.tests && options.testsPackage == "none") {
@@ -1199,7 +1201,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                     groupLost = true
                                 }
 
-                                if (it.any { options.multiconnectionConfiguration.second_win_client }) {
+                                if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
                                     try {
                                         makeUnstash(name: "${it}_sec_cl", storeOnNAS: options.storeOnNAS)
                                     } catch (e) {
@@ -1270,7 +1272,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("secondClientTestResults") {
                 testResultList.each {
                     if (it.endsWith(game)) {
-                        if (it.any { options.multiconnectionConfiguration.second_win_client }) {
+                        if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
                             List testNameParts = it.split("-") as List
                             String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                             dir(testName.replace("testResult-", "")) {
