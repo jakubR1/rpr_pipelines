@@ -98,8 +98,8 @@ def executeTests(String osName, String asicName, Map options)
             String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_core_autotests_assets" : "/mnt/c/TestResources/rpr_core_autotests_assets"
             downloadFiles("/volume1/Assets/rpr_core_autotests/", assets_dir)
         }
-
-`       String enginePostfix = options.engine
+        
+        String enginePostfix = options.engine
         String REF_PATH_PROFILE="/volume1/Baselines/rpr_core_autotests/${asicName}-${osName}"
 
         REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
