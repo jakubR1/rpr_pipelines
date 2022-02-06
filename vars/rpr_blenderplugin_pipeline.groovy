@@ -18,6 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger
 )
 
 
+Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+    println(asicName)
+    println(osName)
+    println(testName)
+    return (engine == "HYBRIDPRO" && !(asicName.contains("RTX") || asicName == "AMD_RX6800"))
+}
+
+
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
     dir('scripts') {
@@ -109,6 +117,16 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
+        // FIXME: remove this ducktape when CPUs on that machines will be changes
+        if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
+            if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("regression.0")) {
+                throw new ExpectedExceptionWrapper(
+                    "System doesn't support CPU_Mode group", 
+                    new Exception("System doesn't support CPU_Mode group")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "15", unit: "MINUTES") {
                 cleanWS(osName)
@@ -191,6 +209,9 @@ def executeTests(String osName, String asicName, Map options)
                 break
             case 'HIGH':
                 enginePostfix = "HybridHigh"
+                break
+            case 'HYBRIDPRO':
+                enginePostfix = "HybridPro"
                 break
         }
         REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
@@ -818,14 +839,19 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
                     if (it.endsWith(engine)) {
-                        List testNameParts = it.split("-") as List
+                        List testNameParts = it.replace("testResult-", "").split("-") as List
+
+                        if (hybridProFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
+                        dir(testName) {
                             try {
                                 makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 echo "[ERROR] Failed to unstash ${it}"
-                                lostStashes.add("'${testName}'".replace("testResult-", ""))
+                                lostStashes.add("'${testName}'")
                                 println(e.toString())
                                 println(e.getMessage())
                             }
@@ -852,7 +878,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
                 if (useTrackedMetrics) {
-                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics/${engine}", "${metricsRemoteDir}/")
                 }
 
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
@@ -896,7 +922,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 }
 
                 if (saveTrackedMetrics) {
-                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics/${engine}", metricsRemoteDir)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
@@ -1064,10 +1090,12 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
             enginesNames.each {
-                 if (it.contains('Hybrid')) {
+                if (it == 'HybridPro') {
+                    formattedEngines.add('HYBRIDPRO')
+                } else if (it.contains('Hybrid')) {
                     formattedEngines.add(it.replace('Hybrid', '').toUpperCase())
                 } else {
-                    formattedEngines.add((it == 'Northstar') ? 'FULL2' : 'FULL')
+                    formattedEngines.add('FULL2')
                 }
             }
 
@@ -1185,7 +1213,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        skipCallback: this.&hybridProFilter
                         ]
 
             if (sendToUMS) {

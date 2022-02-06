@@ -188,10 +188,10 @@ def executeTests(String osName, String asicName, Map options) {
 
             if (stashResults) {
                 dir("Work-HybridPro/Results/HybridVsNs") {
-                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-HybridPro", allowEmpty: true
+                    stash includes: "**/*", name: "${options.testResultsName}-HybridPro", allowEmpty: true
                 }
                 dir("Work-Northstar64/Results/HybridVsNs") {
-                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-Northstar64", allowEmpty: true
+                    stash includes: "**/*", name: "${options.testResultsName}-Northstar64", allowEmpty: true
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
@@ -422,12 +422,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: "northstar_baselines_compare", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_hybrid_vs_ns.git")
             }
 
             dir("summaryTestResults") {
                 testResultList.each {
-                    dir("RPR") {
+                    dir("HybridPro") {
                         dir(it.replace("testResult-", "")) {
                             try {
                                 unstash("${it}-HybridPro")
@@ -438,7 +438,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
                     }
 
-                    dir("NorthStar") {
+                    dir("Northstar64") {
                         dir(it.replace("testResult-", "")) {
                             try {
                                 unstash("${it}-Northstar64")
@@ -453,12 +453,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["FIRST_ENGINE_NAME=HybridPro", "SECOND_ENGINE_NAME=Northstar64", "SHOW_SYNC_TIME=false", 
-                    "SHOW_RENDER_LOGS=true", "REPORT_TOOL=HybridVsNs", "USE_BASELINES=false"]) {
-
-                    bat """
-                        build_performance_comparison_report.bat summaryTestResults\\\\RPR summaryTestResults\\\\NorthStar summaryTestResults
-                    """
+                dir ("jobs_launcher") {
+                    withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
+                        bat """
+                            build_comparison_reports.bat ..\\\\summaryTestResults
+                        """
+                    }
                 }
             } catch (e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
@@ -491,7 +491,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             Map summaryTestResults = ["passed": 0, "failed": 0, "error": 0]
             try {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_report.json'
+                def summaryReport = readJSON file: 'summaryTestResults/compared_configurations_info.json'
 
                 summaryReport.each { configuration ->
                     summaryTestResults["passed"] += configuration.value["summary"]["passed"]

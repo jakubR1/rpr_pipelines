@@ -1019,6 +1019,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
+            if (env.BRANCH_NAME && env.BRANCH_NAME == "PR-278") {
+                testsBranch = "inemankov/remove_tahoe"
+            }
+
             sendToUMS = updateRefs.contains('Update') || sendToUMS
             
             enginesNames = enginesNames.split(',') as List

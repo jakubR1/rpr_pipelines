@@ -17,6 +17,11 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git"
 
 
+Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+    return (engine == "Hybrid" && !(asicName.contains("RTX") || asicName == "AMD_RX6800"))
+}
+
+
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
     dir('scripts') {
         switch(osName) {
@@ -150,6 +155,9 @@ def executeTests(String osName, String asicName, Map options) {
                 break
             case 'HdStormRendererPlugin':
                 enginePostfix = "GL"
+                break
+            case 'Hybrid':
+                enginePostfix = "Hybrid"
                 break
         }
         REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
@@ -738,14 +746,19 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
                     if (it.endsWith(engine)) {
-                        List testNameParts = it.split("-") as List
+                        List testNameParts = it.replace("testResult-", "").split("-") as List
+
+                        if (hybridProFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
+                        dir(testName) {
                             try {
                                 makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 println("[ERROR] Failed to unstash ${it}")
-                                lostStashes.add("'${testName}'".replace("testResult-", ""))
+                                lostStashes.add("'${testName}'")
                                 println(e.toString())
                                 println(e.getMessage())
                             }
@@ -1081,7 +1094,8 @@ def call(String projectRepo = PROJECT_REPO,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS:true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        skipCallback: this.&hybridProFilter
                         ]
         }
 

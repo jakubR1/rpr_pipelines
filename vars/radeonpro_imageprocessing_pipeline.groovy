@@ -46,7 +46,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${libType}")
-        makeUnstash(name: "app_${libType}_${osName}", storeOnNAS: options.storeOnNAS)
+        makeUnstash(name: "app_${libType}_${osName}", storeOnNAS: false)
         executeTestCommand(osName, libType, options.testPerformance)
     } catch (e) {
         println(e.toString())
@@ -121,7 +121,7 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
     // Stash for testing only
     dir("${options.packageName}-${osName}-dynamic") {
-        makeStash(includes: "bin/*", name: "app_dynamic_${osName}", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}", storeOnNAS: false)
     }
 
     bat """
@@ -139,11 +139,11 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
     // Stash for github repo
     dir("${options.packageName}-${osName}-dynamic/bin") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: false)
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: false)
     }
 
     makeStash(includes: "models/**/*", name: "models", storeOnNAS: options.storeOnNAS)
@@ -224,7 +224,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
 
     // Stash for testing
     dir("${options.packageName}-${osName}-dynamic") {
-        makeStash(includes: "bin/*", name: "app_dynamic_${osName}", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}", storeOnNAS: false)
     }
 
     sh """
@@ -255,11 +255,11 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     rtp nullAction: "1", parserName: "HTML", stableText: """<h4>${osName}: <a href="${dynamicPackageURL}">dynamic</a> / <a href="${statisRuntimePackageURL}">static-runtime</a> </h4>"""
 
     dir("${options.packageName}-${osName}-dynamic/bin/") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: false)
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin/") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: options.storeOnNAS)
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: false)
     }
 }
 
@@ -360,10 +360,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
         platformList.each() {
             dir(it) {
                 dir("Dynamic"){
-                    makeUnstash(name: "deploy-dynamic-${it}", storeOnNAS: options.storeOnNAS)
+                    makeUnstash(name: "deploy-dynamic-${it}", storeOnNAS: false)
                 }
                 dir("Static-Runtime"){
-                    makeUnstash(name: "deploy-static-runtime-${it}", storeOnNAS: options.storeOnNAS)
+                    makeUnstash(name: "deploy-static-runtime-${it}", storeOnNAS: false)
                 }
             }
         }
