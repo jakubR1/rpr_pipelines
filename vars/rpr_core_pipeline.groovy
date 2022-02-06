@@ -47,7 +47,7 @@ def executeTestCommand(String osName, String asicName, Map options)
             case 'Windows':
                 dir('scripts') {
                     bat """
-                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
                 break
@@ -55,7 +55,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -64,7 +64,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -74,6 +74,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    options.engine = options.tests.split("-")[1]
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
@@ -98,7 +99,10 @@ def executeTests(String osName, String asicName, Map options)
             downloadFiles("/volume1/Assets/rpr_core_autotests/", assets_dir)
         }
 
+`       String enginePostfix = options.engine
         String REF_PATH_PROFILE="/volume1/Baselines/rpr_core_autotests/${asicName}-${osName}"
+
+        REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, "", options.currentTry)
@@ -120,6 +124,7 @@ def executeTests(String osName, String asicName, Map options)
         } else {
             withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
                 String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_core_autotests_baselines" : "/mnt/c/TestResources/rpr_core_autotests_baselines"
+                baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
                 println "[INFO] Downloading reference images for ${options.tests}"
                 options.tests.split(" ").each() {
                     downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
@@ -131,9 +136,9 @@ def executeTests(String osName, String asicName, Map options)
         }
         options.executeTestsFinished = true
 
-        if (options["errorsInSuccession"]["${osName}-${asicName}"] != -1) {
+        if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] != -1) {
             // mark that one group was finished and counting of errored groups in succession must be stopped
-            options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(-1)
+            options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
         }
 
     } catch (e) {
@@ -141,13 +146,13 @@ def executeTests(String osName, String asicName, Map options)
         if (options.currentTry + 1 < options.nodeReallocateTries) {
             stashResults = false
         } else {
-            if (!options["errorsInSuccession"]["${osName}-${asicName}"]) {
-                options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(0)
+            if (!options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]) {
+                options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(0)
             }
-            Integer errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"]
+            Integer errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]
             // if counting of errored groups in succession must isn't stopped
             if (errorsInSuccession >= 0) {
-                errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"].addAndGet(1)
+                errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"].addAndGet(1)
             
                 if (errorsInSuccession >= 3) {
                     additionalDescription = "Number of errored groups in succession exceeded (max - 3). Next groups for this platform will be aborted"
@@ -364,13 +369,13 @@ def executeBuild(String osName, Map options)
     }
 }
 
-def getReportBuildArgs(Map options) {
+def getReportBuildArgs(String engineName, Map options) {
     String buildNumber = options.collectTrackedMetrics ? env.BUILD_NUMBER : ""
 
     if (options["isPreBuilt"]) {
-        return """Core "PreBuilt" "PreBuilt" "PreBuilt" \"\" \"${buildNumber}\""""
+        return """Core "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\" \"${buildNumber}\""""
     } else {
-        return """Core ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\""""
+        return """Core ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\" \"${buildNumber}\""""
     }
 }
 
@@ -446,16 +451,20 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
-                tempTests["groups"].each() {
-                    // TODO: fix: duck tape - error with line ending
-                    tests << it.key
+                options.engines.each { engine ->
+                    tempTests["groups"].each() {
+                        tests << "${it}-${engine}"
+                    }
                 }
+                
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
-                options.tests.split(" ").each() {
-                    tests << "${it}"
+                options.engines.each { engine ->
+                    options.tests.split(" ").each() {
+                        tests << "${it}-${engine}"
+                    }
                 }
                 options.tests = tests
                 options.groupsUMS = tests
@@ -481,26 +490,29 @@ def executePreBuild(Map options) {
 }
 
 
-def executeDeploy(Map options, List platformList, List testResultList)
+def executeDeploy(Map options, List platformList, List testResultList, String engine)
 {
     try {
         if (options['executeTests'] && testResultList) {
+            String engineName = options.enginesNames[options.engines.indexOf(engine)]
 
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             List lostStashes = []
 
             dir("summaryTestResults") {
-                unstashCrashInfo(options['nodeRetry'])
+                unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
-                    dir("$it".replace("testResult-", "")) {
+                    List testNameParts = it.split("-") as List
+                    String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                    dir(testName.replace("testResult-", "")) {
                         try {
                             makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
-                            echo "Can't unstash ${it}"
-                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            echo "[ERROR] Failed to unstash ${testName}"
+                            lostStashes.add("'${testName}'".replace("testResult-", ""))
                             println(e.toString())
                             println(e.getMessage())
                         }
@@ -522,7 +534,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"${engine}\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -531,7 +543,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
                 if (options.collectTrackedMetrics) {
                     try {
@@ -555,9 +567,25 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
 
-                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
-
-                        bat "get_status.bat ..\\summaryTestResults"
+                        try {
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
+                        } catch (e) {
+                            String errorMessage = utils.getReportFailReason(e.getMessage())
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            if (utils.isReportFailCritical(e.getMessage())) {
+                                throw e
+                            } else {
+                                currentBuild.result = "FAILURE"
+                                options.problemMessageManager.saveGlobalFailReason(errorMessage)
+                            }
+                        }
+                        try {
+                            bat "get_status.bat ..\\summaryTestResults"
+                        } catch(e) {
+                            println("[ERROR] Failed to generate slack status.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
                     }
                 }
                 if (options.collectTrackedMetrics) {
@@ -573,7 +601,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }  
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                 if (utils.isReportFailCritical(e.getMessage())) {
                     options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                     println("[ERROR] Failed to build test report.")
@@ -584,7 +612,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                                "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
                                 ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                             options.testDataSaved = true 
@@ -646,15 +674,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                    "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
         }
@@ -694,7 +722,8 @@ def call(String projectBranch = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
-         Boolean collectTrackedMetrics = false)
+         Boolean collectTrackedMetrics = false,
+         String enginesNames = "Northstar64")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -707,6 +736,13 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+            withNotifications(options: options, configuration: NotificationConfiguration.ENGINES_PARAM) {
+                if (!enginesNames) {
+                    throw new Exception()
+                }
+            }
+
+            enginesNames = enginesNames.split(',') as List
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
 
@@ -791,6 +827,7 @@ def call(String projectBranch = "",
                         executeBuild:true,
                         executeTests:true,
                         reportName:'Test_20Report',
+                        enginesNames:enginesNames,
                         TEST_TIMEOUT:180,
                         DEPLOY_TIMEOUT:30,
                         width:width,
