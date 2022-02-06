@@ -451,20 +451,16 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
-                options.engines.each { engine ->
-                    tempTests["groups"].each() {
-                        tests << "${it}-${engine}"
-                    }
+                tempTests["groups"].each() {
+                    tests << "${it}"
                 }
                 
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
-                options.engines.each { engine ->
-                    options.tests.split(" ").each() {
-                        tests << "${it}-${engine}"
-                    }
+                options.tests.split(" ").each() {
+                    tests << "${it}"
                 }
                 options.tests = tests
                 options.groupsUMS = tests
