@@ -401,10 +401,11 @@ def executeBuildLinux(String osName, Map options) {
                             make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                         """
 
+                        // todo return tests
+                        // cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
+                        // cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
                         sh """
                             mkdir binUbuntu18
-                            cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
-                            cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
                             cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
                         """
 
