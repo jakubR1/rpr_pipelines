@@ -472,7 +472,6 @@ def executePreBuild(Map options) {
                 options.groupsUMS = tests
             }
 
-            options.tests = tests.join(" ")
             options.testsList = options.tests
             
 
