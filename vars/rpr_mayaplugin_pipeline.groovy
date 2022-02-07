@@ -589,11 +589,12 @@ def executePreBuild(Map options)
                         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
                         println "[INFO] Updated build version: ${options.pluginVersion}"
 
-                        bat """
+                        // TODO: wait access to GPU Open
+/*                        bat """
                           git add version.h
                           git commit -m "buildmaster: version update to ${options.pluginVersion}"
                           git push origin HEAD:develop
-                        """
+                        """*/
 
                         //get commit's sha which have to be build
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
