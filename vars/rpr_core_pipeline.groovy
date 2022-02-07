@@ -43,9 +43,9 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 def executeTestCommand(String osName, String asicName, Map options)
 {
     UniverseManager.executeTests(osName, asicName, options) {
-        def tests = []
+        def tests = ""
         options.tests.each(){
-            tests << it.split("-")[0]
+            tests << it.split("-")[0] + " "
         }
         switch(osName) {
             case 'Windows':
@@ -468,15 +468,16 @@ def executePreBuild(Map options) {
             } else {
                 options.engines.each(){ engine ->
                     options.tests.split(" ").each() {
-                        tests << "${it}"
+                        tests << "${it}-${engine}"
                     }
                 }
                 options.tests = tests
                 options.groupsUMS = tests
             }
 
-            options.testsList = ['']
             options.tests = tests.join(" ")
+            options.testsList = options.tests
+            
 
             if (options.sendToUMS) {
                 options.universeManager.createBuilds(options)   
