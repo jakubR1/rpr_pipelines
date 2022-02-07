@@ -43,11 +43,15 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 def executeTestCommand(String osName, String asicName, Map options)
 {
     UniverseManager.executeTests(osName, asicName, options) {
+        def tests = []
+        options.tests.each(){
+            tests << it.split("-")[0]
+        }
         switch(osName) {
             case 'Windows':
                 dir('scripts') {
                     bat """
-                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        run.bat ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
                 break
@@ -55,7 +59,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -64,7 +68,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -74,7 +78,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    //options.engine = options.tests.split("-")[1]
+    options.engine = options.tests.split("-")[-1]
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
@@ -451,16 +455,21 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
-                tempTests["groups"].each() {
-                    // TODO: fix: duck tape - error with line ending
-                    tests << it.key
+                options.engines.each(){ engine ->
+                    tempTests["groups"].each() {
+                        // TODO: fix: duck tape - error with line ending
+                        tests << "${it}-${engine}"
+                    }
                 }
+                    
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
-                options.tests.split(" ").each() {
-                    tests << "${it}"
+                options.engines.each(){ engine ->
+                    options.tests.split(" ").each() {
+                        tests << "${it}"
+                    }
                 }
                 options.tests = tests
                 options.groupsUMS = tests
