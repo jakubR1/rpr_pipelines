@@ -192,7 +192,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                     case "Windows":
                         dir('scripts') {
                             bat """
-                                run.bat \"${testsPackageName}\" \"${testsNames}\" Inventor 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                                run.bat \"${testsPackageName}\" \"${testsNames}\" Inventor ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                             """
                         }
                         break
@@ -247,8 +247,8 @@ def executeTests(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
             timeout(time: "5", unit: "MINUTES") {
-                String prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Autodesk/Inventor 2022"
-                downloadFiles("/volume1/CIS/tools-preferences/Inventor/${osName}/2022/*", prefsDir, "", false)
+                String prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Autodesk/Inventor ${options.toolVersion}"
+                downloadFiles("/volume1/CIS/tools-preferences/Inventor/${osName}/${options.toolVersion}/*", prefsDir, "", false)
                 bat "reg import \"${prefsDir.replace("/mnt/c", "C:").replace("/", "\\")}\\inventor_window.reg\""
             }
         }
@@ -284,7 +284,7 @@ def executeTests(String osName, String asicName, Map options) {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
                     timeout(time: "15", unit: "MINUTES") {
                         try {
-                            buildRenderCache(osName, "2022", options, false)
+                            buildRenderCache(osName, options.toolVersion, options, false)
                         } catch (e) {
                             throw e
                         } finally {
@@ -318,7 +318,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CLEAN) {                        
             timeout(time: "15", unit: "MINUTES") {
                 try {
-                    buildRenderCache(osName, "2022", options, true)
+                    buildRenderCache(osName, options.toolVersion, options, true)
                 } catch (e) {
                     throw e
                 } finally {
@@ -1042,6 +1042,7 @@ def call(String projectBranch = "",
          String tester_tag = 'USDViewer',
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
+         String toolVersion = "2022",
          Integer testCaseRetries = 3,
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
@@ -1097,6 +1098,7 @@ def call(String projectBranch = "",
                         platforms: platforms,
                         parallelExecutionType: TestsExecutionType.valueOf(parallelExecutionTypeString),
                         parallelExecutionTypeString: parallelExecutionTypeString,
+                        toolVersion: toolVersion,
                         testCaseRetries: testCaseRetries,
                         universePlatforms: convertPlatforms(platforms),
                         sendToUMS: false,
