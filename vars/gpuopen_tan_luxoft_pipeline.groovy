@@ -250,7 +250,7 @@ def executeBuildWindows(Map options) {
                     dir (win_build_name) {
                         bat """
                             SET CMAKE_PREFIX_PATH=../../../thirdparty/Qt/Qt5.9.9/5.9.9/msvc2017_64/lib/cmake/Qt5Widgets
-                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DAMF_OPEN_DIR=../../../amfOpen -DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
+                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
                         """
                     }
 
@@ -374,11 +374,11 @@ def executeBuildOSX(Map options) {
 
                         if (osx_tool == "cmake") {
                             sh """
-                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
                         } else if (osx_tool == "xcode") {
                             sh """
-                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
                         }
                         
@@ -508,7 +508,7 @@ def executeBuildLinux(String osName, Map options) {
                     options.ub18_portaudio = "../../../../../thirdparty/portaudio"
 
                     sh """
-                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                     """
 
                     sh """
