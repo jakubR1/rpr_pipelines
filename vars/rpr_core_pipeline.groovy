@@ -43,15 +43,11 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 def executeTestCommand(String osName, String asicName, Map options)
 {
     UniverseManager.executeTests(osName, asicName, options) {
-        def tests = ""
-        options.tests.each(){
-            tests << it.split("-")[0] + " "
-        }
         switch(osName) {
             case 'Windows':
                 dir('scripts') {
                     bat """
-                        run.bat ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
                 break
@@ -59,7 +55,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -68,7 +64,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -78,7 +74,8 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    options.engine = options.tests.split("-")[-1]
+    options.parsedTests = options.tests.split("-")[0]
+    options.engine = options.tests.split("-")[1]
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
