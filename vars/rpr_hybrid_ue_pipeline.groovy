@@ -105,7 +105,12 @@ def executeBuildWindows(String projectName, Map options) {
     if (options.saveEngine) {
         dir("RPRHybrid-UE") {
             String ARTIFACT_NAME = "${projectName}_editor.zip"
-            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!.vs -xr!.git -xr!*@tmp*")
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!*.obj -xr!*.pdb -xr!*.vs -xr!*.git -xr!*@tmp*")
+            makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+            utils.removeFile(this, "Windows", ARTIFACT_NAME)
+
+            ARTIFACT_NAME = "${projectName}_debug.zip"
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" -ir!*.pdb -xr!*@tmp*")
             makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
             utils.removeFile(this, "Windows", ARTIFACT_NAME)
         }
