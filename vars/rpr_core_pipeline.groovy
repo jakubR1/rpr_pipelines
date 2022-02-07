@@ -74,7 +74,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    options.engine = options.tests.split("-")[1]
+    //options.engine = options.tests.split("-")[1]
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
@@ -98,7 +98,7 @@ def executeTests(String osName, String asicName, Map options)
             String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_core_autotests_assets" : "/mnt/c/TestResources/rpr_core_autotests_assets"
             downloadFiles("/volume1/Assets/rpr_core_autotests/", assets_dir)
         }
-        
+
         String enginePostfix = options.engine
         String REF_PATH_PROFILE="/volume1/Baselines/rpr_core_autotests/${asicName}-${osName}"
 
@@ -451,20 +451,16 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
-                options.engines.each { engine ->
-                    tempTests["groups"].each() {
-                        tests << "${it}-${engine}"
-                    }
+                tempTests["groups"].each() {
+                    // TODO: fix: duck tape - error with line ending
+                    tests << it.key
                 }
-                
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
-                options.engines.each { engine ->
-                    options.tests.split(" ").each() {
-                        tests << "${it}-${engine}"
-                    }
+                options.tests.split(" ").each() {
+                    tests << "${it}"
                 }
                 options.tests = tests
                 options.groupsUMS = tests
@@ -722,8 +718,8 @@ def call(String projectBranch = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
-         Boolean collectTrackedMetrics = false,
-         String enginesNames = "Northstar64")
+         String enginesNames = "Northstar64",
+         Boolean collectTrackedMetrics = false)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
