@@ -47,7 +47,9 @@ import groovy.json.JsonSlurperClassic
     "tahoe": "",
     "northstar": "NorthStar",
     "hdrprplugin": "RPR",
-    "hdstormrendererplugin": "GL"
+    "hdstormrendererplugin": "GL",
+    "gl": "GL",
+    "rpr": "RPR"
 ]
 
 
