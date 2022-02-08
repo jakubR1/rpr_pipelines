@@ -45,6 +45,10 @@ def getPreparedUE(Map options, String projectName) {
 
 
 def executeBuildWindows(String projectName, Map options) {
+    // clear unused directories (Hybrid UE workspace takes a lot of disk space)
+    String unusedWorkspacePath = env.WORKSPACE.contains("@") ? env.WORKSPACE.split('@')[0] : env.WORKSPACE + "@2"
+    bat("if exist ${unusedWorkspacePath} rmdir /Q /S ${unusedWorkspacePath}")
+
     if (!projectsInfo.containsKey(projectName)) {
         throw new Exception("Unknown project name: ${projectName}")
     }
