@@ -101,8 +101,10 @@ def executeTestCommand(String osName, Map options) {
             break
         default:
             dir('Launcher') {
+                // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
                 sh """
-                    ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "RoomAcousticQT/test_smoke_room.py" >> ../${STAGE_NAME}.log 2>&1
+                    
                 """
             }
     }
