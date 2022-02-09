@@ -1136,14 +1136,16 @@ def executePreBuild(Map options) {
 
             // Multiconnection group required Android client
             if (!options.platforms.contains("Android") && (options.multiconnectionConfiguration.android_client.any { options.testsList.join("").contains(it) })) {
+                println(options.platforms)
                 options.platforms = options.platforms + ";Android"
+                println(options.platforms)
 
-                options.androidBuildConfiguration = "debug"
+                options.androidBuildConfiguration = ["debug"]
                 options.androidTestingBuildName = "debug"
 
                 println """
-                    Android build configuration was updated: ${androidBuildConfiguration}"
-                    Android testing build name was updated: ${androidTestingBuildName}"
+                    Android build configuration was updated: ${options.androidBuildConfiguration}
+                    Android testing build name was updated: ${options.androidTestingBuildName}
                 """
             }
         }

@@ -379,6 +379,7 @@ def makeDeploy(Map options, String engine = "") {
     }
 }
 
+// TODO: pass platforms only through options (it allows to modify it in PreBuild stage)
 def call(String platforms, def executePreBuild, def executeBuild, def executeTests, def executeDeploy, Map options) {
     try {
         this.executeDeploy = executeDeploy
@@ -506,6 +507,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 }
 
                 Map tasks = [:]
+
+                if (options.platforms) {
+                    platforms = options.platforms
+                }
 
                 platforms.split(';').each() {
                     if (it) {
