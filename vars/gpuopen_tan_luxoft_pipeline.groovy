@@ -83,6 +83,7 @@ def getTanTool(String osName, Map options) {
 }
 
 
+
 def executeTestCommand(String osName, Map options) {
     switch(osName) {
         case 'Windows':
@@ -104,7 +105,7 @@ def executeTestCommand(String osName, Map options) {
                 // todo need to add switch between tests
                 // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
                 sh """
-                    sh ./run.sh "RoomAcousticQT/test_smoke_room.py" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
     }
@@ -523,6 +524,7 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         mkdir binUbuntu18
                         cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
+                        cp -rf ../../../scenes binUbuntu18/scenes
                     """
 
                     sh """
