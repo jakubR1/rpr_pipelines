@@ -389,11 +389,15 @@ def executeBuildOSX(Map options) {
                             make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                         """
 
+                        // todo return tests after fix
+                        // cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
+                        // cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
+
                         sh """
                             mkdir binMacOS
-                            cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
-                            cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
                             cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
+                            cp -rf ../../../../scenes binMacOS/scenes
+
                         """
 
                         sh """
@@ -496,9 +500,12 @@ def executeBuildLinux(String osName, Map options) {
                         fftw_flag = "-DFFTW_DIR=../../thirdparty/fftw "
                     }
 
-                    String tan_no_opencl_flag ="-DTAN_NO_OPENCL=0"
+                    String tan_no_opencl_flag = "-DTAN_NO_OPENCL=0"
+                    String amd_opencl_extension_flag = "-DDEFINE_AMD_OPENCL_EXTENSION=0"
+
                     if (options.TAN_NO_OPENCL == "on") {
                         tan_no_opencl_flag = "-DTAN_NO_OPENCL=1"
+                        amd_opencl_extension_flag = "-DDEFINE_AMD_OPENCL_EXTENSION=1"
                     }
 
                     String amf_core_static_flag ="-DAMF_CORE_STATIC=0"
@@ -511,14 +518,17 @@ def executeBuildLinux(String osName, Map options) {
                     options.ub18_portaudio = "../../../../../thirdparty/portaudio"
 
                     sh """
-                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc \
+                        ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} \
+                        ${portaudio_flag} ${fftw_flag} \
+                        ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                     """
 
                     sh """
                         make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                     """
 
-                    // todo return tests
+                    // todo return tests after fix
                     // cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
                     // cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
                     sh """
