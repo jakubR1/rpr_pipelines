@@ -130,7 +130,7 @@ def executePreBuild(Map options) {
         """
 
         if (options.incrementVersion) {
-            if ((env.BRANCH_NAME == "master") {
+            if (env.BRANCH_NAME == "master") {
                 println("[INFO] Incrementing version of change made by ${options.commitAuthor}.")
 
                 dir("../inc") {
