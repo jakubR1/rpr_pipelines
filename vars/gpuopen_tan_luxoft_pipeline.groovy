@@ -519,7 +519,7 @@ def executeBuildLinux(String osName, Map options) {
 
                     sh """
                         cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc \
-                        ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} \
+                        ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} ${amd_opencl_extension_flag} \
                         ${portaudio_flag} ${fftw_flag} \
                         ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                     """
