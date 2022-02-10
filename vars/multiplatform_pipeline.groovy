@@ -136,10 +136,13 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                 if (!options.splitTestsExecution && testName) {
                                     // case for non splitted projects with multiple engines (e.g. Streaming SDK with multiple games)
-                                    newOptions['engine'] = engine ? options.tester_tag == "Core" : testName
+                                    newOptions['engine'] = testName
                                     newOptions['tests'] = options.tests
                                 } else {
                                     newOptions['tests'] = testName ?: options.tests
+                                }
+                                if (options.tester_tag == "Core") {
+                                    newOptions['engine'] = engine
                                 }
 
                                 def retringFunction = { nodesList, currentTry ->

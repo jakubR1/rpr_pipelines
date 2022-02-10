@@ -74,11 +74,15 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    def tempTests = []
-    options.tests.each(){
-        tempTests << it.split("-")[0]
+    if (!options.testsParsed){
+        options.tests.each(){
+            tempTests << it.split("-")[0]
+            options.testsParsed = true
+        }  
     }
     options.tests = tempTests.toSet().join(" ")
+    
+    
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
