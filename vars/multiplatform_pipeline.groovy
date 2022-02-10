@@ -141,9 +141,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 } else {
                                     newOptions['tests'] = testName ?: options.tests
                                 }
-                                if (options.tester_tag == "Core") {
-                                    newOptions['engine'] = engine
-                                }
 
                                 def retringFunction = { nodesList, currentTry ->
                                     try {

@@ -74,16 +74,8 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    def tempTests = []
-    if (!options.testsParsed){
-        options.tests.each(){
-            tempTests << it.split("-")[0]
-            options.testsParsed = true
-        }  
-        options.tests = tempTests.toSet().join(" ")
-    }
-    
-    
+    options.parsedTests = options.tests.split("-")[0]
+    options.engine = options.tests.split("-")[1]
     
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
@@ -473,7 +465,7 @@ def executePreBuild(Map options) {
                 options.groupsUMS = tests
             } else {
                 options.engines.each(){ engine ->
-                    options.tests.split(" ").each() {
+                    options.tests.each() {
                         tests << "${it}-${engine}"
                     }
                 }
@@ -483,7 +475,6 @@ def executePreBuild(Map options) {
 
             options.testsList = options.tests
             
-
             if (options.sendToUMS) {
                 options.universeManager.createBuilds(options)   
             }
@@ -545,7 +536,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             try {
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"${engine}\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.join(" ")}\" \"${engine}\" \"{}\"
                     """
                 }
             } catch (e) {
