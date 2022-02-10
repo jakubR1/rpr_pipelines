@@ -31,12 +31,10 @@ def main(Map options) {
 }
 
 def call(Boolean productionDriver = False,
-        String url = "",
         String platforms = "",
         String tags = "")
 {
     main([productionDriver:productionDriver,
-        url:url,
         platforms:platforms,
         tags:tags])
 }
