@@ -852,7 +852,8 @@ def call(String projectBranch = "",
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        splitTestsExecution: true
                         ]
 
             if (sendToUMS) {
