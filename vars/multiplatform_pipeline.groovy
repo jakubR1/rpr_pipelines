@@ -80,6 +80,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                             while (testName != null) {
                                 String engine = null
                                 if (options.engines) {
+                                    println("--------------DEBUG------------------- : ${testName} , ${testName.split("-")[-1]}")
                                     engine = testName.split("-")[-1]
                                 }
                                 if (options.skippedTests && options.skippedTests.containsKey(testName) && options.skippedTests[testName].contains("${asicName}-${osName}")) {
