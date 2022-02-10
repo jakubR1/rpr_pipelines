@@ -75,7 +75,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 def executeTests(String osName, String asicName, Map options)
 {
     def tempTests = []
-    options.tests.each() = {
+    options.tests.each(){
         tempTests << it.split("-")[0]
     }
     options.tests = tempTests.toSet().join(" ")
