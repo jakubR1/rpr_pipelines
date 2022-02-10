@@ -27,7 +27,7 @@ def uninstallRPRMayaPlugin(String osName, Map options) {
     }
 }
 
-def installRPRMayaUSDPlugin() {
+def installRPRMayaUSDPlugin(String osName, Map options) {
 
     if (options['isPreBuilt']) {
         installerName = "${options[getProduct.getIdentificatorKey('Windows')]}.exe"
