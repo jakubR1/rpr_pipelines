@@ -80,7 +80,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                             while (testName != null) {
                                 String engine = null
                                 if (options.engines) {
-                                    println("--------------DEBUG------------------- : ${testName} , ${testName.split("-")[-1]}")
                                     engine = testName.split("-")[-1]
                                 }
                                 if (options.skippedTests && options.skippedTests.containsKey(testName) && options.skippedTests[testName].contains("${asicName}-${osName}")) {
@@ -137,7 +136,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                 if (!options.splitTestsExecution && testName) {
                                     // case for non splitted projects with multiple engines (e.g. Streaming SDK with multiple games)
-                                    newOptions['engine'] = testName
+                                    newOptions['engine'] = engine ? options.tester_tag == "Core" : testName
                                     newOptions['tests'] = options.tests
                                 } else {
                                     newOptions['tests'] = testName ?: options.tests
