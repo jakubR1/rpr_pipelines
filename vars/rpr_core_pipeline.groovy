@@ -465,9 +465,7 @@ def executePreBuild(Map options) {
                 options.groupsUMS = tests
             } else {
                 options.engines.each(){ engine ->
-                    options.tests.each() {
-                        tests << "${it}-${engine}"
-                    }
+                    tests << "${options.tests.split("-").join(" ")}-${engine}"
                 }
                 options.tests = tests
                 options.groupsUMS = tests
