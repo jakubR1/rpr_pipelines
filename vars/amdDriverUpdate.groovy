@@ -25,7 +25,7 @@ def main(Map options) {
             }
         }
 
-        parallel windowsUpdateTasks
+        parallel updateTasks
         return 0
     }
 }
