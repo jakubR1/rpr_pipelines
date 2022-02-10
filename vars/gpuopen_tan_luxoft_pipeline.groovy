@@ -78,9 +78,6 @@ def getTanTool(String osName, Map options) {
 
             sh """
                 tar -zxvf binUbuntu18.tar.gz
-                ls -la >> info_${STAGE_NAME}_${ub18_build_name}.log 2>&1
-                ls -la ./binUbuntu18/ >> info_${STAGE_NAME}_${ub18_build_name}.log 2>&1
-                pwd >> info_${STAGE_NAME}_${ub18_build_name}.log 2>&1
             """
     }
 }
@@ -537,7 +534,7 @@ def executeBuildLinux(String osName, Map options) {
                     // cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
                     sh """
                         mkdir binUbuntu18
-                        cp -rf ../../../../bin binUbuntu18/bin
+                        cp -rf ../../../../bin binUbuntu18/
                         cp -rf ../../../../scenes binUbuntu18/scenes
                     """
 
