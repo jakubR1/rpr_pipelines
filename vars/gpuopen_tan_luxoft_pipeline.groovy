@@ -61,23 +61,23 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "TAN_Ubuntu18", unzip: false)
+                makeUnstash(name: "TAN_Ubuntu", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binUbuntu18.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
+                    cp binUbuntu.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
                 """ 
 
             } else {
 
                 println "[INFO] The plugin ${options.pluginUbuntuSha}.tar.gz exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu18.tar.gz
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu.tar.gz
                 """
             }
 
             sh """
-                tar -zxvf binUbuntu18.tar.gz
+                tar -zxvf binUbuntu.tar.gz
             """
     }
 }
@@ -529,27 +529,27 @@ def executeBuildLinux(String osName, Map options) {
                     """
 
                     // todo return tests after fix
-                    // cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
-                    // cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
-                    // cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
+                    // cp -rf cmake-TALibTestConvolution-bin binUbuntu/cmake-TALibTestConvolution-bin
+                    // cp -rf cmake-TALibDopplerTest-bin binUbuntu/cmake-TALibDopplerTest-bin
+                    // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
                     sh """
-                        mkdir binUbuntu18
-                        cp -rf ../../../../bin binUbuntu18/
-                        cp -rf ../../../../scenes binUbuntu18/scenes
+                        mkdir binUbuntu
+                        cp -rf ../../../../bin/Linux binUbuntu/
+                        cp -rf ../../../../scenes binUbuntu/scenes
                     """
 
                     sh """
-                        tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
+                        tar -czvf "Ubuntu_${ub18_build_name}.tar.gz" ./binUbuntu
                     """
                     
-                    archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+                    archiveArtifacts "Ubuntu_${ub18_build_name}.tar.gz"
 
                     sh """
-                        mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
+                        mv Ubuntu_${ub18_build_name}.tar.gz binUbuntu.tar.gz
                     """
 
-                    makeStash(includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18', preZip: false)
-                    options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
+                    makeStash(includes: "binUbuntu.tar.gz", name: 'TAN_Ubuntu', preZip: false)
+                    options.pluginUbuntuSha = sha1 "binUbuntu.tar.gz"
 
                 } catch (FlowInterruptedException error) {
                     println "[INFO] Job was aborted during build stage"
@@ -557,7 +557,7 @@ def executeBuildLinux(String osName, Map options) {
                 } catch (e) {
                     println(e.getMessage())
                     currentBuild.result = "FAILED"
-                    println "[ERROR] Failed to build TAN on Ubuntu18"
+                    println "[ERROR] Failed to build TAN on Ubuntu"
                 } 
             }
         }
