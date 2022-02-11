@@ -631,7 +631,8 @@ def call(String anariSdkBranch = "main",
     String tests = "",
     String customBuildLinkWindows = "",
     String customBuildLinkUbuntu20 = "",
-    String customBuildLinkMacOS = "")
+    String customBuildLinkMacOS = "",
+    String testerTag = "Anari")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -712,7 +713,8 @@ def call(String anariSdkBranch = "main",
                         isPreBuilt:isPreBuilt,
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
-                        customBuildLinkMacOS: customBuildLinkMacOS
+                        customBuildLinkMacOS: customBuildLinkMacOS,
+                        testerTag: testerTag
                         ]
         }
 
