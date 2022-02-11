@@ -35,7 +35,7 @@ def saveDownloadedInstaller(String artifactNameBase, String extension, String id
 
 def unpack(String unpackDestination, String identificatorKey, String extension, Map options) {
     if (extension == "tar") {
-        sh("tar -xvf ${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension} ${unpackDestination}")
+        sh("mkdir -p ${unpackDestination}; tar xvf ${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension} -C ${unpackDestination}")
     } else if (extension == "zip") {
         unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unpackDestination, quiet: true
     } else {
