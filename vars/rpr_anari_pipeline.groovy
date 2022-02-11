@@ -358,13 +358,24 @@ def executeBuild(String osName, Map options) {
 
 
 def getReportBuildArgs(Map options) {
-    return """Anari ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"\""""
+    if (options["isPreBuilt"]) {
+        return """Anari "PreBuilt" "PreBuilt" "PreBuilt" \"\" \"\""""
+    } else {
+        return """Anari ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"\""""
+    }
 }
 
 
 def executePreBuild(Map options) {
-    options['executeBuild'] = true
-    options['executeTests'] = true
+    if (options['isPreBuilt']) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
+        options['executeBuild'] = false
+        options['executeTests'] = true
+    } else {
+        options['executeBuild'] = true
+        options['executeTests'] = true
+    }
 
     // manual job
     if (!env.BRANCH_NAME) {
@@ -388,66 +399,68 @@ def executePreBuild(Map options) {
         }
     }
 
-    dir('RadeonProRenderAnari') {
-        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO, disableSubmodules: true)
-        }
-
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options.commitShortSHA = options.commitSHA[0..6]
-        options.branchName = env.BRANCH_NAME ?: options.projectBranch
-
-        println(bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim());
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
-        println "Commit shortSHA: ${options.commitShortSHA}"
-        println "Branch name: ${options.branchName}"
-
-        if (options.projectBranch) {
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-        } else {
-            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        }
-
-        currentBuild.description = "<b>Anari SDK branch:</b> ${options.anariSdkBranch}<br/>"
-        currentBuild.description = "<b>RPR Anari branch:</b> ${options.rprAnariBranch}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-    }
-
-    options.tests = []
-
-    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_anari') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
-            dir ('jobs_launcher') {
-                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    if (!options['isPreBuilt']) {
+        dir('RadeonProRenderAnari') {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO, disableSubmodules: true)
             }
-            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            println("[INFO] Test branch hash: ${options['testsBranch']}")
 
-            if (options.testsPackage != "none") {
-                // json means custom test suite. Split doesn't supported
-                def packageInfo = readJSON file: "jobs/${options.testsPackage}"
-                packageInfo["groups"].each() {
-                    options.tests << it.key
-                }
-                options.testsPackage = "none"
+            options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+            options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+            options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            options.commitShortSHA = options.commitSHA[0..6]
+            options.branchName = env.BRANCH_NAME ?: options.projectBranch
+
+            println(bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim());
+            println "The last commit was written by ${options.commitAuthor}."
+            println "Commit message: ${options.commitMessage}"
+            println "Commit SHA: ${options.commitSHA}"
+            println "Commit shortSHA: ${options.commitShortSHA}"
+            println "Branch name: ${options.branchName}"
+
+            if (options.projectBranch) {
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
             } else {
-                options.tests = options.tests.split(" ") as List
-                options.tests = tests
+                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            options.testsList = ['']
-            options.tests = tests.join(" ")
+            currentBuild.description = "<b>Anari SDK branch:</b> ${options.anariSdkBranch}<br/>"
+            currentBuild.description = "<b>RPR Anari branch:</b> ${options.rprAnariBranch}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         }
 
-        if (env.BRANCH_NAME && options.githubNotificator) {
-            options.githubNotificator.initChecks(options, "${BUILD_URL}")
+        options.tests = []
+
+        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+            dir('jobs_test_anari') {
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+                dir ('jobs_launcher') {
+                    options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                }
+                options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                println("[INFO] Test branch hash: ${options['testsBranch']}")
+
+                if (options.testsPackage != "none") {
+                    // json means custom test suite. Split doesn't supported
+                    def packageInfo = readJSON file: "jobs/${options.testsPackage}"
+                    packageInfo["groups"].each() {
+                        options.tests << it.key
+                    }
+                    options.testsPackage = "none"
+                } else {
+                    options.tests = options.tests.split(" ") as List
+                    options.tests = tests
+                }
+
+                options.testsList = ['']
+                options.tests = tests.join(" ")
+            }
+
+            if (env.BRANCH_NAME && options.githubNotificator) {
+                options.githubNotificator.initChecks(options, "${BUILD_URL}")
+            }
         }
     }
 
@@ -605,7 +618,10 @@ def call(String anariSdkBranch = "main",
     String platforms = "Windows;Ubuntu20;MacOS",
     String updateRefs = "No",
     String testsPackage = "",
-    String tests = "")
+    String tests = "",
+    String customBuildLinkWindows = "",
+    String customBuildLinkUbuntu20 = "",
+    String customBuildLinkOSX = "")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -625,6 +641,37 @@ def call(String anariSdkBranch = "main",
                         gpusCount += 1
                     }
                 }
+            }
+
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
+
+            if (isPreBuilt) {
+                //remove platforms for which pre built plugin is not specified
+                String filteredPlatforms = ""
+
+                platforms.split(';').each() { platform ->
+                    List tokens = platform.tokenize(':')
+                    String platformName = tokens.get(0)
+
+                    switch(platformName) {
+                        case 'Windows':
+                            if (customBuildLinkWindows) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                        case 'OSX':
+                            if (customBuildLinkOSX) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                        default:
+                            if (customBuildLinkUbuntu20) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                        }
+                }
+
+                platforms = filteredPlatforms
             }
 
             println "Platforms: ${platforms}"
@@ -650,7 +697,11 @@ def call(String anariSdkBranch = "main",
                         nodeRetry: nodeRetry,
                         platforms:platforms,
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        isPreBuilt:isPreBuilt,
+                        customBuildLinkWindows: customBuildLinkWindows,
+                        customBuildLinkUbuntu20: customBuildLinkUbuntu20,
+                        customBuildLinkOSX: customBuildLinkOSX
                         ]
         }
 
