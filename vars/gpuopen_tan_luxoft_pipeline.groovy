@@ -253,7 +253,10 @@ def executeBuildWindows(Map options) {
                     dir (win_build_name) {
                         bat """
                             SET CMAKE_PREFIX_PATH=../../../thirdparty/Qt/Qt5.9.9/5.9.9/msvc2017_64/lib/cmake/Qt5Widgets
-                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
+                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} \
+                             ${opencl_flag} ${portaudio_flag} ${fftw_flag} \
+                             -DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} \
+                             ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
@@ -261,22 +264,24 @@ def executeBuildWindows(Map options) {
                         dir (win_build_name) {
                             bat """
                                 set msbuild="${options.msBuildPath}"
-                                %msbuild% TAN-CL.sln /target:build /maxcpucount /property:Configuration=${win_build_conf};Platform=x64 >> ../../../../${STAGE_NAME}.${win_build_name}.log 2>&1
+                                %msbuild% TAN-CL.sln /target:build /maxcpucount \
+                                 /property:Configuration=${win_build_conf}; \
+                                 Platform=x64 >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                             """
                         }
                     } else if (win_tool == "cmake") {
                         bat """
-                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../${STAGE_NAME}.${win_build_name}.log 2>&1
+                            cmake --build ${win_build_name} --config \
+                            ${win_build_conf} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
                     bat """
                         mkdir binWindows
-                        xcopy /s/y/i vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf} binWindows\\cmake-TALibTestConvolution-bin
-                        xcopy /s/y/i vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf} binWindows\\cmake-TALibDopplerTest-bin
-                        xcopy /s/y/i vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf} binWindows\\cmake-RoomAcousticQT-bin
-                    """
-                    
+                        xcopy /s/y/i ../../../../bin/Windows/${win_build_conf} binWindows/
+                        xcopy /s/y/i ../../../../scenes binWindows/scenes
+                    """   
+
                     zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
 
                     bat """
@@ -377,27 +382,26 @@ def executeBuildOSX(Map options) {
 
                         if (osx_tool == "cmake") {
                             sh """
-                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} \
+                                ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} \
+                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                             """
                         } else if (osx_tool == "xcode") {
                             sh """
-                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake  .. -G "Xcode" ${cmake_flag} ${opencl_flag} \
+                                ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} \
+                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                             """
                         }
                         
                         sh """
-                            make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                            make VERBOSE=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                         """
-
-                        // todo return tests after fix
-                        // cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
-                        // cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
 
                         sh """
                             mkdir binMacOS
-                            cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
-                            cp -rf ../../../../scenes binMacOS/scenes
-
+                            cp -rf ../../../../bin/Darwin/${osx_build_name} binMacOS/
+                            cp -rf ../../../../scenes binMacOS/scenes                     
                         """
 
                         sh """
@@ -501,11 +505,9 @@ def executeBuildLinux(String osName, Map options) {
                     }
 
                     String tan_no_opencl_flag = "-DTAN_NO_OPENCL=0"
-                    String amd_opencl_extension_flag = "-DDEFINE_AMD_OPENCL_EXTENSION=0"
 
                     if (options.TAN_NO_OPENCL == "on") {
                         tan_no_opencl_flag = "-DTAN_NO_OPENCL=1"
-                        amd_opencl_extension_flag = "-DDEFINE_AMD_OPENCL_EXTENSION=1"
                     }
 
                     String amf_core_static_flag ="-DAMF_CORE_STATIC=0"
@@ -519,13 +521,13 @@ def executeBuildLinux(String osName, Map options) {
 
                     sh """
                         cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc \
-                        ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} ${amd_opencl_extension_flag} \
+                        ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} \
                         ${portaudio_flag} ${fftw_flag} \
-                        ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>&1
                     """
 
                     sh """
-                        make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        make VERBOSE=1 >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>&1
                     """
 
                     // todo return tests after fix
