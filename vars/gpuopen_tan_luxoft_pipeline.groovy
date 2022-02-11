@@ -253,7 +253,8 @@ def executeBuildWindows(Map options) {
                     dir (win_build_name) {
                         bat """
                             SET CMAKE_PREFIX_PATH=../../../thirdparty/Qt/Qt5.9.9/5.9.9/msvc2017_64/lib/cmake/Qt5Widgets
-                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag} -DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}_${win_build_name}.log 2>&1
+                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag} -DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
+                        
                         """
                     }
 
@@ -266,8 +267,7 @@ def executeBuildWindows(Map options) {
                         }
                     } else if (win_tool == "cmake") {
                         bat """
-                            cmake --build ${win_build_name} --config \
-                            ${win_build_conf} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
+                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
