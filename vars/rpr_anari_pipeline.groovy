@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
     supportedOS: ["Windows", "MacOS", "Ubuntu20"],
-    productExtensions: ["Windows": "zip", "MacOS": "zip", "Ubuntu20": "zip"],
+    productExtensions: ["Windows": "zip", "MacOS": "tar", "Ubuntu20": "tar"],
     artifactNameBase: "Anari_"
 )
 

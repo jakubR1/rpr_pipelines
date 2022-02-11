@@ -33,7 +33,7 @@ def saveDownloadedInstaller(String artifactNameBase, String extension, String id
 }
 
 
-def unpack(String unpackDestination, String identificatorKey, Map options) {
+def unpack(String unpackDestination, String identificatorKey, String extension, Map options) {
     if (extension == "tar") {
         sh("tar -xvf ${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension} ${unpackDestination}")
     } else if (extension == "zip") {
@@ -63,7 +63,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             println "[INFO] The product ${options[identificatorKey]}.${extension} exists in the storage."
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, options)
+                unpack(unpackDestination, identificatorKey, extension, options)
             }
         } else {
             println "[INFO] The product does not exist in the storage. Downloading and copying..."
@@ -80,7 +80,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, options)
+                unpack(unpackDestination, identificatorKey, extension, options)
             }
         }
 
@@ -93,7 +93,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             println "[INFO] The plugin ${options[identificatorKey]}.${extension} exists in the storage."
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, options)
+                unpack(unpackDestination, identificatorKey, extension, options)
             }
         } else {
             if (isUnix()) {
@@ -108,7 +108,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, options)
+                unpack(unpackDestination, identificatorKey, extension, options)
             }
         }
     }
