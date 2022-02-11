@@ -2,6 +2,7 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import groovy.transform.Field
 
 
+@Field final String PLUGIN_REPO = "git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git"
 @Field final String INSTALLER_REPO = "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git"
 @Field final String HTTP_INSTALLER_REPO = "https://github.com/Radeon-Pro/RadeonProRenderInventorPluginInstaller"
 
@@ -60,7 +61,7 @@ def executeBuildWindows(Map options) {
 def executeBuild(String osName, Map options) {
     try {
         dir('RadeonProRenderInventorPlugin') {
-            checkoutScm(branchName: options.projectBranch, repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git")
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: PLUGIN_REPO)
         }
         
         switch(osName) {
@@ -111,7 +112,7 @@ def executePreBuild(Map options) {
     }
 
     dir ('RadeonProRenderInventorPlugin') {
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git", disableSubmodules: true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: PLUGIN_REPO, disableSubmodules: true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -140,9 +141,7 @@ def executePreBuild(Map options) {
                     println("[INFO] Current build version: ${options.pluginVersion}")
 
                     dir("RadeonProRenderInventorPlugin") {
-                        bat """
-                            git checkout -B master origin/master
-                        """
+                        checkoutScm(branchName: "master", repositoryUrl: PLUGIN_REPO, disableSubmodules: true)
                     }
 
                     String pluginVersion = utils.incrementVersion(self: this, currentVersion: options.pluginVersion, index: 4)
@@ -198,11 +197,11 @@ def executePreBuild(Map options) {
                         }
                     }
 
+                    dir("RadeonProRenderInventorPlugin") {
+                        checkoutScm(branchName: options.commitSHA, repositoryUrl: PLUGIN_REPO, disableSubmodules: true)
+                    }
+
                     bat """
-                        cd RadeonProRenderInventorPlugin
-                        git pull
-                        git checkout ${options.commitSHA}
-                        cd ..
                         git add RadeonProRenderInventorPlugin
                         git commit -m "buildmaster: update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}"
                         git push origin HEAD:refs/heads/${branchName}
