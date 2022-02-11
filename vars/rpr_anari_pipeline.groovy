@@ -612,6 +612,16 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 
+def appendPlatform(String filteredPlatforms, String platform) {
+    if (filteredPlatforms) {
+        filteredPlatforms +=  ";" + platform
+    } else {
+        filteredPlatforms += platform
+    }
+    return filteredPlatforms
+}
+
+
 def call(String anariSdkBranch = "main",
     String rprAnariBranch = "",
     String testsBranch = "master",
@@ -678,7 +688,8 @@ def call(String anariSdkBranch = "main",
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
 
-            options << [anariSdkBranch: anariSdkBranch,
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        anariSdkBranch: anariSdkBranch,
                         rprAnariBranch:rprAnariBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_anari.git",
                         testsBranch:testsBranch,
@@ -705,7 +716,7 @@ def call(String anariSdkBranch = "main",
                         ]
         }
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         throw e
     } finally {
