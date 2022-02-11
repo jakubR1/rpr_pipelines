@@ -506,9 +506,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             dir("summaryTestResults") {
                 unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
-                    List testNameParts = it.split("-") as List
+                    List testNameParts = it.replace("testResult-", "").split("-") as List
                     String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                    dir(testName.replace("testResult-", "")) {
+                    dir(testName) {
                         try {
                             makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
@@ -548,7 +548,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
 
                 if (options.collectTrackedMetrics) {
                     try {
-                        dir("summaryTestResults/tracked_metrics") {
+                        dir("summaryTestResults/tracked_metrics/${engine}") {
                             downloadFiles("${metricsRemoteDir}/", ".")
                         }
                     } catch (e) {
@@ -565,6 +565,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
                         if (options.sendToUMS) {
+                            options.engine = engine
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
 
