@@ -69,11 +69,13 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-            getProduct(osName, options, "Anari")
-
             if (osName == "MacOS" || osName == "MacOS_ARM") {
                 sh("brew install glfw3")
+            } else if (osName == "Windows") {
+                downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/VS_dlls/*", "Anari")
             }
+
+            getProduct(osName, options, "Anari")
         }
 
         String REF_PATH_PROFILE="/volume1/Baselines/rpr_anari_autotests/${asicName}-${osName}"
@@ -414,8 +416,6 @@ def executePreBuild(Map options) {
         }
     }
 
-    options.tests = []
-
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_anari') {
             checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
@@ -428,17 +428,15 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def packageInfo = readJSON file: "jobs/${options.testsPackage}"
+                options.tests = []
                 packageInfo["groups"].each() {
                     options.tests << it.key
                 }
                 options.testsPackage = "none"
-            } else {
-                options.tests = options.tests.split(" ") as List
-                options.tests = tests
+                options.tests = options.tests.join(" ")
             }
 
             options.testsList = ['']
-            options.tests = tests.join(" ")
         }
 
         if (env.BRANCH_NAME && options.githubNotificator) {
