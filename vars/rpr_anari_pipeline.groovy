@@ -108,28 +108,10 @@ def executeTests(String osName, String asicName, Map options) {
         }
         options.executeTestsFinished = true
 
-        if (options["errorsInSuccession"]["${osName}-${asicName}"] != -1) {
-            // mark that one group was finished and counting of errored groups in succession must be stopped
-            options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(-1)
-        }
-
     } catch (e) {
         String additionalDescription = ""
         if (options.currentTry + 1 < options.nodeReallocateTries) {
             stashResults = false
-        } else {
-            if (!options["errorsInSuccession"]["${osName}-${asicName}"]) {
-                options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(0)
-            }
-            Integer errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"]
-            // if counting of errored groups in succession must isn't stopped
-            if (errorsInSuccession >= 0) {
-                errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"].addAndGet(1)
-            
-                if (errorsInSuccession >= 3) {
-                    additionalDescription = "Number of errored groups in succession exceeded (max - 3). Next groups for this platform will be aborted"
-                }
-            }
         }
         println(e.toString())
         println(e.getMessage())
@@ -430,37 +412,37 @@ def executePreBuild(Map options) {
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
             currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         }
+    }
 
-        options.tests = []
+    options.tests = []
 
-        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-            dir('jobs_test_anari') {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
-                dir ('jobs_launcher') {
-                    options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+        dir('jobs_test_anari') {
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+            dir ('jobs_launcher') {
+                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            }
+            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            println("[INFO] Test branch hash: ${options['testsBranch']}")
+
+            if (options.testsPackage != "none") {
+                // json means custom test suite. Split doesn't supported
+                def packageInfo = readJSON file: "jobs/${options.testsPackage}"
+                packageInfo["groups"].each() {
+                    options.tests << it.key
                 }
-                options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-                println("[INFO] Test branch hash: ${options['testsBranch']}")
-
-                if (options.testsPackage != "none") {
-                    // json means custom test suite. Split doesn't supported
-                    def packageInfo = readJSON file: "jobs/${options.testsPackage}"
-                    packageInfo["groups"].each() {
-                        options.tests << it.key
-                    }
-                    options.testsPackage = "none"
-                } else {
-                    options.tests = options.tests.split(" ") as List
-                    options.tests = tests
-                }
-
-                options.testsList = ['']
-                options.tests = tests.join(" ")
+                options.testsPackage = "none"
+            } else {
+                options.tests = options.tests.split(" ") as List
+                options.tests = tests
             }
 
-            if (env.BRANCH_NAME && options.githubNotificator) {
-                options.githubNotificator.initChecks(options, "${BUILD_URL}")
-            }
+            options.testsList = ['']
+            options.tests = tests.join(" ")
+        }
+
+        if (env.BRANCH_NAME && options.githubNotificator) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
     }
 
@@ -714,7 +696,7 @@ def call(String anariSdkBranch = "main",
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkMacOS: customBuildLinkMacOS,
-                        testerTag: testerTag
+                        TESTER_TAG: testerTag
                         ]
         }
 
