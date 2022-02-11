@@ -534,7 +534,7 @@ def executeBuildLinux(String osName, Map options) {
                     // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
                     sh """
                         mkdir binUbuntu
-                        cp -rf ../../../../bin/Linux binUbuntu/
+                        cp -rf ../../../../bin/Linux/${ub18_build_name} binUbuntu/
                         cp -rf ../../../../scenes binUbuntu/scenes
                     """
 
