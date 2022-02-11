@@ -43,8 +43,10 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
             break
         case 'Ubuntu':
             customBuildLink = options['customBuildLinkLinux']
+            break
         case 'Ubuntu18':
             customBuildLink = options['customBuildLinkUbuntu18']
+            break
         // Ubuntu20
         default:
             customBuildLink = options['customBuildLinkUbuntu20']
