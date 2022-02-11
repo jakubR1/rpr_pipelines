@@ -13,6 +13,205 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final String RPR_ANARI_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderANARI.git"
 
 
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows", "MacOS", "Ubuntu20"],
+    productExtensions: ["Windows": "zip", "MacOS": "zip", "Ubuntu20": "zip"],
+    artifactNameBase: "Anari_"
+)
+
+
+def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
+    dir("scripts") {
+        switch(osName) {
+            case "Windows":
+                bat """
+                    make_results_baseline.bat ${delete}
+                """
+                break
+            default:
+                sh """
+                    ./make_results_baseline.sh ${delete}
+                """
+        }
+    }
+}
+
+def executeTestCommand(String osName, String asicName, Map options) {
+    UniverseManager.executeTests(osName, asicName, options) {
+        switch(osName) {
+            case "Windows":
+                dir("scripts") {
+                    bat """
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
+                break
+            default:
+                dir("scripts") {
+                    sh """
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
+        }
+    }
+}
+
+def executeTests(String osName, String asicName, Map options) {
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+
+    try {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "5", unit: "MINUTES") {
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+            }
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
+            getProduct(osName, options, "Anari")
+
+            if (osName == "MacOS" || osName == "MacOS_ARM") {
+                sh("brew install glfw3")
+            }
+        }
+
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_anari_autotests/${asicName}-${osName}"
+
+        outputEnvironmentInfo(osName, "", options.currentTry)
+
+        if (options["updateRefs"].contains("Update")) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+                executeTestCommand(osName, asicName, options)
+                executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                // delete generated baselines when they're sent 
+                switch(osName) {
+                    case "Windows":
+                        bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
+                        break
+                    default:
+                        sh "rm -rf ./Work/GeneratedBaselines"        
+                }
+            }
+        } else {
+            withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
+                String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_anari_autotests_baselines" : "/mnt/c/TestResources/rpr_anari_autotests_baselines"
+                println "[INFO] Downloading reference images for ${options.tests}"
+                options.tests.split(" ").each() {
+                    downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                }
+            }
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+                executeTestCommand(osName, asicName, options)
+            }
+        }
+        options.executeTestsFinished = true
+
+        if (options["errorsInSuccession"]["${osName}-${asicName}"] != -1) {
+            // mark that one group was finished and counting of errored groups in succession must be stopped
+            options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(-1)
+        }
+
+    } catch (e) {
+        String additionalDescription = ""
+        if (options.currentTry + 1 < options.nodeReallocateTries) {
+            stashResults = false
+        } else {
+            if (!options["errorsInSuccession"]["${osName}-${asicName}"]) {
+                options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(0)
+            }
+            Integer errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"]
+            // if counting of errored groups in succession must isn't stopped
+            if (errorsInSuccession >= 0) {
+                errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"].addAndGet(1)
+            
+                if (errorsInSuccession >= 3) {
+                    additionalDescription = "Number of errored groups in succession exceeded (max - 3). Next groups for this platform will be aborted"
+                }
+            }
+        }
+        println(e.toString())
+        println(e.getMessage())
+        
+        if (e instanceof ExpectedExceptionWrapper) {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
+        } else {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}\n${additionalDescription}", e)
+        }
+    } finally {
+        if (osName == "MacOS" || osName == "MacOS_ARM") {
+            sh("brew uninstall glfw3")
+        }
+
+        try {
+            dir("${options.stageName}") {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+
+            if (stashResults) {
+                dir('Work') {
+                    if (fileExists("Results/Anari/session_report.json")) {
+
+                        def sessionReport = null
+                        sessionReport = readJSON file: 'Results/Anari/session_report.json'
+
+                        if (sessionReport.summary.error > 0) {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                        } else if (sessionReport.summary.failed > 0) {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
+                        } else {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
+                        }
+
+                        println "Stashing test results to : ${options.testResultsName}"
+                        
+                        utils.stashTestData(this, options, options.storeOnNAS, "**/cache/**")
+                        // reallocate node if there are still attempts
+                        // if test group is fully errored or number of test cases is equal to zero
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
+                            // check that group isn't fully skipped
+                            if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
+                                // remove brocken core package
+                                removeInstaller(osName: osName, options: options, extension: "zip")
+                                collectCrashInfo(osName, options, options.currentTry)
+                                String errorMessage
+                                if (options.currentTry < options.nodeReallocateTries) {
+                                    errorMessage = "All tests were marked as error. The test group will be restarted."
+                                } else {
+                                    errorMessage = "All tests were marked as error."
+                                }
+                                throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
+                            }
+                        }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            // throw exception in finally block only if test stage was finished
+            if (options.executeTestsFinished) {
+                if (e instanceof ExpectedExceptionWrapper) {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
+                    throw e
+                } else {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.FAILED_TO_SAVE_RESULTS, "${BUILD_URL}")
+                    throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
+                }
+            }
+        }
+    }
+}
+
+
 def executeBuildWindows(Map options) {
     GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${STAGE_NAME}.log")
 
@@ -158,6 +357,11 @@ def executeBuild(String osName, Map options) {
 }
 
 
+def getReportBuildArgs(Map options) {
+    return """Anari ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"\""""
+}
+
+
 def executePreBuild(Map options) {
     options['executeBuild'] = true
     options['executeTests'] = true
@@ -215,8 +419,32 @@ def executePreBuild(Map options) {
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
     }
 
+    options.tests = []
+
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        // TODO: init autotests repo
+        dir('jobs_test_anari') {
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+            dir ('jobs_launcher') {
+                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            }
+            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            println("[INFO] Test branch hash: ${options['testsBranch']}")
+
+            if (options.testsPackage != "none") {
+                // json means custom test suite. Split doesn't supported
+                def packageInfo = readJSON file: "jobs/${options.testsPackage}"
+                packageInfo["groups"].each() {
+                    options.tests << it.key
+                }
+                options.testsPackage = "none"
+            } else {
+                options.tests = options.tests.split(" ") as List
+                options.tests = tests
+            }
+
+            options.testsList = ['']
+            options.tests = tests.join(" ")
+        }
 
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
@@ -224,10 +452,150 @@ def executePreBuild(Map options) {
     }
 
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
-        // TODO: support flexible updating
-        //options.reportUpdater = new ReportUpdater(this, env, options)
-        //options.reportUpdater.init(this.&getReportBuildArgs)
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
     }
+}
+
+
+def executeDeploy(Map options, List platformList, List testResultList) {
+    try {
+        if (options['executeTests'] && testResultList) {
+
+            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+            }
+
+            List lostStashes = []
+
+            dir("summaryTestResults") {
+                unstashCrashInfo(options['nodeRetry'])
+                testResultList.each() {
+                    dir("$it".replace("testResult-", "")) {
+                        try {
+                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
+                        } catch(e) {
+                            echo "Can't unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+
+                    }
+                }
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    bat """
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"false\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
+            }
+
+            try {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
+                    dir("jobs_launcher") {
+                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
+                        bat "get_status.bat ..\\summaryTestResults"
+                    }
+                } 
+            } catch(e) {
+                String errorMessage = utils.getReportFailReason(e.getMessage())
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                if (utils.isReportFailCritical(e.getMessage())) {
+                    options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                    println("[ERROR] Failed to build test report.")
+                    println(e.toString())
+                    println(e.getMessage())
+
+                    if (!options.testDataSaved && !options.storeOnNAS) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
+                    throw e
+                } else {
+                    currentBuild.result = "FAILURE"
+                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
+                }
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            } catch(e) {
+                println("[ERROR] during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            Map summaryTestResults = [:]
+            try {
+                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                summaryTestResults['passed'] = summaryReport.passed
+                summaryTestResults['failed'] = summaryReport.failed
+                summaryTestResults['error'] = summaryReport.error
+                if (summaryReport.error > 0) {
+                    println("[INFO] Some tests marked as error. Build result = FAILURE.")
+                    currentBuild.result = "FAILURE"
+
+                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
+                } else if (summaryReport.failed > 0) {
+                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
+                    currentBuild.result = "UNSTABLE"
+
+                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
+                }
+            } catch(e) {
+                println(e.toString())
+                println(e.getMessage())
+                println("[ERROR] CAN'T GET TESTS STATUS")
+                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
+                currentBuild.result = "UNSTABLE"
+            }
+
+            try {
+                options.testsStatus = readFile("summaryTestResults/slack_status.json")
+            } catch(e) {
+                println(e.toString())
+                println(e.getMessage())
+                options.testsStatus = ""
+            }
+
+            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
+                if (summaryTestResults) {
+                    // add in description of status check information about tests statuses
+                    // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                } else {
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                }
+            }
+        }
+    } catch (e) {
+        println(e.toString())
+        println(e.getMessage())
+        throw e
+    } finally {}
 }
 
 
@@ -265,7 +633,7 @@ def call(String anariSdkBranch = "main",
 
             options << [anariSdkBranch: anariSdkBranch,
                         rprAnariBranch:rprAnariBranch,
-                        testRepo:"git@github.com:luxteam/jobs_test_blender.git",
+                        testRepo:"git@github.com:luxteam/jobs_test_anari.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         testsPackage:testsPackage,
