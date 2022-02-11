@@ -621,7 +621,7 @@ def call(String anariSdkBranch = "main",
     String tests = "",
     String customBuildLinkWindows = "",
     String customBuildLinkUbuntu20 = "",
-    String customBuildLinkOSX = "")
+    String customBuildLinkMacOS = "")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -643,7 +643,7 @@ def call(String anariSdkBranch = "main",
                 }
             }
 
-            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkMacOS || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
 
             if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
@@ -659,8 +659,8 @@ def call(String anariSdkBranch = "main",
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                             break
-                        case 'OSX':
-                            if (customBuildLinkOSX) {
+                        case 'MacOS':
+                            if (customBuildLinkMacOS) {
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                             break
@@ -701,7 +701,7 @@ def call(String anariSdkBranch = "main",
                         isPreBuilt:isPreBuilt,
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
-                        customBuildLinkOSX: customBuildLinkOSX
+                        customBuildLinkMacOS: customBuildLinkMacOS
                         ]
         }
 
