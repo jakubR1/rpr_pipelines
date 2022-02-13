@@ -548,13 +548,12 @@ def executePreBuild(Map options)
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
                         println "[INFO] Updated build version: ${options.pluginVersion}"
-                        // TODO: wait access to GPU Open
 
-/*                        bat """
+                        bat """
                             git add src/hdusd/__init__.py
                             git commit -m "buildmaster: version update to ${options.pluginVersion}"
                             git push origin HEAD:master
-                        """*/
+                        """
 
                         //get commit's sha which have to be build
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
