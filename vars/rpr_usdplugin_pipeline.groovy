@@ -694,11 +694,11 @@ def executePreBuild(Map options) {
                     options.pluginVersion = "${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
                     println "[INFO] Updated build version: ${options.patchVersion}"
 
-/*                    bat """
+                    bat """
                         git add cmake/defaults/Version.cmake
                         git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
                         git push origin HEAD:develop
-                    """*/
+                    """
 
                     //get commit's sha which have to be build
                     options['projectBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
