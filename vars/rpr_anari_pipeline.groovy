@@ -385,14 +385,6 @@ def executePreBuild(Map options) {
         options.projectBranchName = options.rprAnariBranch
     // auto job
     } else {
-        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-            GithubNotificator githubNotificator = new GithubNotificator(this, options)
-            githubNotificator.init(options)
-            options["githubNotificator"] = githubNotificator
-            githubNotificator.initPreBuild("${BUILD_URL}")
-            options.projectBranchName = githubNotificator.branchName
-        }
-
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
@@ -420,6 +412,14 @@ def executePreBuild(Map options) {
             println "Commit SHA: ${options.commitSHA}"
             println "Commit shortSHA: ${options.commitShortSHA}"
             println "Branch name: ${options.branchName}"
+
+            withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                githubNotificator.init(options)
+                options["githubNotificator"] = githubNotificator
+                githubNotificator.initPreBuild("${BUILD_URL}")
+                options.projectBranchName = githubNotificator.branchName
+            }
 
             if (options.projectBranch) {
                 currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -691,6 +691,7 @@ def call(String anariSdkBranch = "main",
             options << [configuration: PIPELINE_CONFIGURATION,
                         anariSdkBranch: anariSdkBranch,
                         rprAnariBranch:rprAnariBranch,
+                        projectRepo:RPR_ANARI_REPO,
                         testRepo:"git@github.com:luxteam/jobs_test_anari.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
