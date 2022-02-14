@@ -266,14 +266,14 @@ def executeBuildWindows(Map options) {
                         }
                     } else if (win_tool == "cmake") {
                         bat """
-                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
+                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
                     bat """
                         mkdir binWindows
-                        xcopy /s/y/i ../../../../bin/Windows/${win_build_conf} binWindows/
-                        xcopy /s/y/i ../../../../scenes binWindows/scenes
+                        xcopy /s/y/i ..\\.\\..\\..\\bin\\Windows\\${win_build_conf} binWindows
+                        xcopy /s/y/i ..\\..\\..\\..\\scenes binWindows\\scenes
                     """   
 
                     zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
