@@ -382,6 +382,7 @@ def executePreBuild(Map options) {
     // manual job
     if (!env.BRANCH_NAME) {
         println "[INFO] Manual job launch detected"
+        options.projectBranchName = options.rprAnariBranch
     // auto job
     } else {
         withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
