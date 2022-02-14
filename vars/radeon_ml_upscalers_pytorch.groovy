@@ -52,15 +52,18 @@ def executeTestCommand(String osName, String asicName, Map options)
                         println("[INFO] Job was aborted during executing tests.")
                         throw error
                     } 
+
                     if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR')) { 
                         currentBuild.result = "FAILURE"
                         archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
                         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
                         options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
                         println "[ERROR] Failed to execute ${test}"
-                        }
                     }
                 }
+            }
+
+            break
 
         case 'Windows':
 
@@ -125,6 +128,8 @@ def executeTestCommand(String osName, String asicName, Map options)
                     }
                 }
             }
+
+            break
     }
 }
 
