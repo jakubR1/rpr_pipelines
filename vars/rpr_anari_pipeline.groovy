@@ -634,7 +634,7 @@ def call(String anariSdkBranch = "main",
                 }
             }
 
-            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkMacOS || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkMacOS || customBuildLinkUbuntu20
 
             if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
