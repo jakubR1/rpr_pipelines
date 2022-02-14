@@ -65,7 +65,7 @@ def executeTestCommand(String osName, String asicName, Map options)
         case 'Windows':
 
             if (options.recreateCondaEnv) {
-                    bash """
+                    bat """
                         call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env remove --name upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env create --force --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
@@ -77,7 +77,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         call delete_auto_generated_files_upscaler
                     """
                 } else {
-                    bash """
+                    bat """
                         call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env update --prune --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
