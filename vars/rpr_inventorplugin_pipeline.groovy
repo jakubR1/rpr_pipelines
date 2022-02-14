@@ -5,6 +5,7 @@ import groovy.transform.Field
 @Field final String PLUGIN_REPO = "git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git"
 @Field final String INSTALLER_REPO = "git@github.com:Radeon-Pro/RadeonProRenderInventorPluginInstaller.git"
 @Field final String HTTP_INSTALLER_REPO = "https://github.com/Radeon-Pro/RadeonProRenderInventorPluginInstaller"
+@Field final List REVIEWERS = ["superkomar"]
 
 
 def executeBuildWindows(Map options) {
@@ -209,7 +210,8 @@ def executePreBuild(Map options) {
 
                     if (env.BRANCH_NAME == "master") {
                         def githubApiProvider = new GithubApiProvider(this)
-                        githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
+                        def prInfo = githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
+                        githubApiProvider.addReviewers(HTTP_INSTALLER_REPO, prInfo["number"], REVIEWERS)
                     }
                 }
             }
