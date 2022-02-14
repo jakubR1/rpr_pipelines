@@ -36,6 +36,18 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
     }
 }
 
+def buildRenderCache(String osName, String logName, Integer currentTry) {
+    dir("scripts") {
+        switch(osName) {
+            case 'Windows':
+                bat "build_cache.bat rpr >> \"..\\${logName}_${currentTry}.cb.log\"  2>&1"
+                break
+            default:
+                sh "./build_cache.sh rpr >> \"../${logName}_${currentTry}.cb.log\" 2>&1"        
+        }
+    }
+}
+
 def executeTestCommand(String osName, String asicName, Map options) {
     UniverseManager.executeTests(osName, asicName, options) {
         switch(osName) {
@@ -81,6 +93,12 @@ def executeTests(String osName, String asicName, Map options) {
         String REF_PATH_PROFILE="/volume1/Baselines/rpr_anari_autotests/${asicName}-${osName}"
 
         outputEnvironmentInfo(osName, "", options.currentTry)
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
+            timeout(time: "10", unit: "MINUTES") {
+                buildRenderCache(osName, options.stageName, options.currentTry)
+            }
+        }
 
         if (options["updateRefs"].contains("Update")) {
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
