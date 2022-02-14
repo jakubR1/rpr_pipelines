@@ -211,7 +211,7 @@ def executePreBuild(Map options) {
                     if (env.BRANCH_NAME == "master") {
                         def githubApiProvider = new GithubApiProvider(this)
                         def prInfo = githubApiProvider.createPR(HTTP_INSTALLER_REPO, "autoupdate_${options.pluginVersion}", "master", "Update RadeonProRenderInventorPlugin submodule to ${options.pluginVersion}")
-                        githubApiProvider.addReviewers(HTTP_INSTALLER_REPO, prInfo["number"], REVIEWERS)
+                        githubApiProvider.addReviewers(HTTP_INSTALLER_REPO, "${prInfo['number']}", REVIEWERS)
                     }
                 }
             }
