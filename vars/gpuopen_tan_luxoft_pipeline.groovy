@@ -23,7 +23,7 @@ def getTanTool(String osName, Map options) {
                 """
             }
 
-            unzip zipFile: "binWindows.zip", dir: "TAN", quiet: true
+            unzip zipFile: "binWindows.zip", dir: "binWindows", quiet: true
 
             break
 
