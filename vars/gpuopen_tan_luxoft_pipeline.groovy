@@ -89,23 +89,23 @@ def executeTestCommand(String osName, Map options) {
         case 'Windows':
             dir('Launcher') {
                 bat """
-                    run.bat "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>>&1
+                    run.bat "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         case 'OSX':
             dir('Launcher') {
                 sh """
-                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>>&1
+                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         default:
             dir('Launcher') {
                 // todo need to add switch between tests
-                // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>>&1
+                // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
                 sh """
-                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>>&1
+                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
     }
@@ -168,7 +168,7 @@ def executeBuildWindows(Map options) {
         @echo off
         mkdir thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
         echo Copying Qt to thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
-        xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i >> nul 2>>&1
+        xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i >> nul 2>&1
     """
 
     options.buildConfiguration.each() { win_build_conf ->
@@ -253,7 +253,7 @@ def executeBuildWindows(Map options) {
                     dir (win_build_name) {
                         bat """
                             SET CMAKE_PREFIX_PATH=../../../thirdparty/Qt/Qt5.9.9/5.9.9/msvc2017_64/lib/cmake/Qt5Widgets
-                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag} -DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>>&1
+                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag} -DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
@@ -261,12 +261,12 @@ def executeBuildWindows(Map options) {
                         dir (win_build_name) {
                             bat """
                                 set msbuild="${options.msBuildPath}"
-                                %msbuild% TAN-CL.sln /target:build /maxcpucount /p:Configuration=${win_build_conf} /p:Platform=x64 >> ./../../../${STAGE_NAME}_${win_build_name}.log 2>>&1
+                                %msbuild% TAN-CL.sln /target:build /maxcpucount /p:Configuration=${win_build_conf} /p:Platform=x64 >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                             """
                         }
                     } else if (win_tool == "cmake") {
                         bat """
-                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>>&1
+                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
@@ -379,19 +379,19 @@ def executeBuildOSX(Map options) {
                                 cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} \
                                 ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} \
                                 -DAMF_OPEN_DIR=../../../amfOpen \
-                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>>&1
+                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                             """
                         } else if (osx_tool == "xcode") {
                             sh """
                                 cmake  .. -G "Xcode" ${cmake_flag} ${opencl_flag} \
                                 ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} \
                                 -DAMF_OPEN_DIR=../../../amfOpen \
-                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>>&1
+                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                             """
                         }
                         
                         sh """
-                            make VERBOSE=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>>&1
+                            make VERBOSE=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                         """
 
                         sh """
@@ -519,11 +519,11 @@ def executeBuildLinux(String osName, Map options) {
                         cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc \
                         ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} \
                         ${portaudio_flag} ${fftw_flag} \
-                        ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>>&1
+                        ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>&1
                     """
 
                     sh """
-                        make VERBOSE=1 >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>>&1
+                        make VERBOSE=1 >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>&1
                     """
 
                     // todo return tests after fix
