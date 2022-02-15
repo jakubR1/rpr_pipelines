@@ -1052,6 +1052,14 @@ def executePreBuild(Map options) {
     println "Commit SHA: ${options.commitSHA}"
     println "Commit shortSHA: ${options.commitShortSHA}"
 
+    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+        githubNotificator.init(options)
+        options["githubNotificator"] = githubNotificator
+        githubNotificator.initPreBuild("${BUILD_URL}")
+        options.projectBranchName = githubNotificator.branchName
+    }
+
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
@@ -1200,7 +1208,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
     try {
 
         if (options["executeTests"] && testResultList) {
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${game}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
 
@@ -1363,7 +1371,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             try {
                 Boolean showGPUViewTraces = options.clientCollectTraces || options.serverCollectTraces
 
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -1394,7 +1402,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 }
             } catch (e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "failure", options, errorMessage, "${BUILD_URL}")
                 if (utils.isReportFailCritical(e.getMessage())) {
                     options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                     println """
@@ -1476,17 +1484,17 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 options.testsStatus = ""
             }
 
-            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${game}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 // FIXME: save reports on NAS
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
                     "Test Report ${game}", "Summary Report, Compare Report", false, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
                 if (summaryTestResults) {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "success", options,
                             NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
@@ -1597,6 +1605,7 @@ def call(String projectBranch = "",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
+                        enginesNames: games.split(",") as List,
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
