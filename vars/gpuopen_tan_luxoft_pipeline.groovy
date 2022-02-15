@@ -23,7 +23,11 @@ def getTanTool(String osName, Map options) {
                 """
             }
 
-            unzip zipFile: "binWindows.zip", dir: "binWindows", quiet: true
+            bat """
+                    mkdir FilesToCheck
+                """
+
+            unzip zipFile: "binWindows.zip", dir: "FilesToCheck/", quiet: true
 
             break
 
@@ -49,7 +53,8 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                tar -zxvf binMacOS.tar.gz
+                mkdir FilesToCheck
+                tar -zxvf binMacOS.tar.gz --directory FilesToCheck/
             """
             
             break
@@ -77,7 +82,8 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                tar -zxvf binUbuntu.tar.gz
+                mkdir FilesToCheck
+                tar -zxvf binUbuntu.tar.gz --directory FilesToCheck/
             """
     }
 }
@@ -396,7 +402,7 @@ def executeBuildOSX(Map options) {
 
                         sh """
                             mkdir binMacOS
-                            cp -rf ../../../../bin/Darwin/${osx_build_name} binMacOS/
+                            cp -rf ../../../../bin/ binMacOS/bin
                             cp -rf ../../../../scenes binMacOS/scenes                     
                         """
 
@@ -532,7 +538,7 @@ def executeBuildLinux(String osName, Map options) {
                     // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
                     sh """
                         mkdir binUbuntu
-                        cp -rf ../../../../bin/Linux/${ub18_build_name} binUbuntu/
+                        cp -rf ../../../../bin binUbuntu/bin
                         cp -rf ../../../../scenes binUbuntu/scenes
                     """
 
