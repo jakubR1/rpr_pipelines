@@ -849,6 +849,7 @@ def executeBuildWindows(Map options) {
             String msBuildPath = ""
             String buildSln = ""
             String winArtifactsDir = "vs${winVSVersion}x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+            String winDriverDir = "x64/${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
 
             switch(winVSVersion) {
                 case "2017":
@@ -869,30 +870,30 @@ def executeBuildWindows(Map options) {
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
-            if (branchName == "develop") {
+            if (branchName == "origin/develop") {
                 dir("AMDVirtualDrivers") {
-                    withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                    withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                         checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
                     }
 
-                    GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
+                    GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logNameDriver}")
 
                     bat """
                         set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
                         set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
                         set msbuild="${msBuildPath}"
-                        %msbuild% AMDVirtualDrivers.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
+                        %msbuild% AMDVirtualDrivers.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\${logNameDriver} 2>&1
                     """
 
-                    dir("x64/Release") {
-                        String DRIVER_NAME = "StreamingSDK_Windows_${winBuildConf}.zip"
+                    dir(winDriverDir) {
+                        String DRIVER_NAME = "Driver_Windows_${winBuildConf}.zip"
 
                         zip archive: true, zipFile: DRIVER_NAME
 
                         makeStash(includes: DRIVER_NAME, name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
                         String archiveUrl = "${BUILD_URL}artifact/${DRIVER_NAME}"
-                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${DRIVER_NAME}</a></h3>"""
                     }
                 }
             }
