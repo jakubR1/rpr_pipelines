@@ -277,12 +277,12 @@ def executeBuildWindows(Map options) {
                     }
 
                     bat """
-                        mkdir binWindows
+                        mkdir FilesToCheck
                         xcopy /s/y/i ..\\..\\..\\bin FilesToCheck
                         xcopy /s/y/i ..\\..\\..\\scenes FilesToCheck\\scenes
                     """   
 
-                    zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
+                    zip archive: true, dir: "FilesToCheck", glob: '', zipFile: "Windows_${win_build_name}.zip"
 
                     bat """
                         rename Windows_${win_build_name}.zip binWindows.zip
@@ -401,13 +401,13 @@ def executeBuildOSX(Map options) {
                         """
 
                         sh """
-                            mkdir binMacOS
-                            cp -rf ../../../../bin/ binMacOS/bin
-                            cp -rf ../../../../scenes binMacOS/scenes                     
+                            mkdir FilesToCheck
+                            cp -rf ../../../../bin FilesToCheck/bin
+                            cp -rf ../../../../scenes FilesToCheck/scenes
                         """
 
                         sh """
-                            tar -czvf "MacOS_${osx_build_name}.tar.gz" ./binMacOS
+                            tar -czvf "MacOS_${osx_build_name}.tar.gz" ./FilesToCheck
                         """
                         
                         archiveArtifacts "MacOS_${osx_build_name}.tar.gz"
@@ -538,12 +538,12 @@ def executeBuildLinux(String osName, Map options) {
                     // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
                     sh """
                         mkdir binUbuntu
-                        cp -rf ../../../../bin binUbuntu/bin
-                        cp -rf ../../../../scenes binUbuntu/scenes
+                        cp -rf ../../../../bin FilesToCheck/bin
+                        cp -rf ../../../../scenes FilesToCheck/scenes
                     """
 
                     sh """
-                        tar -czvf "Ubuntu_${ub18_build_name}.tar.gz" ./binUbuntu
+                        tar -czvf "Ubuntu_${ub18_build_name}.tar.gz" ./FilesToCheck
                     """
                     
                     archiveArtifacts "Ubuntu_${ub18_build_name}.tar.gz"
