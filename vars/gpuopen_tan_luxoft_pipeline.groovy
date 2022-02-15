@@ -278,8 +278,8 @@ def executeBuildWindows(Map options) {
 
                     bat """
                         mkdir binWindows
-                        xcopy /s/y/i ..\\..\\..\\bin\\Windows\\${win_build_conf} binWindows\\${win_build_conf}
-                        xcopy /s/y/i ..\\..\\..\\scenes binWindows\\scenes
+                        xcopy /s/y/i ..\\..\\..\\bin FilesToCheck
+                        xcopy /s/y/i ..\\..\\..\\scenes FilesToCheck\\scenes
                     """   
 
                     zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
