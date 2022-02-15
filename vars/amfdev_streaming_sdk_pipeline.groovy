@@ -870,7 +870,7 @@ def executeBuildWindows(Map options) {
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
-            if (branchName == "origin/develop") {
+            if (branchName == "origin/develop" || branchName == "develop") {
                 dir("AMDVirtualDrivers") {
                     withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                         checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
