@@ -617,4 +617,6 @@ public class NotificationConfiguration {
 
     def static FAILED_UPDATE_BASELINES_UMS = "Failed to update baselines on UMS <name>"
 
+    def static SOME_STAGES_FAILED = "Some stages failed"
+
 }
