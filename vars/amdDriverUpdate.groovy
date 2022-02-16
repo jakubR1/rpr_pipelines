@@ -10,15 +10,15 @@ def main(Map options) {
             updateTasks["${it}"] = {
                 stage("Driver update ${it}") {
                     node("${it}") {
-                        timeout(time: "30", unit: "MINUTES") {
+                        timeout(time: "60", unit: "MINUTES") {
                             try {
                                 DRIVER_PAGE_URL = "https://www.amd.com/en/support/graphics/amd-radeon-6000-series/amd-radeon-6800-series/amd-radeon-rx-6800-xt"
                                 
                                 bat "${CIS_TOOLS}\\driver_detection\\amd_request.bat \"${DRIVER_PAGE_URL}\" ${env.WORKSPACE}\\page.html >> page_download_${it}.log 2>&1 "
 
                                 withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
-                                    bat "python -m pip install -r ${CIS_TOOLS}\\driver_detection\\requirements.txt >> parse_stage_${it}.log 2>&1"
-                                    bat "python ${CIS_TOOLS}\\driver_detection\\parse_driver.py --file ${env.WORKSPACE}\\page.html --output ${env.WORKSPACE}\\driver.exe >> parse_stage_${it}.log 2>&1"
+                                    python3("-m pip install -r ${CIS_TOOLS}\\driver_detection\\requirements.txt >> parse_stage_${it}.log 2>&1")
+                                    python3("${CIS_TOOLS}\\driver_detection\\parse_driver.py --html_path ${env.WORKSPACE}\\page.html --installer_dst ${env.WORKSPACE}\\driver.exe --drivers_dir C:\\AMD >> parse_stage_${it}.log 2>&1")
                                 }
                             } catch(e) {
                                 println(e.toString());
