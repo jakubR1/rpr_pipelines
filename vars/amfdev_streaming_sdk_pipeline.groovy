@@ -1052,12 +1052,14 @@ def executePreBuild(Map options) {
     println "Commit SHA: ${options.commitSHA}"
     println "Commit shortSHA: ${options.commitShortSHA}"
 
-    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-        GithubNotificator githubNotificator = new GithubNotificator(this, options)
-        githubNotificator.init(options)
-        options["githubNotificator"] = githubNotificator
-        githubNotificator.initPreBuild("${BUILD_URL}")
-        options.projectBranchName = githubNotificator.branchName
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options["githubNotificator"] = githubNotificator
+            githubNotificator.initPreBuild("${BUILD_URL}")
+            options.projectBranchName = githubNotificator.branchName
+        }
     }
 
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
