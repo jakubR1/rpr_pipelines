@@ -18,7 +18,10 @@ def main(Map options) {
 
                                 withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
                                     python3("-m pip install -r ${CIS_TOOLS}\\driver_detection\\requirements.txt >> parse_stage_${it}.log 2>&1")
-                                    python3("${CIS_TOOLS}\\driver_detection\\parse_driver.py --html_path ${env.WORKSPACE}\\page.html --installer_dst ${env.WORKSPACE}\\driver.exe --drivers_dir C:\\AMD >> parse_stage_${it}.log 2>&1")
+                                    status = bat(returnStatus: true, script: "python ${CIS_TOOLS}\\driver_detection\\parse_driver.py --html_path ${env.WORKSPACE}\\page.html --installer_dst ${env.WORKSPACE}\\driver.exe --drivers_dir C:\\AMD >> parse_stage_${it}.log 2>&1")
+                                    if (status == 404) {
+                                        println("[INFO] Newer driver not found")
+                                    }
                                 }
                             } catch(e) {
                                 println(e.toString());
