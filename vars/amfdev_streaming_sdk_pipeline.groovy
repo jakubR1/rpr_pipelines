@@ -391,6 +391,15 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                 if (fileExists("Results/StreamingSDK/session_report.json")) {
 
                     if (executionType == "client" || executionType == "android") {
+                        String stashPostfix = executionType == "client" ? "_client" : ""
+
+                        println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
+                        makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                    } else if (executionType == "mcClient") {
+                         println "Stashing results of multiconnection client"
+                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_sec_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_sec_cl_j", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                    } else {
                         def sessionReport = readJSON file: "Results/StreamingSDK/session_report.json"
 
                         if (sessionReport.summary.error > 0) {
@@ -401,15 +410,6 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        String stashPostfix = executionType == "client" ? "_client" : ""
-
-                        println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                    } else if (executionType == "mcClient") {
-                         println "Stashing results of multiconnection client"
-                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_sec_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_sec_cl_j", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                    } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_serv_l", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
