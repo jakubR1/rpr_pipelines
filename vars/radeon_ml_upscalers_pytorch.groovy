@@ -228,7 +228,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {}
 
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:NVIDIA_RTX5000;Ubuntu18:Cluster',
+         String platforms = 'Ubuntu18:Cluster',
          Boolean executeAllTests = true,
          String tests = "0000_index,0010_config,0015_utils,0018_pytorch_utils,0020_plot,0030_image,0050_colormaps,0070_SSIM",
          String customTests = "",
