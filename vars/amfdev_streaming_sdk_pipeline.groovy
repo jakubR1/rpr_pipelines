@@ -10,6 +10,7 @@ import TestsExecutionType
 @Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
 @Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
 @Field final String DRIVER_REPO = "git@github.com:amfdev/AMDVirtualDrivers.git"
+@Field final Map driverTestsExecuted = new ConcurrentHashMap()
 
 
 String getClientLabels(Map options) {
@@ -92,8 +93,8 @@ def unpackDriver(String osName, Map options) {
 def uninstallDriver(Map options) {
     try {
         powershell """
-            $command = "cd ${WORKSPACE}\\AMDVirtualDrivers\\x64\\Debug; .\\uninstall.bat | Out-File ..\\${options.stageName}_${options.currentTry}_install_driver.log"
-            Start-Process powershell "$command" -Verb RunAs -Wait
+            \$command = "cd ${WORKSPACE}\\AMDVirtualDrivers; .\\uninstall.bat | Out-File ..\\${options.stageName}_${options.currentTry}_uninstall_driver.log"
+            Start-Process powershell "\$command" -Verb RunAs -Wait
         """
     } catch (e) {
         println("[ERROR] Failed to uninstall driver")
@@ -103,14 +104,34 @@ def uninstallDriver(Map options) {
 
 
 def runDriverTests(Map options) {
+    String title = "Driver tests"
+    String logName = "${options.stageName}_${options.currentTry}_test_driver.log"
+    String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}/${logName}"
+
     try {
+        // start script which agree to install unsigned driver
         powershell """
-            $command = "cd ${WORKSPACE}\\AMDVirtualDrivers\\x64\\Debug; .\\AMDHidTests.exe | Out-File ..\\${options.stageName}_${options.currentTry}_test_driver.log"
-            Start-Process powershell "$command" -Verb RunAs -Wait
+            \$command = "C:\\Python39\\python.exe \$env:CIS_TOOLS\\register_dev_driver.py"
+            Start-Process powershell "\$command" -Verb RunAs
         """
+
+        powershell """
+            \$command = "cd ${WORKSPACE}\\AMDVirtualDrivers; .\\AMDHidTests.exe | Out-File ..\\${logName}"
+            Start-Process powershell "\$command" -Verb RunAs -Wait
+        """
+
+        String driverTestsLog = readFile("${log_name}_${currentTry}.cb.log")
+        String status = driverTestsLog.contains("FAILED") ? "action_required" : "success"
+        String description = driverTestsLog.contains("FAILED") ? "Testing finished with error" : "Testing successfully finished"
+
+        GithubNotificator.updateStatus('Test', title, status, options, description, url)
     } catch (e) {
-        println("[ERROR] Failed to run driver tests")
+        String message = "Failed to run driver tests"
+        println("[ERROR] ${message}")
         print(e)
+        GithubNotificator.updateStatus('Test', title, "action_required", options, message, url)
+    } finally {
+        driverTestsExecuted["executed"] = true
     }
 }
 
@@ -446,15 +467,15 @@ def executeTestsClient(String osName, String asicName, Map options) {
         options["clientInfo"]["screenHeight"] = getClientScreenHeight(osName, options)
         println("[INFO] Screen height on client machine: ${options.clientInfo.screenHeight}")
 
-        String branchName = env.BRANCH_NAME ?: options.projectBranch
+        if (options.isDevelopBranch) {
+            if (!driverTestsExecuted.containsKey("executed") || !driverTestsExecuted["executed"]) {
+                println("[INFO] Execute driver tests")
 
-        if (branchName == "origin/develop" || branchName == "develop") {
-            println("[INFO] Execute driver tests")
-
-            dir("AMDVirtualDrivers") {
-                unpackDriver(osName, options)
-                uninstallDriver(options)
-                runDriverTests(options)
+                dir("AMDVirtualDrivers") {
+                    unpackDriver(osName, options)
+                    uninstallDriver(options)
+                    runDriverTests(options)
+                }
             }
         }
 
@@ -918,9 +939,7 @@ def executeBuildWindows(Map options) {
                     throw Exception("Unsupported VS version")
             }
 
-            String branchName = env.BRANCH_NAME ?: options.projectBranch
-
-            if (branchName == "origin/develop" || branchName == "develop") {
+            if (options.isDevelopBranch) {
                 dir("AMDVirtualDrivers") {
                     withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                         checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
@@ -1253,6 +1272,10 @@ def executePreBuild(Map options) {
 
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
+
+            if (options.isDevelopBranch) {
+                GithubNotificator.createStatus('Test', "Driver tests", 'queued', options, 'Scheduled', "${env.JOB_URL}")
+            }
         }
     }
 }
@@ -1633,6 +1656,9 @@ def call(String projectBranch = "",
                 Android build configuration: ${androidBuildConfiguration}"
             """
 
+            String branchName = env.BRANCH_NAME ?: projectBranch
+            Boolean isDevelopBranch = (branchName == "origin/develop" || branchName == "develop")
+
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         testsBranch: testsBranch,
@@ -1669,7 +1695,8 @@ def call(String projectBranch = "",
                         serverCollectTraces:serverCollectTraces,
                         collectTracesType:collectTracesType,
                         storeOnNAS: storeOnNAS,
-                        finishedBuildStages: new ConcurrentHashMap()
+                        finishedBuildStages: new ConcurrentHashMap(),
+                        isDevelopBranch: isDevelopBranch
                         ]
         }
 
@@ -1680,6 +1707,7 @@ def call(String projectBranch = "",
         println(e.getMessage())
         throw e
     } finally {
+        GithubNotificator.closeUnfinishedSteps(options, NotificationConfiguration.SOME_STAGES_FAILED)
         problemMessageManager.publishMessages()
     }
 
