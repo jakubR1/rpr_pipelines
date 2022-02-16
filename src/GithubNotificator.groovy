@@ -179,7 +179,7 @@ public class GithubNotificator {
             if (hasDeployStage) {
                 if (options.enginesNames) {
                     options.enginesNames.each { engine ->
-                        String message = "Building test report for ${engine} engine"
+                        String message = "Building test report for ${engine}"
                         paramsBase["name"] = "[DEPLOY] ${message}"
                         githubApiProvider.createOrUpdateStatusCheck(paramsBase)
                         deployCases << message

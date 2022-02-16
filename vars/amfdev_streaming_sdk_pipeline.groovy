@@ -9,6 +9,7 @@ import TestsExecutionType
 
 @Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
 @Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
+@Field final String DRIVER_REPO = "git@github.com:amfdev/AMDVirtualDrivers.git"
 
 
 String getClientLabels(Map options) {
@@ -843,10 +844,12 @@ def executeBuildWindows(Map options) {
 
             String winBuildName = "${winBuildConf}_vs${winVSVersion}"
             String logName = "${STAGE_NAME}.${winBuildName}.log"
+            String logNameDriver = "${STAGE_NAME}.${winBuildName}.driver.log"
 
             String msBuildPath = ""
             String buildSln = ""
             String winArtifactsDir = "vs${winVSVersion}x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+            String winDriverDir = "x64/${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
 
             switch(winVSVersion) {
                 case "2017":
@@ -865,10 +868,42 @@ def executeBuildWindows(Map options) {
                     throw Exception("Unsupported VS version")
             }
 
+            String branchName = env.BRANCH_NAME ?: options.projectBranch
+
+            if (branchName == "origin/develop" || branchName == "develop") {
+                dir("AMDVirtualDrivers") {
+                    withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                        checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
+                    }
+
+                    GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logNameDriver}")
+
+                    bat """
+                        set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
+                        set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
+                        set msbuild="${msBuildPath}"
+                        %msbuild% AMDVirtualDrivers.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\${logNameDriver} 2>&1
+                    """
+
+                    dir(winDriverDir) {
+                        String DRIVER_NAME = "Driver_Windows_${winBuildConf}.zip"
+
+                        zip archive: true, zipFile: DRIVER_NAME
+
+                        makeStash(includes: DRIVER_NAME, name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+
+                        String archiveUrl = "${BUILD_URL}artifact/${DRIVER_NAME}"
+                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${DRIVER_NAME}</a></h3>"""
+                    }
+                }
+            }
+
             dir("StreamingSDK\\amf\\protected\\samples") {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
 
                 bat """
+                    set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
+                    set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
                 """
@@ -1016,6 +1051,16 @@ def executePreBuild(Map options) {
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
     println "Commit shortSHA: ${options.commitShortSHA}"
+
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options["githubNotificator"] = githubNotificator
+            githubNotificator.initPreBuild("${BUILD_URL}")
+            options.projectBranchName = githubNotificator.branchName
+        }
+    }
 
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -1165,7 +1210,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
     try {
 
         if (options["executeTests"] && testResultList) {
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${game}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
 
@@ -1328,7 +1373,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             try {
                 Boolean showGPUViewTraces = options.clientCollectTraces || options.serverCollectTraces
 
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -1359,7 +1404,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 }
             } catch (e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "failure", options, errorMessage, "${BUILD_URL}")
                 if (utils.isReportFailCritical(e.getMessage())) {
                     options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                     println """
@@ -1441,17 +1486,17 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 options.testsStatus = ""
             }
 
-            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${game}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 // FIXME: save reports on NAS
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
                     "Test Report ${game}", "Summary Report, Compare Report", false, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
                 if (summaryTestResults) {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "success", options,
                             NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
@@ -1562,6 +1607,7 @@ def call(String projectBranch = "",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
+                        enginesNames: games.split(",") as List,
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
