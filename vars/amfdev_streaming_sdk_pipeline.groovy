@@ -98,7 +98,7 @@ def uninstallDriver(Map options) {
         """
     } catch (e) {
         println("[ERROR] Failed to uninstall driver")
-        print(e)
+        throw e
     }
 }
 
@@ -120,16 +120,14 @@ def runDriverTests(Map options) {
             Start-Process powershell "\$command" -Verb RunAs -Wait
         """
 
-        String driverTestsLog = readFile("${log_name}_${currentTry}.cb.log")
+        String driverTestsLog = readFile("..\\${logName}")
         String status = driverTestsLog.contains("FAILED") ? "action_required" : "success"
         String description = driverTestsLog.contains("FAILED") ? "Testing finished with error" : "Testing successfully finished"
 
-        GithubNotificator.updateStatus('Test', title, status, options, description, url)
+        GithubNotificator.updateStatus("Test", title, status, options, description, url)
     } catch (e) {
-        String message = "Failed to run driver tests"
-        println("[ERROR] ${message}")
-        print(e)
-        GithubNotificator.updateStatus('Test', title, "action_required", options, message, url)
+        println("[ERROR] Failed to run driver tests")
+        throw e
     } finally {
         driverTestsExecuted["executed"] = true
     }
@@ -469,12 +467,17 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
         if (options.isDevelopBranch) {
             if (!driverTestsExecuted.containsKey("executed") || !driverTestsExecuted["executed"]) {
-                println("[INFO] Execute driver tests")
+                try {
+                    println("[INFO] Execute driver tests")
 
-                dir("AMDVirtualDrivers") {
-                    unpackDriver(osName, options)
-                    uninstallDriver(options)
-                    runDriverTests(options)
+                    dir("AMDVirtualDrivers") {
+                        unpackDriver(osName, options)
+                        uninstallDriver(options)
+                        runDriverTests(options)
+                    }
+                } catch (e) {
+                    println(e)
+                    GithubNotificator.updateStatus("Test", "Drivet tests", "action_required", options, "Failed to test driver")
                 }
             }
         }
