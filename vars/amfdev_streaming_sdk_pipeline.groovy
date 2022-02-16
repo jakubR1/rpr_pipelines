@@ -106,7 +106,7 @@ def uninstallDriver(Map options) {
 def runDriverTests(Map options) {
     String title = "Driver tests"
     String logName = "${options.stageName}_${options.currentTry}_test_driver.log"
-    String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}/${logName}"
+    String url = "${env.BUILD_URL}/artifact/${logName}"
 
     try {
         // start script which agree to install unsigned driver
@@ -119,6 +119,10 @@ def runDriverTests(Map options) {
             \$command = "cd ${WORKSPACE}\\AMDVirtualDrivers; .\\AMDHidTests.exe | Out-File ..\\${logName}"
             Start-Process powershell "\$command" -Verb RunAs -Wait
         """
+
+        dir("..") {
+            archiveArtifacts artifacts: logName, allowEmptyArchive: true
+        }
 
         String driverTestsLog = readFile("..\\${logName}")
         String status = driverTestsLog.contains("FAILED") ? "action_required" : "success"
