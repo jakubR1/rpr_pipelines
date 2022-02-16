@@ -77,6 +77,44 @@ def prepareTool(String osName, Map options) {
 }
 
 
+def unpackDriver(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            makeUnstash(name: "DriverWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+            unzip(zipFile: "${options.winTestingDriverName}.zip")
+            break
+        default:
+            println("Unsupported OS")
+    } 
+}
+
+
+def uninstallDriver(Map options) {
+    try {
+        powershell """
+            $command = "cd ${WORKSPACE}\\AMDVirtualDrivers\\x64\\Debug; .\\uninstall.bat | Out-File ..\\${options.stageName}_${options.currentTry}_install_driver.log"
+            Start-Process powershell "$command" -Verb RunAs -Wait
+        """
+    } catch (e) {
+        println("[ERROR] Failed to uninstall driver")
+        print(e)
+    }
+}
+
+
+def runDriverTests(Map options) {
+    try {
+        powershell """
+            $command = "cd ${WORKSPACE}\\AMDVirtualDrivers\\x64\\Debug; .\\AMDHidTests.exe | Out-File ..\\${options.stageName}_${options.currentTry}_test_driver.log"
+            Start-Process powershell "$command" -Verb RunAs -Wait
+        """
+    } catch (e) {
+        println("[ERROR] Failed to run driver tests")
+        print(e)
+    }
+}
+
+
 def getServerIpAddress(String osName, Map options) {
     switch(osName) {
         case "Windows":
@@ -407,6 +445,18 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
         options["clientInfo"]["screenHeight"] = getClientScreenHeight(osName, options)
         println("[INFO] Screen height on client machine: ${options.clientInfo.screenHeight}")
+
+        String branchName = env.BRANCH_NAME ?: options.projectBranch
+
+        if (branchName == "origin/develop" || branchName == "develop") {
+            println("[INFO] Execute driver tests")
+
+            dir("AMDVirtualDrivers") {
+                unpackDriver(osName, options)
+                uninstallDriver(options)
+                runDriverTests(options)
+            }
+        }
 
         options["clientInfo"]["ready"] = true
         println("[INFO] Client is ready to run tests")
@@ -888,12 +938,14 @@ def executeBuildWindows(Map options) {
                     dir(winDriverDir) {
                         String DRIVER_NAME = "Driver_Windows_${winBuildConf}.zip"
 
-                        zip archive: true, zipFile: DRIVER_NAME
+                        bat("%CIS_TOOLS%\\7-Zip\\7z.exe a ${DRIVER_NAME} .")
 
-                        makeStash(includes: DRIVER_NAME, name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+                        makeArchiveArtifacts(name: DRIVER_NAME, storeOnNAS: options.storeOnNAS)
 
-                        String archiveUrl = "${BUILD_URL}artifact/${DRIVER_NAME}"
-                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${DRIVER_NAME}</a></h3>"""
+                        if (options.winTestingDriverName == winBuildConf) {
+                            utils.moveFiles(this, "Windows", DRIVER_NAME, "${options.winTestingDriverName}.zip")
+                            makeStash(includes: "${options.winTestingDriverName}.zip", name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+                        }
                     }
                 }
             }
@@ -1544,7 +1596,9 @@ def call(String projectBranch = "",
                 winBuildConfiguration = "debug"
                 winVisualStudioVersion = "2019"
                 winTestingBuildName = "debug_vs2019"
-            }  
+            }
+
+            String winTestingDriverName = winTestingBuildName ? winTestingBuildName.split("_")[0] : ""
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
@@ -1570,6 +1624,7 @@ def call(String projectBranch = "",
                 Win build configuration: ${winBuildConfiguration}"
                 Win visual studio version: ${winVisualStudioVersion}"
                 Win testing build name: ${winTestingBuildName}
+                Win driver build name: ${winTestingDriverName}
             """
 
             androidBuildConfiguration = androidBuildConfiguration.split(',')
@@ -1589,6 +1644,7 @@ def call(String projectBranch = "",
                         winBuildConfiguration: winBuildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
+                        winTestingDriverName: winTestingDriverName,
                         androidBuildConfiguration: androidBuildConfiguration,
                         androidTestingBuildName: androidTestingBuildName,
                         gpusCount: gpusCount,
