@@ -76,17 +76,17 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            if (asicName.contains("AMD")) {
+            if (asicName.contains("AMD") && options.configuration.contains("HIP")) {
                 executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
                 utils.moveFiles(this, osName, "Work", "Work-HIP")
-
-                if (options.configuration == "AMD_HIP_CPU") {
-                    executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
-                    utils.moveFiles(this, osName, "Work", "Work-CPU")
-                }
-            } else {
+            } else if (asicName.contains("NVIDIA") && options.configuration.contains("CUDA")) {
                 executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
                 utils.moveFiles(this, osName, "Work", "Work-CUDA")
+            }
+
+            if (options.configuration.contains("CPU")) {
+                executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
+                utils.moveFiles(this, osName, "Work", "Work-CPU")
             }
         }
 
@@ -113,19 +113,19 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
 
             if (stashResults) {
-                if (asicName.contains("AMD")) {
+                if (asicName.contains("AMD") && options.configuration.contains("HIP")) {
                     dir("Work-HIP/Results/Blender") {
                         makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
                     }
-
-                    if (options.configuration == "AMD_HIP_CPU") {
-                        dir("Work-CPU/Results/Blender") {
-                            makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
-                        }
-                    }
-                } else {
+                } else if (asicName.contains("NVIDIA") && options.configuration.contains("CUDA")) {
                     dir("Work-CUDA/Results/Blender") {
                         makeStash(includes: "**/*", name: "${options.testResultsName}-CUDA", storeOnNAS: options.storeOnNAS)
+                    }
+                }
+
+                if (options.configuration.contains("CPU")) {
+                    dir("Work-CPU/Results/Blender") {
+                        makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
                     }
                 }
             } else {
@@ -250,7 +250,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             dir("summaryTestResults") {
                 testResultList.each {
-                    if (it.contains("AMD")) {
+                    if (it.contains("AMD") && options.configuration.contains("HIP")) {
                         dir("HIP") {
                             dir(it.replace("testResult-", "")) {
                                 try {
@@ -261,26 +261,26 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                                 }
                             }
                         }
-
-                        if (options.configuration == "AMD_HIP_CPU") {
-                            dir("CPU") {
-                                dir(it.replace("testResult-", "")) {
-                                    try {
-                                        makeUnstash(name: "${it}-CPU", storeOnNAS: options.storeOnNAS)
-                                    } catch (e) {
-                                        println("Can't unstash ${it}-CPU")
-                                        println(e.toString())
-                                    }
-                                }
-                            }
-                        }
-                    } else {
+                    } else if (it.contains("NVIDIA") && options.configuration.contains("CUDA")) {
                         dir("CUDA") {
                             dir(it.replace("testResult-", "")) {
                                 try {
                                     makeUnstash(name: "${it}-CUDA", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println("Can't unstash ${it}-CUDA")
+                                    println(e.toString())
+                                }
+                            }
+                        }
+                    }
+
+                    if (options.configuration.contains("CPU")) {
+                        dir("CPU") {
+                            dir(it.replace("testResult-", "")) {
+                                try {
+                                    makeUnstash(name: "${it}-CPU", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println("Can't unstash ${it}-CPU")
                                     println(e.toString())
                                 }
                             }
@@ -296,6 +296,11 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         del local_config.py
                         move local_config_hip_cpu.py local_config.py
                     """
+                } else if (options.configuration == "Nvidia_CUDA_CPU") {
+                    bat """
+                        del local_config.py
+                        move local_config_cuda_cpu.py local_config.py
+                    """
                 } else {
                     bat """
                         del local_config.py
@@ -305,15 +310,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
                 dir("jobs_launcher") {
                     withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
-                        if (options.configuration == "AMD_HIP_CPU") {
-                            bat """
-                                build_comparison_reports.bat ..\\\\summaryTestResults
-                            """
-                        } else {
-                            bat """
-                                build_comparison_reports.bat ..\\\\summaryTestResults
-                            """
-                        }
+                        bat """
+                            build_comparison_reports.bat ..\\\\summaryTestResults
+                        """
                     }
                 }
             } catch (e) {
@@ -416,7 +415,9 @@ def call(String testsBranch = "master",
             if (platforms.contains("Windows")) {
                 if (configuration == "AMD_HIP_CPU") {
                     platforms = platforms.replace("Windows", "Windows:AMD_RX6800")
-                } else if (configuration == "Nvidia_HIP_CUDA") {
+                } else if (configuration == "Nvidia_CUDA_CPU") {
+                    platforms = platforms.replace("Windows", "Windows:NVIDIA_RTX3070")
+                } else if (configuration == "HIP_CUDA") {
                     platforms = platforms.replace("Windows", "Windows:AMD_RX6800,NVIDIA_RTX3070")
                 }
             }
