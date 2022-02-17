@@ -14,6 +14,8 @@ def main(Map options) {
                             try {
                                 DRIVER_PAGE_URL = "https://www.amd.com/en/support/graphics/amd-radeon-6000-series/amd-radeon-6800-series/amd-radeon-rx-6800-xt"
                                 
+                                cleanWS()
+                                
                                 bat "${CIS_TOOLS}\\driver_detection\\amd_request.bat \"${DRIVER_PAGE_URL}\" ${env.WORKSPACE}\\page.html >> page_download_${it}.log 2>&1 "
 
                                 withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
