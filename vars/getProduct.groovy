@@ -54,7 +54,7 @@ def unpack(String unpackDestination, String identificatorKey, String extension, 
 }
 
 
-def call(String osName, Map options, String unpackDestination = "", Boolean cacheInstaller = true) {
+def call(String osName, Map options, String unpackDestination = "", Boolean cacheInstaller = true, Integer oneTryTimeout=90) {
     if (!options["configuration"].supportedOS.contains(osName)) {
         throw new Exception("Unsupported OS")
     }
@@ -85,7 +85,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             }
 
             println "[INFO] The product does not exist in the storage. Downloading and copying..."
-            downloadPlugin(osName, options)
+            downloadPlugin(osName, options, "", oneTryTimeout)
 
             saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
