@@ -28,7 +28,7 @@ def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
 }
 
 String installBlender(String osName, Map options) {
-    getProduct(osName, options, ".")
+    getProduct(osName, options, ".", true, 300)
 
     switch(osName) {
         case "Windows":
