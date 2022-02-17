@@ -10,6 +10,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.Synchronized
 
 
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows"],
+    productExtensions: ["Windows": "zip"],
+    artifactNameBase: "Blender_"
+)
+
+
 @NonCPS
 @Synchronized
 def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
@@ -22,10 +29,10 @@ def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
 
 String installBlender(String osName) {
     switch(osName) {
-        case "Windows":
-            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"Blender_*.zip\"")
-            bat(script: "move blender-* daily_blender_build")
+        getProduct(osName, options, ".")
 
+        case "Windows":
+            bat(script: "move blender-* daily_blender_build")
             return "${env.WORKSPACE}\\daily_blender_build\\blender.exe"
         default:
             throw new Exception("Unexpected OS name ${osName}")
@@ -194,22 +201,26 @@ def executeBuild(String osName, Map options) {
 }
 
 def executePreBuild(Map options) {
+    if (options['isPreBuilt']) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Blender version:</b> custom build<br/>"
+        options['executeBuild'] = false
+        options['executeTests'] = true
+    } else {
+        options['executeBuild'] = true
+        options['executeTests'] = true
+    }
+
     // manual job
     if (!env.BRANCH_NAME) {
         println "[INFO] Manual job launch detected"
-        options['executeBuild'] = true
-        options['executeTests'] = true
     // auto job
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options['executeBuild'] = true
-            options['executeTests'] = true
             options['testsPackage'] = "regression.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options['executeBuild'] = true
-           options['executeTests'] = true
            options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
@@ -392,6 +403,16 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 
+def appendPlatform(String filteredPlatforms, String platform) {
+    if (filteredPlatforms) {
+        filteredPlatforms +=  ";" + platform
+    } else {
+        filteredPlatforms += platform
+    }
+    return filteredPlatforms
+}
+
+
 def call(String testsBranch = "master",
     String platforms = 'Windows',
     String configuration = 'AMD_HIP_CPU',
@@ -399,7 +420,8 @@ def call(String testsBranch = "master",
     String testsPackage = "",
     String tests = "",
     String testerTag = "Blender",
-    Integer testCaseRetries = 2)
+    Integer testCaseRetries = 2,
+    String customBuildLinkWindows = "")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -433,12 +455,35 @@ def call(String testsBranch = "master",
                 }
             }
 
+            Boolean isPreBuilt = customBuildLinkWindows
+
+            if (isPreBuilt) {
+                //remove platforms for which pre built plugin is not specified
+                String filteredPlatforms = ""
+
+                platforms.split(';').each() { platform ->
+                    List tokens = platform.tokenize(':')
+                    String platformName = tokens.get(0)
+
+                    switch(platformName) {
+                        case 'Windows':
+                            if (customBuildLinkWindows) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                        }
+                }
+
+                platforms = filteredPlatforms
+            }
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
             println "Configuration: ${configuration}"
 
-            options << [testRepo:"git@github.com:luxteam/jobs_test_blender.git",
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        testRepo:"git@github.com:luxteam/jobs_test_blender.git",
                         testsBranch:testsBranch,
                         enableNotifications:enableNotifications,
                         testsPackage:testsPackage,
@@ -463,7 +508,9 @@ def call(String testsBranch = "master",
                         errorsInSuccession: errorsInSuccession,
                         platforms:platforms,
                         testCaseRetries:testCaseRetries,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        isPreBuilt:isPreBuilt,
+                        customBuildLinkWindows: customBuildLinkWindows
                         ]
         }
 
