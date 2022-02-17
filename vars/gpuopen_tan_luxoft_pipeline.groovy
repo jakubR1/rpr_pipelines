@@ -27,7 +27,13 @@ def getTanTool(String osName, Map options) {
                     mkdir FilesToCheck
                 """
 
-            unzip zipFile: "binWindows.zip", dir: "FilesToCheck/", quiet: true
+            unzip zipFile: "binWindows.zip", dir: "FilesToCheck", quiet: true
+
+            unzip zipFile: "binWindows.zip", dir: ".", quiet: false
+            bat """
+                    dir "C:\\JN\\WS\\TAN_Test" >> info_unzip3.log 2>&1
+                    dir "C:\\JN\\WS\\TAN_Test\\FilesToCheck" >> info_unzip3.log 2>&1
+                """
 
             break
 
@@ -278,7 +284,7 @@ def executeBuildWindows(Map options) {
 
                     bat """
                         mkdir FilesToCheck
-                        xcopy /s/y/i ..\\..\\..\\bin FilesToCheck
+                        xcopy /s/y/i ..\\..\\..\\bin FilesToCheck\\bin
                         xcopy /s/y/i ..\\..\\..\\scenes FilesToCheck\\scenes
                     """   
 
