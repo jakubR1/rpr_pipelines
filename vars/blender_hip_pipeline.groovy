@@ -28,9 +28,9 @@ def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
 }
 
 String installBlender(String osName) {
-    switch(osName) {
-        getProduct(osName, options, ".")
+    getProduct(osName, options, ".")
 
+    switch(osName) {
         case "Windows":
             bat(script: "move blender-* daily_blender_build")
             return "${env.WORKSPACE}\\daily_blender_build\\blender.exe"
