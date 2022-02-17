@@ -33,13 +33,23 @@ def saveDownloadedInstaller(String artifactNameBase, String extension, String id
 }
 
 
-def unpack(String unpackDestination, String identificatorKey, String extension, Map options) {
-    if (extension == "tar") {
-        sh("mkdir -p ${unpackDestination}; tar xvf ${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension} -C ${unpackDestination}")
-    } else if (extension == "zip") {
-        unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unpackDestination, quiet: true
+def unpack(String unpackDestination, String identificatorKey, String extension, Map options, Boolean cacheInstaller) {
+    if (cacheInstaller) {
+        if (extension == "tar") {
+            sh("mkdir -p ${unpackDestination}; tar xvf ${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension} -C ${unpackDestination}")
+        } else if (extension == "zip") {
+            unzip zipFile: "${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}", dir: unpackDestination, quiet: true
+        } else {
+            throw new Exception("Unexpected extension '${extension}'")
+        }
     } else {
-        throw new Exception("Unexpected extension '${extension}'")
+        if (extension == "tar") {
+            sh("mkdir -p ${unpackDestination}; tar xvf ${options[identificatorKey]}.${extension} -C ${unpackDestination}")
+        } else if (extension == "zip") {
+            unzip zipFile: "${options[identificatorKey]}.${extension}", dir: unpackDestination, quiet: true
+        } else {
+            throw new Exception("Unexpected extension '${extension}'")
+        }
     }
 }
 
@@ -63,7 +73,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             println "[INFO] The product ${options[identificatorKey]}.${extension} exists in the storage."
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, extension, options)
+                unpack(unpackDestination, identificatorKey, extension, options, cacheInstaller)
             }
         } else {
             println "[INFO] The product does not exist in the storage. Downloading and copying..."
@@ -80,7 +90,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, extension, options)
+                unpack(unpackDestination, identificatorKey, extension, options, cacheInstaller)
             }
         }
 
@@ -93,7 +103,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             println "[INFO] The plugin ${options[identificatorKey]}.${extension} exists in the storage."
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, extension, options)
+                unpack(unpackDestination, identificatorKey, extension, options, cacheInstaller)
             }
         } else {
             if (isUnix()) {
@@ -108,7 +118,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             saveDownloadedInstaller(artifactNameBase, extension, options[identificatorKey], cacheInstaller)
 
             if (unpackDestination) {
-                unpack(unpackDestination, identificatorKey, extension, options)
+                unpack(unpackDestination, identificatorKey, extension, options, cacheInstaller)
             }
         }
     }
