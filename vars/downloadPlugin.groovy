@@ -86,7 +86,7 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
                 runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
             }
         } else {
-            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     }
 
