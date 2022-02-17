@@ -17,7 +17,6 @@ def executeTestCommand(String osName, String asicName, Map options)
                 sh """
                     cd sh
                     expect stop_container.exp
-                    expect ./build_docker.exp
                     expect ./run_docker.exp
                     cd ..
                     mkdir nbs/tested
