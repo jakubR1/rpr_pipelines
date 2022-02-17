@@ -326,7 +326,7 @@ def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir('AnariSDK') {
-                checkoutScm(branchName: options.anariSdkBranch, repositoryUrl: ANARI_SDK_REPO)
+                checkoutScm(branchName: options.anariSdkBranch, repositoryUrl: options.anariSdkRepo)
             }
             dir('RadeonProRenderAnari') {
                 checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO)
@@ -621,7 +621,8 @@ def appendPlatform(String filteredPlatforms, String platform) {
 }
 
 
-def call(String anariSdkBranch = "main",
+def call(String anariSdkRepo = ANARI_SDK_REPO,
+    String anariSdkBranch = "main",
     String rprAnariBranch = "",
     String testsBranch = "master",
     String platforms = "Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;MacOS:AMD_RXVEGA,AMD_RX5700XT",
@@ -689,6 +690,7 @@ def call(String anariSdkBranch = "main",
             println "Tests package: ${testsPackage}"
 
             options << [configuration: PIPELINE_CONFIGURATION,
+                        anariSdkRepo: anariSdkRepo,
                         anariSdkBranch: anariSdkBranch,
                         rprAnariBranch:rprAnariBranch,
                         projectRepo:RPR_ANARI_REPO,
