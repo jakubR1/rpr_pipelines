@@ -198,7 +198,7 @@ def executeBuild(String osName, Map options) {
 
         makeStash(includes: packageName, name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
 
-        options[getProduct.getIdentificatorKey(osName)] = options.blenderHash
+        options[getProduct.getIdentificatorKey(osName)] = blenderHash
     }
 }
 
