@@ -87,7 +87,7 @@ def executeTests(String osName, String asicName, Map options) {
                 downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/VS_dlls/*", "Anari")
             }
 
-            getProduct(osName, options, "Anari")
+            getProduct(osName, options, "Anari", false)
         }
 
         String REF_PATH_PROFILE="/volume1/Baselines/rpr_anari_autotests/${asicName}-${osName}"

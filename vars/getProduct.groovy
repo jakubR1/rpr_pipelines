@@ -59,7 +59,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
 
         println "[INFO] Product Identificator (${osName}): ${options[identificatorKey]}"
 
-        if (options[identificatorKey] && fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}")) {
+        if (options[identificatorKey] && fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}") && cacheInstaller) {
             println "[INFO] The product ${options[identificatorKey]}.${extension} exists in the storage."
 
             if (unpackDestination) {
@@ -89,7 +89,7 @@ def call(String osName, Map options, String unpackDestination = "", Boolean cach
             throw new Exception("Missing identificator key for ${osName}")
         }
 
-        if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}")) {
+        if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[identificatorKey]}.${extension}") && cacheInstaller) {
             println "[INFO] The plugin ${options[identificatorKey]}.${extension} exists in the storage."
 
             if (unpackDestination) {
