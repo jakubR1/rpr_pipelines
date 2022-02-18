@@ -19,9 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 
 Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
-    println(asicName)
-    println(osName)
-    println(testName)
     return (engine == "HYBRIDPRO" && !(asicName.contains("RTX") || asicName == "AMD_RX6800"))
 }
 
