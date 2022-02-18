@@ -22,6 +22,17 @@ String getMulticonnectionClientLabels(Map options) {
 }
 
 
+Boolean weeklyFilter(Map options, String asicName, String osName, String testName, String game) {
+    List reducedConfigurations = ["HeavenDX11", "HeavenOpenGL", "ValleyDX11", "ValleyOpenGL", "Dota2Vulkan"]
+    List testGroups = ["General"]
+    if (env.JOB_NAME.contains("Weekly")) {
+        return reducedConfigurations.contains(game) && !testGroups.contains(testName)
+    }
+
+    return false
+}
+
+
 Boolean isIdleClient(Map options) {
     if (options["osName"] == "Windows") {
         Boolean result = false
@@ -1305,6 +1316,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
+
+                        if (weeklyFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             if (it.contains("Android")) {
@@ -1383,6 +1399,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 testResultList.each {
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
+
+                        if (weeklyFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
@@ -1403,6 +1424,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
                             List testNameParts = it.split("-") as List
+
+                            if (weeklyFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                                return
+                            }
+
                             String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                             dir(testName.replace("testResult-", "")) {
                                 try {
@@ -1434,7 +1460,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashesWindows}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashesWindows}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${game}\" \"{}\"
                     """
                 }
 
@@ -1444,7 +1470,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashesAndroid}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashesAndroid}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]]\" \"${game}\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -1703,7 +1729,8 @@ def call(String projectBranch = "",
                         collectTracesType:collectTracesType,
                         storeOnNAS: storeOnNAS,
                         finishedBuildStages: new ConcurrentHashMap(),
-                        isDevelopBranch: isDevelopBranch
+                        isDevelopBranch: isDevelopBranch,
+                        skipCallback: this.&weeklyFilter
                         ]
         }
 
