@@ -1317,7 +1317,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
 
-                        if (weeklyFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), game)) {
+                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
                             return
                         }
 
@@ -1400,7 +1400,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
 
-                        if (weeklyFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), game)) {
+                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
                             return
                         }
 
@@ -1425,7 +1425,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
                             List testNameParts = it.split("-") as List
 
-                            if (weeklyFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), game)) {
+                            if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
                                 return
                             }
 
