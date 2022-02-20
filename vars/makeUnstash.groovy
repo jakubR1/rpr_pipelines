@@ -70,7 +70,6 @@ def call(Map params) {
             if (debug) {
                 println(stdout)
             }
-            /* DEBUG STOP TO DELETE FOR UNPACKING CHECK
             if (unzip) {
                 if (isUnix()) {
                     sh "rm -rf \"${zipName}\""
@@ -78,7 +77,6 @@ def call(Map params) {
                     bat "del \"${zipName}\""
                 }
             }
-            */
         } else {
             unstash(stashName)
         }

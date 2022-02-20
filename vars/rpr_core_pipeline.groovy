@@ -493,6 +493,7 @@ def executePreBuild(Map options) {
 
 def executeDeploy(Map options, List platformList, List testResultList, String engine)
 {
+    cleanWS()
     try {
         if (options['executeTests'] && testResultList) {
             String engineName = options.enginesNames[options.engines.indexOf(engine)]
