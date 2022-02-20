@@ -735,7 +735,8 @@ def call(String projectBranch = "",
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
          String enginesNames = "Northstar64",
-         Boolean collectTrackedMetrics = false)
+         Boolean collectTrackedMetrics = false,
+         Boolean splitTestsExecution = true)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -866,7 +867,7 @@ def call(String projectBranch = "",
                         customBuildLinkOSX: customBuildLinkOSX,
                         storeOnNAS: true,
                         flexibleUpdates: true,
-                        splitTestsExecution: true
+                        splitTestsExecution: splitTestsExecution
                         ]
 
             if (sendToUMS) {
