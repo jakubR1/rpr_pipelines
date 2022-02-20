@@ -372,9 +372,7 @@ def makeDeploy(Map options, String engine = "") {
                     executeDeploy(options, platformList, testResultList)
                 }
                 println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
-                /* DEBUG SAVE DEPLOY FILES
                 cleanWS("Windows")
-                */
             }
             run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 3)
         }
