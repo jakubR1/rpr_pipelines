@@ -42,13 +42,12 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
-    def tests = options.parsedTests
     UniverseManager.executeTests(osName, asicName, options) {
         switch(osName) {
             case 'Windows':
                 dir('scripts') {
                     bat """
-                        run.bat ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        run.bat ${options.testsPackage} \"${options.parsedTests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
                 break
@@ -56,7 +55,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.parsedTests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -65,7 +64,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.parsedTests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -468,6 +467,7 @@ def executePreBuild(Map options) {
                 options.engines.each(){ engine ->
                     tests << "${options.tests.split("-").join(" ")}-${engine}"
                 }
+                println("[DEBUG] TESTS: ${tests}")
                 options.tests = tests
                 options.groupsUMS = tests
             }
@@ -531,11 +531,21 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch (e) {
                 println("[ERROR] Can't download json files with core tests configuration")
             }
-
+            /* DEBUG CHECK BLENDER count_lost_tests params
             try {
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.join(" ")}\" \"${engine}\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.parsedTests}\" \"${engine}\" \"{}\"
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
+            }
+            */
+            try {
+                dir("jobs_launcher") {
+                    bat """
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${engine}\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -801,6 +811,7 @@ def call(String projectBranch = "",
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
+            println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
             println "Send to UMS: ${sendToUMS} "
             println "UMS platforms: ${universePlatforms}"
