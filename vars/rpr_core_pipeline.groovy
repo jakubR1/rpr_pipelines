@@ -507,18 +507,19 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             dir("summaryTestResults") {
                 unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
-                    List testNameParts = it.replace("testResult-", "").split("-") as List
-                    String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                    dir(testName) {
-                        try {
-                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
-                        } catch(e) {
-                            echo "[ERROR] Failed to unstash ${testName}"
-                            lostStashes.add("'${testName}'".replace("testResult-", ""))
-                            println(e.toString())
-                            println(e.getMessage())
+                    if (it.endsWith(engine)) {
+                        List testNameParts = it.replace("testResult-", "").split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        dir(testName) {
+                            try {
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
+                            } catch(e) {
+                                echo "[ERROR] Failed to unstash ${testName}"
+                                lostStashes.add("'${testName}'".replace("testResult-", ""))
+                                println(e.toString())
+                                println(e.getMessage())
+                            }
                         }
-
                     }
                 }
             }
