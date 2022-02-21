@@ -6,6 +6,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
+import java.text.SimpleDateFormat
 
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
@@ -419,7 +420,22 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
         if (!options.rebuildDeps) {
-            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin/*", "bin")
+            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
+
+            dir("bin") {
+                def files = findFiles()
+
+                for (file in files) {
+                    if (file.name == "USD") {
+                        def dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
+                        def formattedTime = dateFormat.format(new Date(file.lastModified))
+                        currentBuild.description += "<b>Dependencies creation time (${osName}):</b> ${formattedTime}<br/>"
+                        break
+                    }
+                }
+            }
+        } else {
+            currentBuild.description += "<b>Rebuild dependencies (${osName}):</b><br/>"
         }
 
         dir("BlenderUSDHydraAddon") {
