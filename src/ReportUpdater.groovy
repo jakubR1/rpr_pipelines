@@ -64,11 +64,13 @@ public class ReportUpdater {
 
                 locks[engine] = new AtomicBoolean(false)
 
-                updateReport(engine)
+                updateReport(engine, false)
 
                 String publishedReportName = context.utils.getPublishedReportName(context, reportName)
                 locations = locations ? "${locations};../../${publishedReportName}" : "../../${publishedReportName}"
             }
+
+            context.println("[INFO] Publish overview report")
 
             // add overview report
             String reportName = "Test Report"
@@ -79,7 +81,7 @@ public class ReportUpdater {
 
             String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_overview_report_template.sh")
             // take only first 4 arguments: tool name, commit sha, project branch name and commit message
-            String buildScriptArgs = (buildArgsFunc(engineName, options.split() as List).subList(0, 4).join(" "))
+            String buildScriptArgs = (buildArgsFunc("", options ).split() as List).subList(0, 4).join(" ")
 
             rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
                 .replace("<report_name>", reportName.replace(" ", "_")).replace("<locations>", locations).replace("<build_script_args>", buildScriptArgs) \
@@ -94,7 +96,7 @@ public class ReportUpdater {
 
             locks["default"] = new AtomicBoolean(false)
 
-            updateReport(engine)
+            updateReport()
         } else {
             String reportName = "Test Report"
 
@@ -125,8 +127,9 @@ public class ReportUpdater {
      * Function to update report
      * 
      * @param engine (optional) engine of the target report (if project supports splitting by engines)
+     * @param updateOverviewReport (options) specify should overview report be updated or not (default - true)
      */
-    def updateReport(String engine) {
+    def updateReport(String engine = "", Boolean updateOverviewReport = true) {
         String lockKey = engine ?: "default"
         String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/jobs_test_repo/jobs_launcher".replace(" ", "_")
 
@@ -154,7 +157,7 @@ public class ReportUpdater {
             locks[lockKey].getAndSet(false)
         }
 
-        if (engine) {
+        if (engine && updateOverviewReport) {
             // update overview report
             updateReport()
         }
