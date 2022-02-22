@@ -383,11 +383,11 @@ def makeDeploy(Map options, String engine = "") {
                                 if (options.enginesNames && options.engines) {
                                     String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
                                     bat("move summary_status.json summary_status_${originalEngineName}.json")
+                                    archiveArtifacts artifacts: "summary_status_${originalEngineName}.json"
                                 } else {
                                     bat("move summary_status.json summary_status_${engine}.json")
+                                    archiveArtifacts artifacts: "summary_status_${engine}.json"
                                 }
-                                
-                                archiveArtifacts artifacts: "summary_status_${engine}.json"
                             } else {
                                 archiveArtifacts artifacts: "summary_status.json"
                             }
