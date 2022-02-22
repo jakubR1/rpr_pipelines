@@ -94,6 +94,10 @@ class utils {
         }
     }
 
+    static String getPublishedReportName(Object self, String defaultReportName) {
+        return defaultReportName.replace("_", "_5f").replace(" ", "_20")
+    }
+
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = [:]) {
         Map params
 
