@@ -66,7 +66,7 @@ public class ReportUpdater {
 
                 updateReport(engine, false)
 
-                String publishedReportName = context.utils.getPublishedReportName(context, reportName)
+                String publishedReportName = reportName.replace(" ", "_")
                 locations = locations ? "${locations}::../../${publishedReportName}" : "../../${publishedReportName}"
             }
 
