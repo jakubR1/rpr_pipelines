@@ -37,14 +37,17 @@ public class ReportUpdater {
             context.bat('%CIS_TOOLS%\\clone_test_repo.bat' + ' %REMOTE_HOST%' + " ${remotePath} ${options.testRepo} ${options.testsBranch}")
         }
 
+        String locations = ""
+
         if (options.engines) {
             options.engines.each { engine ->
                 String engineName = options.enginesNames[options.engines.indexOf(engine)]
                 String reportName = "Test Report ${engineName}"
 
+                // publish, but do not create links to reports (they'll be accessible through overview report)
                 context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     reportName, "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
-                    ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
+                    ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName, "updatable": true])
 
                 String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_report_template.sh")
 
@@ -62,7 +65,36 @@ public class ReportUpdater {
                 locks[engine] = new AtomicBoolean(false)
 
                 updateReport(engine)
+
+                String publishedReportName = context.utils.getPublishedReportName(context, reportName)
+                locations = locations ? "${locations};../../${publishedReportName}" : "../../${publishedReportName}"
             }
+
+            // add overview report
+            String reportName = "Test Report"
+
+            context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html", \
+                reportName, "Summary Report" , options.storeOnNAS, \
+                ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
+
+            String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_overview_report_template.sh")
+            // take only first 4 arguments: tool name, commit sha, project branch name and commit message
+            String buildScriptArgs = (buildArgsFunc(engineName, options.split() as List).subList(0, 4).join(" "))
+
+            rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
+                .replace("<report_name>", reportName.replace(" ", "_")).replace("<locations>", locations).replace("<build_script_args>", buildScriptArgs) \
+                .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL)
+
+            // replace DOS EOF by Unix EOF
+            rebuiltScript = rebuiltScript.replaceAll("\r\n", "\n")
+
+            context.writeFile(file: "update_report.sh", text: rebuiltScript)
+
+            context.uploadFiles("update_report.sh", "${remotePath}/jobs_test_repo/jobs_launcher")
+
+            locks["default"] = new AtomicBoolean(false)
+
+            updateReport(engine)
         } else {
             String reportName = "Test Report"
 
@@ -96,10 +128,10 @@ public class ReportUpdater {
      */
     def updateReport(String engine) {
         String lockKey = engine ?: "default"
+        String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/jobs_test_repo/jobs_launcher".replace(" ", "_")
 
         try {
             if (locks[lockKey].compareAndSet(false, true)) {
-                String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/jobs_test_repo/jobs_launcher".replace(" ", "_")
                 String scriptName = engine ? "update_report_${engine}.sh" : "update_report.sh"
 
                 context.withCredentials([context.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
@@ -120,6 +152,11 @@ public class ReportUpdater {
             context.println(e.getMessage())
 
             locks[lockKey].getAndSet(false)
+        }
+
+        if (engine) {
+            // update overview report
+            updateReport()
         }
     }
 

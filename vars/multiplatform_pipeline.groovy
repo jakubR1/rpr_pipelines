@@ -371,6 +371,11 @@ def makeDeploy(Map options, String engine = "") {
                 } else {
                     executeDeploy(options, platformList, testResultList)
                 }
+
+                if (engine && options.reportUpdater) {
+                    options.reportUpdater.updateReport()
+                }
+
                 println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
                 cleanWS("Windows")
             }
