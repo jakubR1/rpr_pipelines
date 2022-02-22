@@ -38,6 +38,8 @@ public class ReportUpdater {
         }
 
         String locations = ""
+        String reportFiles = "summary_report.html"
+        String reportFilesNames = "Summary Report (Overview)"
 
         if (options.engines) {
             options.engines.each { engine ->
@@ -68,6 +70,9 @@ public class ReportUpdater {
 
                 String publishedReportName = reportName.replace(" ", "_")
                 locations = locations ? "${locations}::${publishedReportName}" : "${publishedReportName}"
+
+                reportFiles += ",../${reportName.replace(' ', '_')/summary_report.html}"
+                reportFilesNames += "Summary Report (${engineName})"
             }
 
             context.println("[INFO] Publish overview report")
@@ -75,8 +80,8 @@ public class ReportUpdater {
             // add overview report
             String reportName = "Test Report"
 
-            context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html", \
-                reportName, "Summary Report" , options.storeOnNAS, \
+            context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", reportFiles, \
+                reportName, reportFilesNames, options.storeOnNAS, \
                 ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
 
             String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_overview_report_template.sh")
