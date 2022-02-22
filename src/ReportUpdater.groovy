@@ -71,8 +71,8 @@ public class ReportUpdater {
                 String publishedReportName = reportName.replace(" ", "_")
                 locations = locations ? "${locations}::${publishedReportName}" : "${publishedReportName}"
 
-                reportFiles += ",../${reportName.replace(' ', '_')/summary_report.html}"
-                reportFilesNames += "Summary Report (${engineName})"
+                reportFiles += ",../${reportName.replace(' ', '_')}/summary_report.html"
+                reportFilesNames += ",Summary Report (${engineName})"
             }
 
             context.println("[INFO] Publish overview report")
