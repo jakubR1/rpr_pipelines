@@ -67,7 +67,7 @@ public class ReportUpdater {
                 updateReport(engine, false)
 
                 String publishedReportName = reportName.replace(" ", "_")
-                locations = locations ? "${locations}::../../${publishedReportName}" : "../../${publishedReportName}"
+                locations = locations ? "${locations}::${publishedReportName}" : "${publishedReportName}"
             }
 
             context.println("[INFO] Publish overview report")
