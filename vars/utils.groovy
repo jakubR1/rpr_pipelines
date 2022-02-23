@@ -602,4 +602,32 @@ class utils {
             self.println(e.getMessage())
         }
     }
+
+    static def generateOverviewReport(Object self, def buildArgsFunc, Map options) {
+        if (options.engines) {
+            self.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+                // take only first 4 arguments: tool name, commit sha, project branch name and commit message
+                String buildScriptArgs = (buildArgsFunc("", options).split() as List).subList(0, 4).join(" ")
+
+                String locations = ""
+
+                options.engines.each() { engine ->
+                    if (options.enginesNames) {
+                        String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
+                        locations = locations ? "${locations}::${self.BUILD_URL}/Test_Report_${originalEngineName}" : "${self.BUILD_URL}/Test_Report_${originalEngineName}"
+                    } else {
+                        locations = locations ? "${locations}::${self.BUILD_URL}/Test_Report_${engine}" : "${self.BUILD_URL}/Test_Report_${engine}"
+                    }
+                }
+
+                dir("jobs_launcher") {
+                    bat """
+                        build_overview_reports.bat ..\\OverviewReport ${locations} ${JENKINS_USERNAME}:${JENKINS_PASSWORD} ${buildScriptArgs}
+                    """
+                }
+
+                publishReport(self, "${self.BUILD_URL}", "OverviewReport", "summary_report.json", "Test Report", "Summary Report (Overview)", false)
+            }
+        }
+    }
 }
