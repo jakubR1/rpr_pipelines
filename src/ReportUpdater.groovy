@@ -90,7 +90,7 @@ public class ReportUpdater {
 
             rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
                 .replace("<report_name>", reportName.replace(" ", "_")).replace("<locations>", locations).replace("<build_script_args>", buildScriptArgs) \
-                .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL)
+                .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL).replace("<credentials>", "none")
 
             // replace DOS EOF by Unix EOF
             rebuiltScript = rebuiltScript.replaceAll("\r\n", "\n")
