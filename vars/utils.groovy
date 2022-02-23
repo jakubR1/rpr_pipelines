@@ -609,6 +609,7 @@ class utils {
                 try {
                     String publishedReportName = getPublishedReportName("Test_Report")
 
+                    // check that overview report isn't deployed yet
                     self.httpRequest(
                         url: "${self.BUILD_URL}/${publishedReportName}/",
                         authentication: 'jenkinsCredentials',
@@ -626,7 +627,7 @@ class utils {
 
                     Boolean allReportsExists = true
 
-                    options.engines.each() { engine ->
+                    options.engines.reverse().each() { engine ->
                         String publishedReportName = ""
 
                         if (options.enginesNames) {
@@ -637,6 +638,7 @@ class utils {
                         }
 
                         try {
+                            // check that all necessary reports are published
                             self.httpRequest(
                                 url: "${self.BUILD_URL}/${publishedReportName}/",
                                 authentication: 'jenkinsCredentials',
@@ -652,9 +654,11 @@ class utils {
 
                     if (allReportsExists) {
                         self.dir("jobs_launcher") {
-                            self.bat """
-                                build_overview_reports.bat ..\\OverviewReport ${locations} ${self.JENKINS_USERNAME}:${self.JENKINS_PASSWORD} ${buildScriptArgs}
-                            """
+                            self.withEnv(["BUILD_NAME=${options.baseBuildName}"]) {
+                                self.bat """
+                                    build_overview_reports.bat ..\\OverviewReport ${locations} ${self.JENKINS_USERNAME}:${self.JENKINS_PASSWORD} ${buildScriptArgs}
+                                """
+                            }
                         }
 
                         publishReport(self, "${self.BUILD_URL}", "OverviewReport", "summary_report.html", "Test Report", "Summary Report (Overview)", false)
