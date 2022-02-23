@@ -606,27 +606,60 @@ class utils {
     static def generateOverviewReport(Object self, def buildArgsFunc, Map options) {
         if (options.engines) {
             self.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-                // take only first 4 arguments: tool name, commit sha, project branch name and commit message
-                String buildScriptArgs = (buildArgsFunc("", options).split() as List).subList(0, 4).join(" ")
+                try {
+                    String publishedReportName = getPublishedReportName("Test_Report")
 
-                String locations = ""
+                    self.httpRequest(
+                        url: "${self.BUILD_URL}/${publishedReportName}/",
+                        authentication: 'jenkinsCredentials',
+                        httpMode: 'GET'
+                    )
 
-                options.engines.each() { engine ->
-                    if (options.enginesNames) {
-                        String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
-                        locations = locations ? "${locations}::${self.BUILD_URL}/Test_Report_${originalEngineName}" : "${self.BUILD_URL}/Test_Report_${originalEngineName}"
-                    } else {
-                        locations = locations ? "${locations}::${self.BUILD_URL}/Test_Report_${engine}" : "${self.BUILD_URL}/Test_Report_${engine}"
+                    self.println("[INFO] Overview report exists")
+                } catch(e) {
+                    self.println("[INFO] Overview report not found, publish it")
+
+                    // take only first 4 arguments: tool name, commit sha, project branch name and commit message
+                    String buildScriptArgs = (buildArgsFunc("", options).split() as List).subList(0, 4).join(" ")
+
+                    String locations = ""
+
+                    Boolean allReportsExists = true
+
+                    options.engines.each() { engine ->
+                        String publishedReportName = ""
+
+                        if (options.enginesNames) {
+                            String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
+                            publishedReportName = getPublishedReportName(self, "Test Report ${originalEngineName}")
+                        } else {
+                            publishedReportName = getPublishedReportName(self, "Test Report ${engine}")
+                        }
+
+                        try {
+                            self.httpRequest(
+                                url: "${self.BUILD_URL}/${publishedReportName}/",
+                                authentication: 'jenkinsCredentials',
+                                httpMode: 'GET'
+                            )
+                        } catch(e1) {
+                            println("[INFO] Report '${publishedReportName}' not found")
+                            allReportsExists = false
+                        }
+
+                        locations = locations ? "${locations}::${self.BUILD_URL}/${publishedReportName}" : "${self.BUILD_URL}/${publishedReportName}"
+                    }
+
+                    if (allReportsExists) {
+                        self.dir("jobs_launcher") {
+                            self.bat """
+                                build_overview_reports.bat ..\\OverviewReport ${locations} ${self.JENKINS_USERNAME}:${self.JENKINS_PASSWORD} ${buildScriptArgs}
+                            """
+                        }
+
+                        publishReport(self, "${self.BUILD_URL}", "OverviewReport", "summary_report.html", "Test Report", "Summary Report (Overview)", false)
                     }
                 }
-
-                dir("jobs_launcher") {
-                    bat """
-                        build_overview_reports.bat ..\\OverviewReport ${locations} ${JENKINS_USERNAME}:${JENKINS_PASSWORD} ${buildScriptArgs}
-                    """
-                }
-
-                publishReport(self, "${self.BUILD_URL}", "OverviewReport", "summary_report.json", "Test Report", "Summary Report (Overview)", false)
             }
         }
     }
