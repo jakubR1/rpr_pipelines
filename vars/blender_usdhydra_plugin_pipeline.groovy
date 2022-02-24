@@ -6,6 +6,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
+import java.text.SimpleDateFormat
 
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
@@ -15,6 +16,11 @@ import java.util.concurrent.atomic.AtomicInteger
 )
 
 @Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git"
+
+
+Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+    return (engine == "Hybrid" && !(asicName.contains("RTX") || asicName == "AMD_RX6800"))
+}
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
@@ -150,6 +156,9 @@ def executeTests(String osName, String asicName, Map options) {
                 break
             case 'HdStormRendererPlugin':
                 enginePostfix = "GL"
+                break
+            case 'Hybrid':
+                enginePostfix = "Hybrid"
                 break
         }
         REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
@@ -411,7 +420,22 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
         if (!options.rebuildDeps) {
-            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin/*", "bin")
+            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
+
+            dir("bin") {
+                def files = findFiles()
+
+                for (file in files) {
+                    if (file.name == "USD") {
+                        def dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
+                        def formattedTime = dateFormat.format(new Date(file.lastModified))
+                        currentBuild.description += "<b>Dependencies creation time (${osName}):</b> ${formattedTime}<br/>"
+                        break
+                    }
+                }
+            }
+        } else {
+            currentBuild.description += "<b>Rebuild dependencies (${osName}):</b><br/>"
         }
 
         dir("BlenderUSDHydraAddon") {
@@ -728,7 +752,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         String engineName = options.enginesNames[options.engines.indexOf(engine)]
 
         if (options['executeTests'] && testResultList) {
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
@@ -738,14 +762,19 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
                     if (it.endsWith(engine)) {
-                        List testNameParts = it.split("-") as List
+                        List testNameParts = it.replace("testResult-", "").split("-") as List
+
+                        if (hybridProFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
+                        dir(testName) {
                             try {
                                 makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 println("[ERROR] Failed to unstash ${it}")
-                                lostStashes.add("'${testName}'".replace("testResult-", ""))
+                                lostStashes.add("'${testName}'")
                                 println(e.toString())
                                 println(e.getMessage())
                             }
@@ -768,7 +797,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -798,7 +827,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
-                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                             if (utils.isReportFailCritical(e.getMessage())) {
                                 throw e
                             } else {
@@ -811,7 +840,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
@@ -886,7 +915,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 options["testsStatus-${engine}"] = ""
             }
 
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
@@ -894,9 +923,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
 
@@ -924,7 +953,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = PROJECT_REPO,
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800,AMD_WX9100,AMD_RXVEGA;Ubuntu20:AMD_RadeonVII',
+    String platforms = 'Windows:AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800,AMD_WX9100,AMD_RXVEGA,NVIDIA_RTX3070;Ubuntu20:AMD_RadeonVII',
     Boolean rebuildDeps = false,
     Boolean updateDeps = false,
     String updateRefs = 'No',
@@ -941,7 +970,7 @@ def call(String projectRepo = PROJECT_REPO,
     String customBuildLinkWindows = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "RPR,GL",
+    String enginesNames = "RPR,GL,Hybrid",
     String tester_tag = "Blender2.8",
     String toolVersion = "3.0",
     String mergeablePR = "",
@@ -1057,7 +1086,7 @@ def call(String projectRepo = PROJECT_REPO,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:210,
+                        TEST_TIMEOUT:240,
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:90,
                         DEPLOY_TIMEOUT:30,
@@ -1081,7 +1110,8 @@ def call(String projectRepo = PROJECT_REPO,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS:true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        skipCallback: this.&hybridProFilter
                         ]
         }
 

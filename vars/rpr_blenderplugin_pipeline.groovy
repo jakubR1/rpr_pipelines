@@ -18,6 +18,11 @@ import java.util.concurrent.atomic.AtomicInteger
 )
 
 
+Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+    return (engine == "HYBRIDPRO" && !(asicName.contains("RTX") || asicName == "AMD_RX6800"))
+}
+
+
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
     dir('scripts') {
@@ -109,6 +114,16 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
+        // FIXME: remove this ducktape when CPUs on that machines will be changes
+        if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
+            if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("regression.0")) {
+                throw new ExpectedExceptionWrapper(
+                    "System doesn't support CPU_Mode group", 
+                    new Exception("System doesn't support CPU_Mode group")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "15", unit: "MINUTES") {
                 cleanWS(osName)
@@ -811,7 +826,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         String engineName = options.enginesNames[options.engines.indexOf(engine)]
 
         if (options['executeTests'] && testResultList) {
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
@@ -821,14 +836,19 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
                     if (it.endsWith(engine)) {
-                        List testNameParts = it.split("-") as List
+                        List testNameParts = it.replace("testResult-", "").split("-") as List
+
+                        if (hybridProFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(testName.replace("testResult-", "")) {
+                        dir(testName) {
                             try {
                                 makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 echo "[ERROR] Failed to unstash ${it}"
-                                lostStashes.add("'${testName}'".replace("testResult-", ""))
+                                lostStashes.add("'${testName}'")
                                 println(e.toString())
                                 println(e.getMessage())
                             }
@@ -851,8 +871,8 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             try {
                 boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
                 boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
-                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderBlenderPlugin"
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderBlenderPlugin/${engine}"
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
                 if (useTrackedMetrics) {
                     utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
@@ -887,7 +907,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
-                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                             if (utils.isReportFailCritical(e.getMessage())) {
                                 throw e
                             } else {
@@ -904,7 +924,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
@@ -978,7 +998,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 options["testsStatus-${engine}"] = ""
             }
 
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
@@ -986,9 +1006,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
 
@@ -1034,7 +1054,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkUbuntu18 = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "Northstar",
+    String enginesNames = "Northstar,HybridPro",
     String tester_tag = "Blender",
     String toolVersion = "3.0",
     String mergeablePR = "",
@@ -1190,7 +1210,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS: true,
-                        flexibleUpdates: true
+                        flexibleUpdates: true,
+                        skipCallback: this.&hybridProFilter
                         ]
 
             if (sendToUMS) {

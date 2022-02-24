@@ -64,6 +64,25 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static DOWNLOAD_BLENDER = [
+        "begin": ["message": "Downloading Blender."],
+
+        "end": ["message": "Blender was successfully downloaded."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to download Blender due to timeout.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to download Blender.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
     def static DOWNLOAD_UNIT_TESTS_REPO = [
         "begin": ["message": "Downloading unit tests repository."],
 
@@ -597,5 +616,7 @@ public class NotificationConfiguration {
     def static FAILED_UPDATE_BASELINES_NAS = "Failed to update baselines on NAS"
 
     def static FAILED_UPDATE_BASELINES_UMS = "Failed to update baselines on UMS <name>"
+
+    def static SOME_STAGES_FAILED = "Some stages failed"
 
 }

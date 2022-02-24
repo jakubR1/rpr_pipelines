@@ -345,6 +345,30 @@ class GithubApiProvider {
                 ],
                 requestBody: JsonOutput.toJson(prData)
             )
+
+            return parseResponse(response.content)
+        }
+    }
+
+    /**
+     * Function to request review (see https://docs.github.com/en/rest/reference/pulls#request-reviewers-for-a-pull-request)
+     *
+     * @param repositoryUrl url to the target repository
+     * @param prNumber number of the target PR
+     * @param reviewers list of strings which represents usernames of reviewers
+     */
+    def addReviewers(String repositoryUrl, String prNumber, List reviewers) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/pulls/${prNumber}/requested_reviewers",
+                httpMode: "POST",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ],
+                requestBody: JsonOutput.toJson(["reviewers": reviewers])
+            )
+
+            return parseResponse(response.content)
         }
     }
 

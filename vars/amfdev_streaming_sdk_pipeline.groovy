@@ -9,6 +9,8 @@ import TestsExecutionType
 
 @Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
 @Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
+@Field final String DRIVER_REPO = "git@github.com:amfdev/AMDVirtualDrivers.git"
+@Field final Map driverTestsExecuted = new ConcurrentHashMap()
 
 
 String getClientLabels(Map options) {
@@ -17,6 +19,17 @@ String getClientLabels(Map options) {
 
 String getMulticonnectionClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.MULTICONNECTION_CLIENT_TAG}"
+}
+
+
+Boolean weeklyFilter(Map options, String asicName, String osName, String testName, String game) {
+    List reducedConfigurations = ["HeavenDX11", "HeavenOpenGL", "ValleyDX11", "ValleyOpenGL", "Dota2Vulkan"]
+    List testGroups = ["General"]
+    if (env.JOB_NAME.contains("Weekly")) {
+        return reducedConfigurations.contains(game) && !testGroups.contains(testName)
+    }
+
+    return false
 }
 
 
@@ -35,7 +48,7 @@ Boolean isIdleClient(Map options) {
 
         def parsedTests = options.tests.split("-")[0]
 
-        if (parsedTests.contains("MulticonnectionWW") || parsedTests.contains("MulticonnectionWWA")) {
+        if (options.multiconnectionConfiguration.second_win_client.any { parsedTests.contains(it) }) {
             result = false
 
             // wait multiconnection client machine
@@ -72,6 +85,66 @@ def prepareTool(String osName, Map options) {
             break
         default:
             println("Unsupported OS")
+    }
+}
+
+
+def unpackDriver(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            makeUnstash(name: "DriverWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+            unzip(zipFile: "${options.winTestingDriverName}.zip")
+            break
+        default:
+            println("Unsupported OS")
+    } 
+}
+
+
+def uninstallDriver(Map options) {
+    try {
+        powershell """
+            \$command = "cd ${WORKSPACE}\\AMDVirtualDrivers; .\\uninstall.bat | Out-File ..\\${options.stageName}_${options.currentTry}_uninstall_driver.log"
+            Start-Process powershell "\$command" -Verb RunAs -Wait
+        """
+    } catch (e) {
+        println("[ERROR] Failed to uninstall driver")
+        throw e
+    }
+}
+
+
+def runDriverTests(Map options) {
+    String title = "Driver tests"
+    String logName = "${options.stageName}_${options.currentTry}_test_driver.log"
+    String url = "${env.BUILD_URL}/artifact/${logName}"
+
+    try {
+        // start script which agree to install unsigned driver
+        powershell """
+            \$command = "C:\\Python39\\python.exe \$env:CIS_TOOLS\\register_dev_driver.py"
+            Start-Process powershell "\$command" -Verb RunAs
+        """
+
+        powershell """
+            \$command = "cd ${WORKSPACE}\\AMDVirtualDrivers; .\\AMDHidTests.exe | Out-File ..\\${logName}"
+            Start-Process powershell "\$command" -Verb RunAs -Wait
+        """
+
+        dir("..") {
+            archiveArtifacts artifacts: logName, allowEmptyArchive: true
+        }
+
+        String driverTestsLog = readFile("..\\${logName}")
+        String status = driverTestsLog.contains("FAILED") ? "action_required" : "success"
+        String description = driverTestsLog.contains("FAILED") ? "Testing finished with error" : "Testing successfully finished"
+
+        GithubNotificator.updateStatus("Test", title, status, options, description, url)
+    } catch (e) {
+        println("[ERROR] Failed to run driver tests")
+        throw e
+    } finally {
+        driverTestsExecuted["executed"] = true
     }
 }
 
@@ -217,12 +290,12 @@ def closeGames(String osName, Map options, String gameName) {
                         taskkill /f /im \"LeagueClient.exe\"
                         taskkill /f /im \"League of Legends.exe\"
                     """
-                } else if (gameName == "HeavenDX9" || gameName == "HeavenDX11") {
+                } else if (gameName == "HeavenDX9" || gameName == "HeavenDX11" || gameName == "HeavenOpenGL") {
                     bat """
                         taskkill /f /im \"browser_x86.exe\"
                         taskkill /f /im \"Heaven.exe\"
                     """
-                } else if (gameName == "ValleyDX9" || gameName == "ValleyDX11") {
+                } else if (gameName == "ValleyDX9" || gameName == "ValleyDX11" || gameName == "ValleyOpenGL") {
                     bat """
                         taskkill /f /im \"browser_x86.exe\"
                         taskkill /f /im \"Valley.exe\"
@@ -232,7 +305,7 @@ def closeGames(String osName, Map options, String gameName) {
                         taskkill /f /im \"launcher.exe\"
                         taskkill /f /im \"superposition.exe\"
                     """
-                } else if (gameName == "Dota2") {
+                } else if (gameName == "Dota2DX11" || gameName == "Dota2Vulkan") {
                     bat """
                         taskkill /f /im \"dota2.exe\"
                     """
@@ -329,6 +402,15 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                 if (fileExists("Results/StreamingSDK/session_report.json")) {
 
                     if (executionType == "client" || executionType == "android") {
+                        String stashPostfix = executionType == "client" ? "_client" : ""
+
+                        println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
+                        makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                    } else if (executionType == "mcClient") {
+                         println "Stashing results of multiconnection client"
+                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_sec_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_sec_cl_j", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                    } else {
                         def sessionReport = readJSON file: "Results/StreamingSDK/session_report.json"
 
                         if (sessionReport.summary.error > 0) {
@@ -339,15 +421,6 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        String stashPostfix = executionType == "client" ? "_client" : ""
-
-                        println "Stashing all test results to : ${options.testResultsName}${stashPostfix}"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}${stashPostfix}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                    } else if (executionType == "mcClient") {
-                         println "Stashing results of multiconnection client"
-                        makeStash(includes: '**/*_second_client.log,**/*.jpg,**/*.mp4', name: "${options.testResultsName}_sec_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_sec_cl_j", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                    } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_serv_l", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
@@ -406,6 +479,23 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
         options["clientInfo"]["screenHeight"] = getClientScreenHeight(osName, options)
         println("[INFO] Screen height on client machine: ${options.clientInfo.screenHeight}")
+
+        if (options.isDevelopBranch) {
+            if (!driverTestsExecuted.containsKey("executed") || !driverTestsExecuted["executed"]) {
+                try {
+                    println("[INFO] Execute driver tests")
+
+                    dir("AMDVirtualDrivers") {
+                        unpackDriver(osName, options)
+                        uninstallDriver(options)
+                        runDriverTests(options)
+                    }
+                } catch (e) {
+                    println(e)
+                    GithubNotificator.updateStatus("Test", "Drivet tests", "action_required", options, "Failed to test driver")
+                }
+            }
+        }
 
         options["clientInfo"]["ready"] = true
         println("[INFO] Client is ready to run tests")
@@ -481,7 +571,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                     prepareTool(osName, options)
                 }
 
-                if (options.parsedTests.contains("MulticonnectionWA") || options.parsedTests.contains("MulticonnectionWWA")) {
+                if (options.multiconnectionConfiguration.android_client.any { options.parsedTests.contains(it) }) {
                     dir("StreamingSDKAndroid") {
                         prepareTool("Android", options)
                         installAndroidClient()
@@ -513,7 +603,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
             sleep(5)
         }
 
-        if (options.tests.contains("MulticonnectionWW") || options.tests.contains("MulticonnectionWWA")) {
+        if (options.multiconnectionConfiguration.second_win_client.any { options.tests.contains(it) }) {
             while (!options["mcClientInfo"]["ready"]) {
                 if (options["mcClientInfo"]["failed"]) {
                     throw new Exception("Multiconnection client was failed")
@@ -794,7 +884,7 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
 
-            if (options.parsedTests.contains("MulticonnectionWW") || options.parsedTests.contains("MulticonnectionWWA")) {
+            if (options.multiconnectionConfiguration.second_win_client.any { options.parsedTests.contains(it) }) {
                 threads["${options.stageName}-multiconnection-client"] = { 
                     node(getMulticonnectionClientLabels(options)) {
                         timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
@@ -843,10 +933,12 @@ def executeBuildWindows(Map options) {
 
             String winBuildName = "${winBuildConf}_vs${winVSVersion}"
             String logName = "${STAGE_NAME}.${winBuildName}.log"
+            String logNameDriver = "${STAGE_NAME}.${winBuildName}.driver.log"
 
             String msBuildPath = ""
             String buildSln = ""
             String winArtifactsDir = "vs${winVSVersion}x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+            String winDriverDir = "x64/${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
 
             switch(winVSVersion) {
                 case "2017":
@@ -865,10 +957,42 @@ def executeBuildWindows(Map options) {
                     throw Exception("Unsupported VS version")
             }
 
+            if (options.isDevelopBranch) {
+                dir("AMDVirtualDrivers") {
+                    withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                        checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
+                    }
+
+                    GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logNameDriver}")
+
+                    bat """
+                        set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
+                        set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
+                        set msbuild="${msBuildPath}"
+                        %msbuild% AMDVirtualDrivers.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\${logNameDriver} 2>&1
+                    """
+
+                    dir(winDriverDir) {
+                        String DRIVER_NAME = "Driver_Windows_${winBuildConf}.zip"
+
+                        bat("%CIS_TOOLS%\\7-Zip\\7z.exe a ${DRIVER_NAME} .")
+
+                        makeArchiveArtifacts(name: DRIVER_NAME, storeOnNAS: options.storeOnNAS)
+
+                        if (options.winTestingDriverName == winBuildConf) {
+                            utils.moveFiles(this, "Windows", DRIVER_NAME, "${options.winTestingDriverName}.zip")
+                            makeStash(includes: "${options.winTestingDriverName}.zip", name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+                        }
+                    }
+                }
+            }
+
             dir("StreamingSDK\\amf\\protected\\samples") {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
 
                 bat """
+                    set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
+                    set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
                 """
@@ -1017,6 +1141,16 @@ def executePreBuild(Map options) {
     println "Commit SHA: ${options.commitSHA}"
     println "Commit shortSHA: ${options.commitShortSHA}"
 
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options["githubNotificator"] = githubNotificator
+            githubNotificator.initPreBuild("${BUILD_URL}")
+            options.projectBranchName = githubNotificator.branchName
+        }
+    }
+
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
@@ -1131,12 +1265,35 @@ def executePreBuild(Map options) {
 
         println "Groups: ${options.testsList}"
 
+        dir("jobs_test_streaming_sdk") {
+            options.multiconnectionConfiguration = readJSON file: "jobs/multiconnection.json"
+
+            // Multiconnection group required Android client
+            if (!options.platforms.contains("Android") && (options.multiconnectionConfiguration.android_client.any { options.testsList.join("").contains(it) })) {
+                println(options.platforms)
+                options.platforms = options.platforms + ";Android"
+                println(options.platforms)
+
+                options.androidBuildConfiguration = ["debug"]
+                options.androidTestingBuildName = "debug"
+
+                println """
+                    Android build configuration was updated: ${options.androidBuildConfiguration}
+                    Android testing build name was updated: ${options.androidTestingBuildName}
+                """
+            }
+        }
+
         if (!options.tests && options.testsPackage == "none") {
             options.executeTests = false
         }
 
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
+
+            if (options.isDevelopBranch) {
+                GithubNotificator.createStatus('Test', "Driver tests", 'queued', options, 'Scheduled', "${env.JOB_URL}")
+            }
         }
     }
 }
@@ -1146,7 +1303,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
     try {
 
         if (options["executeTests"] && testResultList) {
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${game}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
 
@@ -1159,6 +1316,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
+
+                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             if (it.contains("Android")) {
@@ -1184,7 +1346,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                     groupLost = true
                                 }
 
-                                if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                                if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
                                     try {
                                         makeUnstash(name: "${it}_sec_cl", storeOnNAS: options.storeOnNAS)
                                     } catch (e) {
@@ -1237,6 +1399,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 testResultList.each {
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
+
+                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
+                            return
+                        }
+
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
@@ -1255,8 +1422,13 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("secondClientTestResults") {
                 testResultList.each {
                     if (it.endsWith(game)) {
-                        if (it.contains("MulticonnectionWW") || it.contains("MulticonnectionWWA")) {
+                        if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
                             List testNameParts = it.split("-") as List
+
+                            if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
+                                return
+                            }
+
                             String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                             dir(testName.replace("testResult-", "")) {
                                 try {
@@ -1288,7 +1460,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashesWindows}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashesWindows}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${game}\" \"{}\"
                     """
                 }
 
@@ -1298,7 +1470,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashesAndroid}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashesAndroid}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]]\" \"${game}\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -1309,7 +1481,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             try {
                 Boolean showGPUViewTraces = options.clientCollectTraces || options.serverCollectTraces
 
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -1340,7 +1512,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 }
             } catch (e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "failure", options, errorMessage, "${BUILD_URL}")
                 if (utils.isReportFailCritical(e.getMessage())) {
                     options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                     println """
@@ -1422,17 +1594,17 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 options.testsStatus = ""
             }
 
-            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${game}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 // FIXME: save reports on NAS
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
                     "Test Report ${game}", "Summary Report, Compare Report", false, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
                 if (summaryTestResults) {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${game}", "success", options,
                             NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
@@ -1446,7 +1618,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = "Windows:AMD_RX5700XT;Android",
+    String platforms = "Windows:AMD_RX5700XT;Android:AMD_RX5700XT",
     String clientTag = "PC-TESTER-VILNIUS-WIN10",
     String winBuildConfiguration = "release,debug",
     String winVisualStudioVersion = "2019",
@@ -1482,13 +1654,7 @@ def call(String projectBranch = "",
                 winTestingBuildName = "debug_vs2019"
             }
 
-            // Multiconnection group required Android client
-            if (!platforms.contains("Android") && (tests.contains("MulticonnectionWA") || tests.contains("MulticonnectionWWA"))) {
-                platforms = platforms + ";Android"
-
-                androidBuildConfiguration = "debug"
-                androidTestingBuildName = "debug"
-            }   
+            String winTestingDriverName = winTestingBuildName ? winTestingBuildName.split("_")[0] : ""
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
@@ -1514,6 +1680,7 @@ def call(String projectBranch = "",
                 Win build configuration: ${winBuildConfiguration}"
                 Win visual studio version: ${winVisualStudioVersion}"
                 Win testing build name: ${winTestingBuildName}
+                Win driver build name: ${winTestingDriverName}
             """
 
             androidBuildConfiguration = androidBuildConfiguration.split(',')
@@ -1521,6 +1688,9 @@ def call(String projectBranch = "",
             println """
                 Android build configuration: ${androidBuildConfiguration}"
             """
+
+            String branchName = env.BRANCH_NAME ?: projectBranch
+            Boolean isDevelopBranch = (branchName == "origin/develop" || branchName == "develop")
 
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
@@ -1533,6 +1703,7 @@ def call(String projectBranch = "",
                         winBuildConfiguration: winBuildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
+                        winTestingDriverName: winTestingDriverName,
                         androidBuildConfiguration: androidBuildConfiguration,
                         androidTestingBuildName: androidTestingBuildName,
                         gpusCount: gpusCount,
@@ -1541,7 +1712,7 @@ def call(String projectBranch = "",
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
                         // update timeouts dynamicly based on number of cases + traces are generated or not
-                        TEST_TIMEOUT: 240,
+                        TEST_TIMEOUT: 120,
                         DEPLOY_TIMEOUT: 90,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
@@ -1551,12 +1722,15 @@ def call(String projectBranch = "",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
+                        enginesNames: games.split(",") as List,
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
                         collectTracesType:collectTracesType,
                         storeOnNAS: storeOnNAS,
-                        finishedBuildStages: new ConcurrentHashMap()
+                        finishedBuildStages: new ConcurrentHashMap(),
+                        isDevelopBranch: isDevelopBranch,
+                        skipCallback: this.&weeklyFilter
                         ]
         }
 
@@ -1567,6 +1741,7 @@ def call(String projectBranch = "",
         println(e.getMessage())
         throw e
     } finally {
+        GithubNotificator.closeUnfinishedSteps(options, NotificationConfiguration.SOME_STAGES_FAILED)
         problemMessageManager.publishMessages()
     }
 

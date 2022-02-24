@@ -94,6 +94,10 @@ class utils {
         }
     }
 
+    static String getPublishedReportName(Object self, String defaultReportName) {
+        return defaultReportName.replace("_", "_5f").replace(" ", "_20")
+    }
+
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = [:]) {
         Map params
 
@@ -153,7 +157,11 @@ class utils {
 
             self.dir(reportDir) {
                 // upload report to NAS in archive and unzip it
-                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+                if (self.isUnix()) {
+                    self.makeStash(includes: '*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+                } else {
+                    self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+                }
             }
             
             self.dir("redirect_links") {
