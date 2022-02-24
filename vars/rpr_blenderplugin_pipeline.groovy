@@ -595,7 +595,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -1055,9 +1055,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String iter = '50',
     String theshold = '0.05',
     String customBuildLinkWindows = "",
-    String customBuildLinkUbuntu18 = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
+    String customBuildLinkMacOSARM = "",
     String enginesNames = "Northstar,HybridPro",
     String tester_tag = "Blender",
     String toolVersion = "3.0",
@@ -1100,7 +1100,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkMacOSARM || customBuildLinkUbuntu20
 
             if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
@@ -1121,8 +1121,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                             break
-                        case 'Ubuntu18':
-                            if (customBuildLinkUbuntu18) {
+                        case 'MacOS_ARM':
+                            if (customBuildLinkMacOSARM) {
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                         // Ubuntu20
@@ -1200,9 +1200,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         iter: iter,
                         theshold: theshold,
                         customBuildLinkWindows: customBuildLinkWindows,
-                        customBuildLinkUbuntu18: customBuildLinkUbuntu18,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
+                        customBuildLinkMacOSARM: customBuildLinkMacOSARM,
                         engines: formattedEngines,
                         enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
