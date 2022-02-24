@@ -6,9 +6,11 @@ def shoudBreakRetries(labels) {
 }
 
 String findSHA(String description) {
-    for (sha in description.split("<br/>")) {
-        if (sha.contains("Commit SHA")) {
-            return sha.split("</b>")[1]
+    if (description) {
+        for (sha in description.split("<br/>")) {
+            if (sha.contains("Commit SHA")) {
+                return sha.split("</b>")[1]
+            }
         }
     }
 
