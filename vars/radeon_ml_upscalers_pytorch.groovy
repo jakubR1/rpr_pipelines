@@ -259,7 +259,7 @@ def call(String projectBranch = "",
                         recreateCondaEnv:recreateCondaEnv,
                         executeBuild:false,
                         executeTests:true,
-                        TEST_TIMEOUT:70,
+                        TEST_TIMEOUT:90,
                         retriesForTestStage:1]
         }
 
