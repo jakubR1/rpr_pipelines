@@ -144,6 +144,7 @@ def call(String projectBranch = "",
                             enableNotifications:enableNotifications,
                             PRJ_NAME:'WebUsdViewer',
                             PRJ_ROOT:'radeon-pro',
+                            BUILDER_TAG: 'BuilderWebUsdViewer',
                             executeBuild:true,
                             executeTests:false,
                             BUILD_TIMEOUT:'120'])
