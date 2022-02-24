@@ -30,24 +30,69 @@ def uninstallRPRMayaPlugin(String osName, Map options) {
 def installRPRMayaUSDPlugin(String osName, Map options) {
 
     if (options['isPreBuilt']) {
-        installerName = "${options[getProduct.getIdentificatorKey('Windows')]}.exe"
+        options['pluginWinSha'] = "${options[getProduct.getIdentificatorKey('Windows')]}"
     } else {
-        installerName = "${options.commitSHA}.exe"
+        options['pluginWinSha'] = "${options.commitSHA}"
     }
 
     try {
         println "[INFO] Install RPR Maya USD Plugin"
 
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}_${options.currentTry}.install.log
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe /SILENT /NORESTART /LOG=${options.stageName}_${options.currentTry}.install.log
         """
+
     } catch (e) {
         throw new Exception("Failed to install plugin")
-    } 
+    }
+
+    // Move mayausd.mod due to conflict with RPRMayaUSD.mod
+    status = bat(returnStatus: true, script: "MOVE /Y \"${modulesPath}\\mayausd.mod\" \"${modulesPath}\\..\"")
+    
+    if (status == 0) {
+        println "[INFO] mayausd.mod moved"
+    } else {
+        println "[INFO] mayausd.mod not found"
+    }
+}
+
+def uninstallRPRMayaUSDPlugin(String osName, Map options) {
+    println "[INFO] Uninstalling RPR Maya USD plugin"
+    switch(osName) {
+        case "Windows":
+            String defaultUninstallerPath = "C:\\Program Files\\RPRMayaUSD\\unins000.exe"
+
+            try {
+                if (fileExists(defaultUninstallerPath)) {
+                    bat """
+                        start "" /wait "${defaultUninstallerPath}" /SILENT
+                    """
+                } else {
+                    println "[INFO] RPR Maya USD plugin not found"
+                }
+            } catch (e) {
+                throw new Exception("Failed to uninstall RPR Maya USD plugin")
+            }
+            break
+        default:
+            println "[WARNING] ${osName} is not supported for RPR Maya USD"
+    }
 }
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine) {
-    
+    try {
+        dir("scripts") {
+            switch(osName) {
+                case 'Windows':
+                    bat "build_rpr_cache.bat ${toolVersion} ${engine} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                    break
+                default:
+                    println "[WARNING] ${osName} is not supported"
+            }
+        }
+    } catch (e) {
+        throw e
+    }
 }
 
 def executeTestCommand(String osName, String asicName, Map options) {
@@ -55,20 +100,147 @@ def executeTestCommand(String osName, String asicName, Map options) {
 }
 
 def executeTests(String osName, String asicName, Map options) {
-    withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-        timeout(time: "40", unit: "MINUTES") {
-            getProduct(osName, options)
+    options.parsedTests = options.tests.split("-")[0]
+    options.engine = options.tests.split("-")[1]
+
+    if (options.sendToUMS){
+        options.universeManager.startTestsStage(osName, asicName, options)
+    }
+
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+    try {
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
+            timeout(time: "15", unit: "MINUTES") {
+                getProduct(osName, options)
+            }
         }
-    }
 
-    timeout(time: "15", unit: "MINUTES") {
-        uninstallRPRMayaPlugin(osName, options)
-    }
+        timeout(time: "15", unit: "MINUTES") {
+            uninstallRPRMayaPlugin(osName, options)
+        }
 
-    println "Start plugin installation"
+        println "Start plugin installation"
 
-    timeout(time: "15", unit: "MINUTES") {
-        installRPRMayaUSDPlugin(osName, options)
+        timeout(time: "15", unit: "MINUTES") {
+            installRPRMayaUSDPlugin(osName, options)
+        }
+    catch (e) {
+        String additionalDescription = ""
+        if (options.currentTry + 1 < options.nodeReallocateTries) {
+            stashResults = false
+        } else {
+            if (!options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]) {
+                options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(0)
+            }
+            Integer errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]
+            // if counting of errored groups in succession must isn't stopped
+            if (errorsInSuccession >= 0) {
+                errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"].addAndGet(1)
+            
+                if (errorsInSuccession >= 3) {
+                    additionalDescription = "Number of errored groups in succession exceeded (max - 3). Next groups for this platform will be aborted"
+                }
+            }
+        }
+        println(e.toString())
+        println(e.getMessage())
+
+        utils.reboot(this, osName)
+
+        if (e instanceof ExpectedExceptionWrapper) {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
+        } else {
+            String errorMessage = "The reason is not automatically identified. Please contact support."
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${errorMessage} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${errorMessage}\n${additionalDescription}", e)
+        }
+    } finally {
+        try {
+            dir("${options.stageName}") {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+
+                // if some json files are broken - rerun (e.g. Maya crash can cause that)
+                try {
+                    String engineLogContent = readFile("${options.stageName}_${options.currentTry}.log")
+                    if (engineLogContent.contains("json.decoder.JSONDecodeError")) {
+                        throw new ExpectedExceptionWrapper(NotificationConfiguration.FILES_CRASHED, e)
+                    }
+                } catch (ExpectedExceptionWrapper e1) {
+                    throw e1
+                } catch (e1) {
+                    println("[WARNING] Could not analyze autotests log")
+                }
+
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+            if (options.sendToUMS) {
+                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
+            }
+            if (stashResults) {
+                dir('Work') {
+                    if (fileExists("Results/Maya/session_report.json")) {
+
+                        def sessionReport = null
+                        sessionReport = readJSON file: 'Results/Maya/session_report.json'
+
+                        if (options.sendToUMS) {
+                            options.universeManager.finishTestsStage(osName, asicName, options)
+                        }
+
+                        if (sessionReport.summary.error > 0) {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                        } else if (sessionReport.summary.failed > 0) {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
+                        } else {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
+                        }
+
+                        println("Stashing test results to : ${options.testResultsName}")
+                        utils.stashTestData(this, options, options.storeOnNAS)
+
+                        // deinstalling broken addon
+                        // if test group is fully errored or number of test cases is equal to zero
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
+                            // check that group isn't fully skipped
+                            if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
+                                collectCrashInfo(osName, options, options.currentTry)
+                                uninstallRPRMayaUSDPlugin(osName, options)
+                                // remove installer of broken addon
+                                removeInstaller(osName: osName, options: options, extension: "exe")
+                                String errorMessage
+                                if (options.currentTry < options.nodeReallocateTries) {
+                                    errorMessage = "All tests were marked as error. The test group will be restarted."
+                                } else {
+                                    errorMessage = "All tests were marked as error."
+                                }
+                                throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
+                            }
+                        }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
+                    }
+                }
+            } else {
+                println "[INFO] Task ${options.tests} will be retried."
+            }
+        } catch (e) {
+            // throw exception in finally block only if test stage was finished
+            if (options.executeTestsFinished) {
+                if (e instanceof ExpectedExceptionWrapper) {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
+                    throw e
+                } else {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.FAILED_TO_SAVE_RESULTS, "${BUILD_URL}")
+                    throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
+                }
+            }
+        }
     }
 }
 
@@ -268,7 +440,199 @@ def executePreBuild(Map options) {
 }
 
 def executeDeploy(Map options, List platformList, List testResultList) {
-    
+    cleanWS()
+    try {
+        String engineName = options.enginesNames[options.engines.indexOf(engine)]
+
+        if (options['executeTests'] && testResultList) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
+            }
+
+            List lostStashes = []
+
+            dir("summaryTestResults") {
+                unstashCrashInfo(options['nodeRetry'], engine)
+                testResultList.each() {
+                    if (it.endsWith(engine)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        dir(testName.replace("testResult-", "")) {
+                            try {
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
+                            } catch(e) {
+                                println "[ERROR] Failed to unstash ${it}"
+                                lostStashes.add("'${testName}'".replace("testResult-", ""))
+                                println(e.toString())
+                                println(e.getMessage())
+                            }
+
+                        }
+                    }
+                }
+            }
+            
+            try {
+                dir("jobs_launcher") {
+                    bat """
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${engine}\" \"{}\"
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
+            }
+
+            try {
+                boolean useTrackedMetrics = (env.JOB_NAME.contains("WeeklyFullNorthstar") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
+                boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderMayaUSD"
+
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                
+                if (useTrackedMetrics) {
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
+                }
+
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
+                    dir("jobs_launcher") {
+                        List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                        retryInfoList.each{ gpu ->
+                            gpu['Tries'].each{ group ->
+                                group.each{ groupKey, retries ->
+                                    if (groupKey.endsWith(engine)) {
+                                        List testNameParts = groupKey.split("-") as List
+                                        String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                        group[parsedName] = retries
+                                    }
+                                    group.remove(groupKey)
+                                }
+                            }
+                            gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                        }
+                        def retryInfo = JsonOutput.toJson(retryInfoList)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }
+                        if (options.sendToUMS) {
+                            options.engine = engine
+                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
+                        }
+                        try {
+                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
+                        } catch (e) {
+                            String errorMessage = utils.getReportFailReason(e.getMessage())
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
+                            if (utils.isReportFailCritical(e.getMessage())) {
+                                throw e
+                            } else {
+                                currentBuild.result = "FAILURE"
+                                options.problemMessageManager.saveGlobalFailReason(errorMessage)
+                            }
+                        }
+                    }
+                }
+
+                if (saveTrackedMetrics) {
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                }
+            } catch(e) {
+                String errorMessage = utils.getReportFailReason(e.getMessage())
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
+                println("[ERROR] Failed to build test report.")
+                println(e.toString())
+                println(e.getMessage())
+                if (!options.testDataSaved && !options.storeOnNAS) {
+                    try {
+                        // Save test data for access it manually anyway
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                            "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                            ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
+                        options.testDataSaved = true 
+                    } catch(e1) {
+                        println("[WARNING] Failed to publish test data.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }
+                throw e
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    bat "get_status.bat ..\\summaryTestResults"
+                }
+            } catch(e) {
+                println("[ERROR] during slack status generation")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            } catch(e) {
+                println("[ERROR] during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            Map summaryTestResults = [:]
+            try {
+                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                summaryTestResults['passed'] = summaryReport.passed
+                summaryTestResults['failed'] = summaryReport.failed
+                summaryTestResults['error'] = summaryReport.error
+                if (summaryReport.error > 0) {
+                    println("[INFO] Some tests marked as error. Build result = FAILURE.")
+                    currentBuild.result = "FAILURE"
+
+                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
+                }
+                else if (summaryReport.failed > 0) {
+                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
+                    currentBuild.result = "UNSTABLE"
+
+                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
+                }
+            } catch(e) {
+                println(e.toString())
+                println(e.getMessage())
+                println("[ERROR] CAN'T GET TESTS STATUS")
+                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
+                currentBuild.result = "UNSTABLE"
+            }
+
+            try {
+                options["testsStatus-${engine}"] = readFile("summaryTestResults/slack_status.json")
+            } catch(e) {
+                println(e.toString())
+                println(e.getMessage())
+                options["testsStatus-${engine}"] = ""
+            }
+
+            withNotifications(title: "Building test report for ${engineName}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
+                if (summaryTestResults) {
+                    // add in description of status check information about tests statuses
+                    // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                } else {
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                }
+            }
+        }
+    } catch (e) {
+        println(e.toString())
+        println(e.getMessage())
+        throw e
+    } finally {}
 }
 
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaUSD.git",
@@ -349,7 +713,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             options << [configuration: PIPELINE_CONFIGURATION,
                         projectRepo:projectRepo,
                         projectBranch:projectBranch,
-                        testRepo:"git@github.com:luxteam/jobs_test_maya.git",
+                        testRepo:"git@github.com:luxteam/jobs_test_usdmaya.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
