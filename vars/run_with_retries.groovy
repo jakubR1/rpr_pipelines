@@ -4,10 +4,25 @@ def shoudBreakRetries(labels) {
 }
 
 def abortOldBuilds(Map options) {
-    if (env.JOB_NAME.contains("Auto") && options.containsKey("abortOldAutoBuilds") && options["abortOldAutoBuilds"]) {
+    if (options.containsKey("abortOldAutoBuilds")) {
         if (currentBuild.getNextBuild()) {
-            currentBuild.build().@result = Result.fromString("ABORTED")
-            throw new Exception("Aborted by new commit")
+            RunWrapper nextBuild = context.currentBuild.getNextBuild()
+            while(nextBuild) {
+                String nextBuildSHA = ""
+                nextBuildSHA = findSHA(nextBuild.description)
+
+                //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
+                if(!nextBuildSHA) {
+                    context.sleep(60)
+                }
+
+                nextBuildSHA = findSHA(nextBuild.description)
+
+                if (nextBuildSHA == commitSHA) {
+                    currentBuild.build().@result = Result.fromString("ABORTED")
+                    throw new Exception("Aborted by new commit")
+                }
+            }
         }
     }
 }
