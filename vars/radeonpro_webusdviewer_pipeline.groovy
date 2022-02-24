@@ -13,20 +13,21 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     Boolean failure = false
-    String webrtcPath = "${CIS_TOOLS}\\..\\thirdparty\\webrtc\\src".replace('\\', '/')
+    String webrtcPath = "${CIS_TOOLS}\\..\\thirdparty\\webrtc\\src".replace("C:", "/mnt/c").replace('\\', '/')
 
-    downloadFiles("/volume1/CIS/radeon-pro/webrtc-win/", webrtcPath)
+    downloadFiles("/volume1/CIS/radeon-pro/webrtc-win/", webrtcPath, , "--quiet")
 
     try {
         withEnv(["PATH=c:\\CMake322\\bin;c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.log 2>&1
-                cmake --version >> ${STAGE_NAME}.log  2>&1
-                python --version >> ${STAGE_NAME}.log  2>&1
-                python -m pip install conan >> ${STAGE_NAME}.log  2>&1
+                cmake --version >> ${STAGE_NAME}.log 2>&1
+                python --version >> ${STAGE_NAME}.log 2>&1
+                python -m pip install conan >> ${STAGE_NAME}.log 2>&1
                 mkdir Build
-                echo "[WebRTC]" >> Build\\LocalBuildConfig.txt
-                echo "path = ${webrtcPath}" >> Build\\LocalBuildConfig.txt
+                echo [WebRTC] >> Build\\LocalBuildConfig.txt
+                echo path = ${webrtcPath} >> Build\\LocalBuildConfig.txt
+                python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
 
             zip archive: true, dir: "Build/Install", glob: '', zipFile: "WebUsdViewer_Windows.zip"
@@ -53,7 +54,7 @@ def executeBuildLinux(Map options)
 {
     Boolean failure = false
 
-    downloadFiles("/volume1/CIS/radeon-pro/webrtc-linux/", "${CIS_TOOLS}/../thirdparty/webrtc")
+    downloadFiles("/volume1/CIS/radeon-pro/webrtc-linux/", "${CIS_TOOLS}/../thirdparty/webrtc", "--quiet")
 
     try {
        sh """
