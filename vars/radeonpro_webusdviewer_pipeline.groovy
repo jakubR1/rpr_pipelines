@@ -13,7 +13,7 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     Boolean failure = false
-    String webrtcPath = "${CIS_TOOLS}\\..\\thirdparty\\webrtc\\src".replace("C:", "/mnt/c").replace('\\', '/')
+    String webrtcPath = "${CIS_TOOLS}\\..\\thirdparty\\webrtc".replace("C:", "/mnt/c").replace('\\', '/')
 
     downloadFiles("/volume1/CIS/radeon-pro/webrtc-win/", webrtcPath, , "--quiet")
 
@@ -26,7 +26,7 @@ def executeBuildWindows(Map options)
                 python -m pip install conan >> ${STAGE_NAME}.log 2>&1
                 mkdir Build
                 echo [WebRTC] >> Build\\LocalBuildConfig.txt
-                echo path = ${webrtcPath} >> Build\\LocalBuildConfig.txt
+                echo path = ${webrtcPath}\\src >> Build\\LocalBuildConfig.txt
                 python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
 
@@ -58,7 +58,7 @@ def executeBuildLinux(Map options)
 
     try {
        sh """
-            python --version >> ${STAGE_NAME}.log  2>&1
+            python --version >> ${STAGE_NAME}.log 2>&1
             python -m pip install conan
             mkdir --parents Build
             echo "[WebRTC]" >> Build/LocalBuildConfig.txt
