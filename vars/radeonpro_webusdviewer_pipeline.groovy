@@ -20,7 +20,7 @@ def executeBuildWindows(Map options)
     try {
         withEnv(["PATH=c:\\CMake322\\bin;c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
             bat """
-                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.log 2>&1
+                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
                 cmake --version >> ${STAGE_NAME}.log 2>&1
                 python --version >> ${STAGE_NAME}.log 2>&1
                 python -m pip install conan >> ${STAGE_NAME}.log 2>&1
