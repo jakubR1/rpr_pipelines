@@ -8,14 +8,14 @@ def shoudBreakRetries(labels) {
 def abortOldBuilds(Map options) {
     if (options.containsKey("abortOldAutoBuilds")) {
         if (currentBuild.getNextBuild()) {
-            RunWrapper nextBuild = context.currentBuild.getNextBuild()
+            RunWrapper nextBuild = currentBuild.getNextBuild()
             while(nextBuild) {
                 String nextBuildSHA = ""
                 nextBuildSHA = findSHA(nextBuild.description)
 
                 //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
                 if(!nextBuildSHA) {
-                    context.sleep(60)
+                    sleep(60)
                 }
 
                 nextBuildSHA = findSHA(nextBuild.description)
