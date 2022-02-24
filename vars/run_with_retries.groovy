@@ -3,6 +3,15 @@ def shoudBreakRetries(labels) {
     return labels.contains('!') && nodesByLabel(label: labels, offline: false).size() == 0
 }
 
+def abortOldBuilds(Map options) {
+    if (env.JOB_NAME.contains("Auto") && options.containsKey("abortOldAutoBuilds") && options["abortOldAutoBuilds"]) {
+        if (currentBuild.getNextBuild()) {
+            currentBuild.build().@result = Result.fromString("ABORTED")
+            throw new Exception("Aborted by new commit")
+        }
+    }
+}
+
 
 def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1, String osName = "", Boolean setBuildStatus = false) {
     List nodesList = nodesByLabel label: labels, offline: true
@@ -55,6 +64,8 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
         options['currentTry'] = i
         options['nodeReallocateTries'] = tries
 
+        abortOldBuilds(options)
+
         try {
             // check that there is at least one suitable online node and break retries if not (except waiting of first node)
             if (shoudBreakRetries(labels)) {
@@ -80,6 +91,8 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             node(labels) {
                 timeout(time: "${stageTimeout}", unit: 'MINUTES') {
                     ws("WS/${options.PRJ_NAME}_${stageName}") {
+                        abortOldBuilds(options)
+
                         nodeName = env.NODE_NAME
                         retringFunction(nodesList, i)
                         successCurrentNode = true
