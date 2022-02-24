@@ -5,6 +5,16 @@ def shoudBreakRetries(labels) {
     return labels.contains('!') && nodesByLabel(label: labels, offline: false).size() == 0
 }
 
+String findSHA(String description) {
+    for (sha in description.split("<br/>")) {
+        if (sha.contains("Commit SHA")) {
+            return sha.split("</b>")[1]
+        }
+    }
+
+    return null
+}
+
 def abortOldBuilds(Map options) {
     if (options.containsKey("abortOldAutoBuilds")) {
         if (currentBuild.getNextBuild()) {
