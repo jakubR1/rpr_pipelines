@@ -32,6 +32,9 @@ def abortOldBuilds(Map options) {
 
                 nextBuildSHA = findSHA(nextBuild.description)
 
+                println(nextBuildSHA)
+                println(options.commitSHA)
+
                 if (nextBuildSHA == options.commitSHA) {
                     currentBuild.build().@result = Result.fromString("ABORTED")
                     throw new Exception("Aborted by new commit")
