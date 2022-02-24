@@ -263,7 +263,7 @@ def call(String projectBranch = "",
                         executeTests:true,
                         TEST_TIMEOUT:90,
                         retriesForTestStage:1,
-                        abortOldAutoBuilds:true]
+                        abortOldAutoBuilds:false]
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
