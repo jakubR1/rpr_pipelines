@@ -936,6 +936,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         println(e.toString())
         println(e.getMessage())
         throw e
+    } finally {
+        if (!options.storeOnNAS) {
+            utils.generateOverviewReport(this, this.&getReportBuildArgs, options)
+        }
     }
 }
 

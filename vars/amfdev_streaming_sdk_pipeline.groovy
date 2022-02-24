@@ -33,6 +33,12 @@ Boolean weeklyFilter(Map options, String asicName, String osName, String testNam
 }
 
 
+def getReportBuildArgs(String engineName, Map options) {
+    String branchName = env.BRANCH_NAME ?: options.projectBranch
+    return "StreamingSDK ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""
+}
+
+
 Boolean isIdleClient(Map options) {
     if (options["osName"] == "Windows") {
         Boolean result = false
@@ -1612,6 +1618,8 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
     } catch (e) {
         println(e.toString())
         throw e
+    } finally {
+        utils.generateOverviewReport(this, this.&getReportBuildArgs, options)
     }
 }
 

@@ -602,4 +602,69 @@ class utils {
             self.println(e.getMessage())
         }
     }
+
+    static def generateOverviewReport(Object self, def buildArgsFunc, Map options) {
+        if (options.engines) {
+            self.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+                try {
+                    String publishedReportName = getPublishedReportName("Test_Report")
+
+                    // check that overview report isn't deployed yet
+                    self.httpRequest(
+                        url: "${self.BUILD_URL}/${publishedReportName}/",
+                        authentication: 'jenkinsCredentials',
+                        httpMode: 'GET'
+                    )
+
+                    self.println("[INFO] Overview report exists")
+                } catch(e) {
+                    self.println("[INFO] Overview report not found, publish it")
+
+                    // take only first 4 arguments: tool name, commit sha, project branch name and commit message
+                    String buildScriptArgs = (buildArgsFunc("", options).split() as List).subList(0, 4).join(" ")
+
+                    String locations = ""
+
+                    Boolean allReportsExists = true
+
+                    options.engines.reverse().each() { engine ->
+                        String publishedReportName = ""
+
+                        if (options.enginesNames) {
+                            String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
+                            publishedReportName = getPublishedReportName(self, "Test Report ${originalEngineName}")
+                        } else {
+                            publishedReportName = getPublishedReportName(self, "Test Report ${engine}")
+                        }
+
+                        try {
+                            // check that all necessary reports are published
+                            self.httpRequest(
+                                url: "${self.BUILD_URL}/${publishedReportName}/",
+                                authentication: 'jenkinsCredentials',
+                                httpMode: 'GET'
+                            )
+                        } catch(e1) {
+                            println("[INFO] Report '${publishedReportName}' not found")
+                            allReportsExists = false
+                        }
+
+                        locations = locations ? "${locations}::${self.BUILD_URL}/${publishedReportName}" : "${self.BUILD_URL}/${publishedReportName}"
+                    }
+
+                    if (allReportsExists) {
+                        self.dir("jobs_launcher") {
+                            self.withEnv(["BUILD_NAME=${options.baseBuildName}"]) {
+                                self.bat """
+                                    build_overview_reports.bat ..\\OverviewReport ${locations} ${self.JENKINS_USERNAME}:${self.JENKINS_PASSWORD} ${buildScriptArgs}
+                                """
+                            }
+                        }
+
+                        publishReport(self, "${self.BUILD_URL}", "OverviewReport", "summary_report.html", "Test Report", "Summary Report (Overview)", false)
+                    }
+                }
+            }
+        }
+    }
 }
