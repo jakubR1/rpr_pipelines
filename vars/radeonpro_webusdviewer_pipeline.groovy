@@ -26,7 +26,7 @@ def executeBuildWindows(Map options)
                 python -m pip install conan >> ${STAGE_NAME}.log 2>&1
                 mkdir Build
                 echo [WebRTC] >> Build\\LocalBuildConfig.txt
-                echo path = ${webrtcPath}\\src >> Build\\LocalBuildConfig.txt
+                echo path = ${webrtcPath}/src >> Build\\LocalBuildConfig.txt
                 python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
 
@@ -58,8 +58,9 @@ def executeBuildLinux(Map options)
 
     try {
        sh """
+            cmake --version >> ${STAGE_NAME}.log 2>&1
             python --version >> ${STAGE_NAME}.log 2>&1
-            python -m pip install conan
+            python -m pip install conan >> ${STAGE_NAME}.log 2>&1
             mkdir --parents Build
             echo "[WebRTC]" >> Build/LocalBuildConfig.txt
             echo "path = ${CIS_TOOLS}/../thirdparty/webrtc/src" >> Build/LocalBuildConfig.txt
