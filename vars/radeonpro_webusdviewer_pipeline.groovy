@@ -13,7 +13,7 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     Boolean failure = false
-    String webrtcPath = "${CIS_TOOLS}\\..\\thirdparty\\webrtc".replace("C:", "/mnt/c").replace('\\', '/')
+    String webrtcPath = "/mnt/c/JN/thirdparty/webrtc"
 
     downloadFiles("/volume1/CIS/radeon-pro/webrtc-win/", webrtcPath, , "--quiet")
 
