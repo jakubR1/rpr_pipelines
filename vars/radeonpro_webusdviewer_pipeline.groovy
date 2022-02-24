@@ -64,6 +64,7 @@ def executeBuildLinux(Map options)
             mkdir --parents Build
             echo "[WebRTC]" >> Build/LocalBuildConfig.txt
             echo "path = ${CIS_TOOLS}/../thirdparty/webrtc/src" >> Build/LocalBuildConfig.txt
+            export OS=
             python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
         """
 
