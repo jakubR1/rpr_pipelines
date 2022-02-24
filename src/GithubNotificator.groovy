@@ -404,9 +404,11 @@ public class GithubNotificator {
     }
 
     private String findSHA(String description) {
-        for (sha in description.split("<br/>")) {
-            if (sha.contains("Commit SHA")) {
-                return sha.split("</b>")[1]
+        if (description) {
+            for (sha in description.split("<br/>")) {
+                if (sha.contains("Commit SHA")) {
+                    return sha.split("</b>")[1].trim()
+                }
             }
         }
 
@@ -418,8 +420,7 @@ public class GithubNotificator {
             //check that some of next builds (if it exists) has different sha of target commit
             RunWrapper nextBuild = context.currentBuild.getNextBuild()
             while(nextBuild) {
-                String nextBuildSHA = ""
-                nextBuildSHA = findSHA(nextBuild.description)
+                String nextBuildSHA = findSHA(nextBuild.description)
 
                 //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
                 if(!nextBuildSHA) {
@@ -428,7 +429,11 @@ public class GithubNotificator {
 
                 nextBuildSHA = findSHA(nextBuild.description)
 
-                return nextBuildSHA == commitSHA
+                nextBuild = nextBuild.getNextBuild()
+
+                if (nextBuildSHA == commitSHA) {
+                    return true
+                }
             }
         } catch (e) {
             context.println("[ERROR] Failed to find build with same SHA")
