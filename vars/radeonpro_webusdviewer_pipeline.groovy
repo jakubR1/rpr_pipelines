@@ -13,9 +13,9 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     Boolean failure = false
-    String webrtcPath = "/mnt/c/JN/thirdparty/webrtc"
+    String webrtcPath = "C:\\JN\\thirdparty\\webrtc"
 
-    downloadFiles("/volume1/CIS/radeon-pro/webrtc-win/", webrtcPath, , "--quiet")
+    downloadFiles("/volume1/CIS/radeon-pro/webrtc-win/", webrtcPath.replace("C:", "/mnt/c").replace("\\", "/"), , "--quiet")
 
     try {
         withEnv(["PATH=c:\\CMake322\\bin;c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
@@ -26,7 +26,7 @@ def executeBuildWindows(Map options)
                 python -m pip install conan >> ${STAGE_NAME}.log 2>&1
                 mkdir Build
                 echo [WebRTC] >> Build\\LocalBuildConfig.txt
-                echo path = ${webrtcPath}/src >> Build\\LocalBuildConfig.txt
+                echo path = ${webrtcPath.replace("\\", "/")}/src >> Build\\LocalBuildConfig.txt
                 python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
 
