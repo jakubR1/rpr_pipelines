@@ -6,7 +6,6 @@ import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
-import universe.*
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
@@ -168,23 +167,21 @@ def executeTestCommand(String osName, String asicName, Map options) {
 
     withEnv(["RPRVIEWER_RENDER_TIMINGS_LOG_FILE_NAME=$WORKSPACE\\render.log"]) {
         timeout(time: testTimeout, unit: 'MINUTES') {
-            UniverseManager.executeTests(osName, asicName, options) {
-                switch (osName) {
-                    case "Windows":
-                        dir('scripts') {
-                            bat """
-                                run.bat \"${testsPackageName}\" \"${testsNames}\" RPRViewer 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
-                            """
-                        }
-                        break
+            switch (osName) {
+                case "Windows":
+                    dir('scripts') {
+                        bat """
+                            run.bat \"${testsPackageName}\" \"${testsNames}\" RPRViewer 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                        """
+                    }
+                    break
 
-                    case "OSX":
-                        println "OSX isn't supported"
-                        break
+                case "OSX":
+                    println "OSX isn't supported"
+                    break
 
-                    default:
-                        println "Linux isn't supported"
-                }
+                default:
+                    println "Linux isn't supported"
             }
         }
     }
@@ -194,10 +191,6 @@ def executeTestCommand(String osName, String asicName, Map options) {
 def executeTests(String osName, String asicName, Map options) {
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
-    if (options.sendToUMS) {
-        options.universeManager.startTestsStage(osName, asicName, options)
-    }
-
     try {
         if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
             if (options.tests.contains("CPU") || options.tests.contains("weekly.2") || options.tests.contains("regression.2")) {
@@ -403,17 +396,11 @@ def executeTests(String osName, String asicName, Map options) {
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
-            if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
-            }
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/RPRViewer/session_report.json")) {
 
                         def sessionReport = readJSON file: 'Results/RPRViewer/session_report.json'
-                        if (options.sendToUMS) {
-                            options.universeManager.finishTestsStage(osName, asicName, options)
-                        }
 
                         if (sessionReport.summary.error > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
@@ -534,12 +521,6 @@ def executeBuildWindows(Map options) {
                     String ARTIFACT_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
                     String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-                    /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
-                    if (options.sendToUMS) {
-                        // WARNING! call sendToMinio in build stage only from parent directory
-                        options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
-                    }*/
-
                     GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
@@ -601,12 +582,6 @@ def executeBuildOSX(Map options)
             String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
             String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-
-            /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
-            if (options.sendToUMS) {
-                // WARNING! call sendToMinio in build stage only from parent directory
-                options.universeManager.sendToMINIO(options, "OSX", "..", "RadeonProUSDViewer_Package_OSX.zip", false)
-            }*/
         }
     }
     
@@ -614,9 +589,6 @@ def executeBuildOSX(Map options)
 
 
 def executeBuild(String osName, Map options) {
-    if (options.sendToUMS) {
-        options.universeManager.startBuildStage(osName)
-    }
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
@@ -638,10 +610,6 @@ def executeBuild(String osName, Map options) {
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
-            options.universeManager.finishBuildStage(osName)
-        }
     }
 }
 
@@ -789,7 +757,6 @@ def executePreBuild(Map options) {
 
     def tests = []
     options.timeouts = [:]
-    options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer') {
@@ -838,13 +805,10 @@ def executePreBuild(Map options) {
                 groupsFromPackage.each {
                     if (options.isPackageSplitted) {
                         tests << it
-                        options.groupsUMS << it
                     } else {
                         if (tests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it}"
-                        } else {
-                            options.groupsUMS << it
                         }
                     }
                 }
@@ -874,7 +838,6 @@ def executePreBuild(Map options) {
                     options.tests = tests
                 }
             } else {
-                options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -887,9 +850,6 @@ def executePreBuild(Map options) {
         }
         options.testsList = options.tests
         println "timeouts: ${options.timeouts}"
-        if (options.sendToUMS) {
-            options.universeManager.createBuilds(options)
-        }
     }
 
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
@@ -942,10 +902,6 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         dir("..\\summaryTestResults") {
                             writeJSON file: 'retry_info.json', json: JSONSerializer.toJSON(retryInfo, new JsonConfig()), pretty: 4
                         }
-                        if (options.sendToUMS) {
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
-                        }
-
                         bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
                     }
                 }
@@ -1067,7 +1023,7 @@ def call(String projectBranch = "",
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 3,
-         Boolean sendToUMS = true,
+         Boolean sendToUMS = false,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
@@ -1126,17 +1082,10 @@ def call(String projectBranch = "",
                         parallelExecutionType: TestsExecutionType.valueOf(parallelExecutionTypeString),
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries: testCaseRetries,
-                        universePlatforms: convertPlatforms(platforms),
-                        sendToUMS: false,
                         baselinePluginPath: baselinePluginPath,
                         storeOnNAS: true,
                         flexibleUpdates: true
                         ]
-            if (sendToUMS) {
-                UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
-                manager.init()
-                options["universeManager"] = manager
-            }
         }
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
@@ -1145,8 +1094,5 @@ def call(String projectBranch = "",
         throw e
     } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
-        if (options.sendToUMS) {
-            options.universeManager.closeBuild(problemMessage, options)
-        }
     }
 }

@@ -399,12 +399,6 @@ def executeBuildLinux(String osName, Map options) {
             String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", ARTIFACT_NAME)                            
-                }
-            }
-
             sh """
                 mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
@@ -627,7 +621,6 @@ def executePreBuild(Map options)
 
     def tests = []
     options.timeouts = [:]
-    options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdblender') {
@@ -665,17 +658,13 @@ def executePreBuild(Map options)
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
-                options.groupsUMS = tempTests.clone()
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
-                        options.groupsUMS << it.key
                     } else {
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it.key}"
-                        } else {
-                            options.groupsUMS << it.key
                         }
                     }
                 }
@@ -703,7 +692,6 @@ def executePreBuild(Map options)
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else if (options.tests) {
-                options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -818,10 +806,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         dir("..\\summaryTestResults") {
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                        }
-                        if (options.sendToUMS) {
-                            options.engine = engine
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         try {
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
@@ -975,7 +959,7 @@ def call(String projectRepo = PROJECT_REPO,
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
     String enginesNames = "RPR,GL,Hybrid",
-    String tester_tag = "Blender2.8",
+    String tester_tag = "Blender",
     String toolVersion = "3.0",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
