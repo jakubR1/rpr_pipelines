@@ -472,7 +472,7 @@ def executePreBuild(Map options) {
                 options.tests = tests
                 options.groupsUMS = tests
             }
-                        
+            options.testsList = options.tests
             if (options.sendToUMS) {
                 options.universeManager.createBuilds(options)   
             }
