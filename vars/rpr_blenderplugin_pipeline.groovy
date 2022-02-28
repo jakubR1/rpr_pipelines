@@ -1,6 +1,5 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
-import universe.*
 import utils
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -80,23 +79,21 @@ def executeTestCommand(String osName, String asicName, Map options)
     println "Set timeout to ${testTimeout}"
 
     timeout(time: testTimeout, unit: 'MINUTES') { 
-        UniverseManager.executeTests(osName, asicName, options) {
-            switch(osName) {
-                case 'Windows':
-                    dir('scripts') {
-                        bat """
-                            run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"..\\${options.stageName}_${options.currentTry}.log\"  2>&1
-                        """
-                    }
-                    break
-                // OSX & Ubuntu18
-                default:
-                    dir("scripts") {
-                        sh """
-                            ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
-                        """
-                    }
-            }
+        switch(osName) {
+            case 'Windows':
+                dir('scripts') {
+                    bat """
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"..\\${options.stageName}_${options.currentTry}.log\"  2>&1
+                    """
+                }
+                break
+            // OSX & Ubuntu20
+            default:
+                dir("scripts") {
+                    sh """
+                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
+                    """
+                }
         }
     }
 }
@@ -105,10 +102,6 @@ def executeTests(String osName, String asicName, Map options)
 {
     options.parsedTests = options.tests.split("-")[0]
     options.engine = options.tests.split("-")[1]
-
-    if (options.sendToUMS) {
-        options.universeManager.startTestsStage(osName, asicName, options)
-    }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -291,19 +284,12 @@ def executeTests(String osName, String asicName, Map options)
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
-            if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
-            }
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Blender/session_report.json")) {
 
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Blender/session_report.json'
-
-                        if (options.sendToUMS) {
-                            options.universeManager.finishTestsStage(osName, asicName, options)
-                        }
 
                         if (sessionReport.summary.error > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
@@ -383,12 +369,6 @@ def executeBuildWindows(Map options)
             String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                dir("../../..") {
-                    options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", ARTIFACT_NAME, false)
-                }
-            }
-
             bat """
                 rename RadeonProRender*.zip RadeonProRenderBlender_Windows.zip
             """
@@ -428,12 +408,6 @@ def executeBuildOSX(Map options, Boolean isx86 = true)
             String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "_ARM"}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS${isx86 ? "" : "_ARM"}.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                dir("../../..") {
-                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", ARTIFACT_NAME, false)
-                }
-            }
-
             sh """
                 mv RadeonProRender*zip RadeonProRenderBlender_MacOS${isx86 ? "" : "_ARM"}.zip
             """
@@ -472,12 +446,6 @@ def executeBuildLinux(String osName, Map options)
             String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                dir("../../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderBlenderAddon/BlenderPkg/.build", ARTIFACT_NAME, false)
-                }
-            }
-
             sh """
                 mv RadeonProRender*zip RadeonProRenderBlender_${osName}.zip
             """
@@ -492,9 +460,6 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
-    if (options.sendToUMS) {
-        options.universeManager.startBuildStage(osName)
-    }
     try {
         dir('RadeonProRenderBlenderAddon') {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -533,10 +498,6 @@ def executeBuild(String osName, Map options)
         throw e
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
-            options.universeManager.finishBuildStage(osName)
-        }
     }
 }
 
@@ -595,7 +556,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -680,7 +641,6 @@ def executePreBuild(Map options)
 
     def tests = []
     options.timeouts = [:]
-    options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_blender') {
@@ -718,7 +678,6 @@ def executePreBuild(Map options)
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
-                options.groupsUMS = tempTests.clone()
 
                 // receive list of group names from package
                 List groupsFromPackage = []
@@ -735,13 +694,10 @@ def executePreBuild(Map options)
                 groupsFromPackage.each() {
                     if (options.isPackageSplitted) {
                         tempTests << it
-                        options.groupsUMS << it
                     } else {
                         if (tempTests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it}"
-                        } else {
-                            options.groupsUMS << it
                         }
                     }
                 }
@@ -783,7 +739,6 @@ def executePreBuild(Map options)
                     }
                 }
             } else if (options.tests) {
-                options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -807,10 +762,6 @@ def executePreBuild(Map options)
         options.testsList = options.tests
 
         println "timeouts: ${options.timeouts}"
-
-        if (options.sendToUMS) {
-            options.universeManager.createBuilds(options)
-        }
     }
 
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
@@ -898,10 +849,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         dir("..\\summaryTestResults") {
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                        }
-                        if (options.sendToUMS) {
-                            options.engine = engine
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         try {
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
@@ -1019,6 +966,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         println(e.toString())
         println(e.getMessage())
         throw e
+    } finally {
+        if (!options.storeOnNAS) {
+            utils.generateOverviewReport(this, this.&getReportBuildArgs, options)
+        }
     }
 }
 
@@ -1044,16 +995,16 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String tests = "",
     Boolean forceBuild = false,
     Boolean splitTestsExecution = true,
-    Boolean sendToUMS = true,
+    Boolean sendToUMS = false,
     String resX = '0',
     String resY = '0',
     String SPU = '25',
     String iter = '50',
     String theshold = '0.05',
     String customBuildLinkWindows = "",
-    String customBuildLinkUbuntu18 = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
+    String customBuildLinkMacOSARM = "",
     String enginesNames = "Northstar,HybridPro",
     String tester_tag = "Blender",
     String toolVersion = "3.0",
@@ -1082,8 +1033,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            sendToUMS = updateRefs.contains('Update') || sendToUMS
-
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
             enginesNames.each {
@@ -1096,7 +1045,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkMacOSARM || customBuildLinkUbuntu20
 
             if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
@@ -1117,8 +1066,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                             break
-                        case 'Ubuntu18':
-                            if (customBuildLinkUbuntu18) {
+                        case 'MacOS_ARM':
+                            if (customBuildLinkMacOSARM) {
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                         // Ubuntu20
@@ -1143,8 +1092,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            def universePlatforms = convertPlatforms(platforms);
-
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
             println "Platforms: ${platforms}"
@@ -1152,8 +1099,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
-            println "Send to UMS: ${sendToUMS} "
-            println "UMS platforms: ${universePlatforms}"
 
             String prRepoName = ""
             String prBranchName = ""
@@ -1182,23 +1127,21 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         forceBuild:forceBuild,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
-                        sendToUMS: false,
                         gpusCount:gpusCount,
                         TEST_TIMEOUT:210,
                         ADDITIONAL_XML_TIMEOUT:15,
                         NON_SPLITTED_PACKAGE_TIMEOUT:150,
                         DEPLOY_TIMEOUT:180,
                         TESTER_TAG:tester_tag,
-                        universePlatforms: universePlatforms,
                         resX: resX,
                         resY: resY,
                         SPU: SPU,
                         iter: iter,
                         theshold: theshold,
                         customBuildLinkWindows: customBuildLinkWindows,
-                        customBuildLinkUbuntu18: customBuildLinkUbuntu18,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
+                        customBuildLinkMacOSARM: customBuildLinkMacOSARM,
                         engines: formattedEngines,
                         enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
@@ -1213,12 +1156,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         flexibleUpdates: true,
                         skipCallback: this.&hybridProFilter
                         ]
-
-            if (sendToUMS) {
-                UniverseManager universeManager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
-                universeManager.init()
-                options["universeManager"] = universeManager
-            }
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
@@ -1229,8 +1166,5 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         throw e
     } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
-        if (options.sendToUMS) {
-            options.universeManager.closeBuild(problemMessage, options)
-        }
     }
 }

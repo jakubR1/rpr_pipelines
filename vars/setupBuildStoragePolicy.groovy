@@ -101,8 +101,8 @@ def call(String project = "")
 def getProjectName(){
     if (env.JOB_NAME.contains("Maya")) {
         return "Maya"
-    } else if (env.JOB_NAME.contains("Blender2.8")) {
-        return "Blender2.8"
+    } else if (env.JOB_NAME.contains("Blender")) {
+        return "Blender"
     } else if (env.JOB_NAME.contains("Max")) {
         return "Max"
     } else if (env.JOB_NAME.contains("USDViewer")) {

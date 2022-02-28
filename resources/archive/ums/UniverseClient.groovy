@@ -396,7 +396,7 @@ class UniverseClient {
                 httpMode: 'POST',
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
-                url: this.url + "/api/build?jobName=${this.product}",
+                url: this.url + "/api/build?product_name=${this.product}",
                 validResponseCodes: '0:599'
             )
             
@@ -447,7 +447,7 @@ class UniverseClient {
                 httpMode: 'PUT',
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
-                url: this.url + "/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
+                url: this.url + "/api/build?id=${this.build["id"]}&product_name=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
             return res
@@ -496,7 +496,7 @@ class UniverseClient {
                 httpMode: 'PUT',
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
-                url: this.url + "/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
+                url: this.url + "/api/build?id=${this.build["id"]}&product_name=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
 
@@ -521,7 +521,7 @@ class UniverseClient {
                 httpMode: 'PUT',
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
-                url: this.url + "/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
+                url: this.url + "/api/build?id=${this.build["id"]}&product_name=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
             return res

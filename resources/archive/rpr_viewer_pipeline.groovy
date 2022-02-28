@@ -143,9 +143,6 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    if (options.sendToUMS){
-        options.universeManager.startTestsStage(osName, asicName, options)
-    }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -245,9 +242,6 @@ def executeTests(String osName, String asicName, Map options)
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
-            if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
-            }
             if (stashResults) {
                 dir('Work')
                 {
@@ -255,10 +249,6 @@ def executeTests(String osName, String asicName, Map options)
 
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/RprViewer/session_report.json'
-
-                        if (options.sendToUMS) {
-                            options.universeManager.finishTestsStage(osName, asicName, options)
-                        }
 
                         if (sessionReport.summary.error > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
@@ -356,10 +346,6 @@ def executeBuildWindows(Map options)
         zip archive: true, dir: "${options.DEPLOY_FOLDER}", glob: '', zipFile: "RprViewer_Windows.zip"
         makeStash(includes: "RprViewer_Windows.zip", name: "appWindows", preZip: false)
         options.pluginWinSha = sha1 "RprViewer_Windows.zip"
-                        
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, "Windows", "..", "RprViewer_Windows.zip", false)  
-        }
     }
 }
 
@@ -396,19 +382,11 @@ def executeBuildLinux(Map options)
         zip archive: true, dir: "${options.DEPLOY_FOLDER}", glob: '', zipFile: "RprViewer_Ubuntu18.zip"
         makeStash(includes: "RprViewer_Ubuntu18.zip", name: "appUbuntu18", preZip: false)
         options.pluginUbuntuSha = sha1 "RprViewer_Ubuntu18.zip"
-
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, "Ubuntu18", "..", "RprViewer_Ubuntu18.zip", false)
-        }
     }
 }
 
 def executeBuild(String osName, Map options)
 {
-    if (options.sendToUMS){
-        options.universeManager.startBuildStage(osName)
-    }
-
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
@@ -432,10 +410,6 @@ def executeBuild(String osName, Map options)
         throw e
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
-            options.universeManager.finishBuildStage(osName)
-        }
     }
 }
 
@@ -490,7 +464,6 @@ def executePreBuild(Map options)
 
     def tests = []
     options.timeouts = [:]
-    options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_rprviewer') {
@@ -519,7 +492,6 @@ def executePreBuild(Map options)
                     // save tests which user wants to run with non-splitted tests package
                     if (options.tests) {
                         tests = options.tests.split(" ") as List
-                        options.groupsUMS = tests.clone()
                     }
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
@@ -529,11 +501,8 @@ def executePreBuild(Map options)
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tests << it.key
-                        options.groupsUMS << it.key
                     } else {
-                        if (!tests.contains(it.key)) {
-                            options.groupsUMS << it.key
-                        } else {
+                        if (tests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it.key}"
                         }
@@ -555,7 +524,6 @@ def executePreBuild(Map options)
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else {
-                options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -611,10 +579,6 @@ def executePreBuild(Map options)
         options.testsList = options.tests
 
         println "timeouts: ${options.timeouts}"
-
-        if (options.sendToUMS) {
-            options.universeManager.createBuilds(options)
-        }
     }
 }
 
@@ -664,9 +628,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         dir("..\\summaryTestResults") {
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                        }
-                        if (options.sendToUMS) {
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         bat """
                             build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
@@ -782,7 +743,7 @@ def call(String projectBranch = "",
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
-         Boolean sendToUMS = true,
+         Boolean sendToUMS = false,
          String tester_tag = 'RprViewer',
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 3)
@@ -797,19 +758,13 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
-
-            sendToUMS = updateRefs.contains('Update') || sendToUMS
             
-            def universePlatforms = convertPlatforms(platforms);
-
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
             println "Tests execution type: ${parallelExecutionType}"
-            println "Send to UMS: ${sendToUMS} "
-            println "UMS platforms: ${universePlatforms}"
 
             options << [projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -832,7 +787,7 @@ def call(String projectBranch = "",
                         tests:tests,
                         nodeRetry: nodeRetry,
                         errorsInSuccession: errorsInSuccession,
-                        sendToUMS:sendToUMS,
+                        sendToUMS: false,
                         universePlatforms: universePlatforms,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
@@ -840,12 +795,6 @@ def call(String projectBranch = "",
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
-
-            if (sendToUMS) {
-                UniverseManager universeManager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
-                universeManager.init()
-                options["universeManager"] = universeManager
-            }
         } 
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
@@ -856,8 +805,5 @@ def call(String projectBranch = "",
         throw e
     } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
-        if (options.sendToUMS) {
-            options.universeManager.closeBuild(problemMessage, options)
-        }
     }
 }

@@ -5,7 +5,6 @@ import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
-import universe.*
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -102,76 +101,74 @@ def executeTestCommand(String osName, String asicName, Map options) {
                 }
             }
 
-            UniverseManager.executeTests(osName, asicName, options) {
-                switch(osName) {
-                    case 'Windows':
-                        if (options.enableRIFTracing) {
-                            bat """
-                                mkdir "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
-                                set RIF_TRACING_ENABLED=1
-                                set RIF_TRACING_PATH=${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace
-                                set PXR_PLUGINPATH_NAME=
-                                set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
-                                echo %MATERIALX_SEARCH_PATH%
-                                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                            """
-                        } else {
-                            bat """
-                                set PXR_PLUGINPATH_NAME=
-                                set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
-                                echo %MATERIALX_SEARCH_PATH%
-                                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                            """
-                        }
-                        break
+            switch(osName) {
+                case 'Windows':
+                    if (options.enableRIFTracing) {
+                        bat """
+                            mkdir "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
+                            set RIF_TRACING_ENABLED=1
+                            set RIF_TRACING_PATH=${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace
+                            set PXR_PLUGINPATH_NAME=
+                            set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
+                            echo %MATERIALX_SEARCH_PATH%
+                            run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        """
+                    } else {
+                        bat """
+                            set PXR_PLUGINPATH_NAME=
+                            set MATERIALX_SEARCH_PATH=C:\\TestResources\\rpr_usdplugin_autotests_assets\\Resources\\RPRMaterialLibrary\\Materials
+                            echo %MATERIALX_SEARCH_PATH%
+                            run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        """
+                    }
+                    break
 
-                    case 'OSX':
-                        if (options.enableRIFTracing) {
-                            sh """
-                                mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
-                                export RIF_TRACING_ENABLED=1
-                                export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
-                                chmod +x run.sh
-                                export PXR_PLUGINPATH_NAME=
-                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
-                                echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                            """
-                        } else {
-                            sh """
-                                chmod +x run.sh
-                                export PXR_PLUGINPATH_NAME=
-                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
-                                echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                            """
-                        }
-                        break
+                case 'OSX':
+                    if (options.enableRIFTracing) {
+                        sh """
+                            mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
+                            export RIF_TRACING_ENABLED=1
+                            export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
+                            chmod +x run.sh
+                            export PXR_PLUGINPATH_NAME=
+                            export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                            echo \$MATERIALX_SEARCH_PATH
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        """
+                    } else {
+                        sh """
+                            chmod +x run.sh
+                            export PXR_PLUGINPATH_NAME=
+                            export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                            echo \$MATERIALX_SEARCH_PATH
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        """
+                    }
+                    break
 
-                    default:
-                        if (options.enableRIFTracing) {
-                            sh """
-                                mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
-                                export RIF_TRACING_ENABLED=1
-                                export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
-                                export LD_LIBRARY_PATH="/home/\$(eval whoami)/Houdini/hfs19.0.383/dsolib"
-                                chmod +x run.sh
-                                export PXR_PLUGINPATH_NAME=
-                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
-                                echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                            """
-                        } else {
-                            sh """
-                                export LD_LIBRARY_PATH="/home/\$(eval whoami)/Houdini/hfs19.0.383/dsolib"
-                                chmod +x run.sh
-                                export PXR_PLUGINPATH_NAME=
-                                export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
-                                echo \$MATERIALX_SEARCH_PATH
-                                ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                            """
-                        }
-                }
+                default:
+                    if (options.enableRIFTracing) {
+                        sh """
+                            mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
+                            export RIF_TRACING_ENABLED=1
+                            export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
+                            export LD_LIBRARY_PATH="/home/\$(eval whoami)/Houdini/hfs19.0.383/dsolib"
+                            chmod +x run.sh
+                            export PXR_PLUGINPATH_NAME=
+                            export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                            echo \$MATERIALX_SEARCH_PATH
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        """
+                    } else {
+                        sh """
+                            export LD_LIBRARY_PATH="/home/\$(eval whoami)/Houdini/hfs19.0.383/dsolib"
+                            chmod +x run.sh
+                            export PXR_PLUGINPATH_NAME=
+                            export MATERIALX_SEARCH_PATH=\$CIS_TOOLS/../TestResources/rpr_usdplugin_autotests_assets/Resources/RPRMaterialLibrary/Materials
+                            echo \$MATERIALX_SEARCH_PATH
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" \"${rprTracesRoot}\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        """
+                    }
             }
         }
     }
@@ -187,9 +184,6 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
         }
-    }
-    if (options.sendToUMS) {
-        options.universeManager.startTestsStage(osName, asicName, options)
     }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -273,16 +267,10 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             archiveArtifacts artifacts: "${env.STAGE_NAME}_RIF_Trace/**/*.*", allowEmptyArchive: true
             archiveArtifacts artifacts: "${env.STAGE_NAME}_RPR_Trace/**/*.*", allowEmptyArchive: true
-            if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
-            }
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Houdini/session_report.json")) {
                         def sessionReport = readJSON file: 'Results/Houdini/session_report.json'
-                        if (options.sendToUMS) {
-                            options.universeManager.finishTestsStage(osName, asicName, options)
-                        }
                         if (sessionReport.summary.error > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
@@ -387,13 +375,6 @@ def executeBuildWindows(String osName, Map options) {
             String ARTIFACT_NAME = "${options.win_build_name}.tar.gz"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                // WARNING! call sendToMinio in build stage only from parent directory
-                dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "..\\RadeonProRenderUSD\\build", ARTIFACT_NAME, false)
-                }
-            }
-
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
@@ -450,13 +431,6 @@ def executeBuildOSX(String osName, Map options) {
             String ARTIFACT_NAME = "${options.osx_build_name}.tar.gz"
             sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
-
-            if (options.sendToUMS) {
-                // WARNING! call sendToMinio in build stage only from parent directory
-                dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", ARTIFACT_NAME, false)
-                }
-            }
 
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
@@ -530,13 +504,6 @@ def executeBuildUnix(String osName, Map options) {
             sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                // WARNING! call sendToMinio in build stage only from parent directory
-                dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", ARTIFACT_NAME, false)
-                }
-            }
-
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
@@ -546,9 +513,7 @@ def executeBuildUnix(String osName, Map options) {
 
 
 def executeBuild(String osName, Map options) {
-    if (options.sendToUMS) {
-        options.universeManager.startBuildStage(osName)
-    }
+
     if (options.buildType == "Houdini") {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.INSTALL_HOUDINI) {
             timeout(time: "20", unit: "MINUTES") {
@@ -613,13 +578,6 @@ def executeBuild(String osName, Map options) {
         archiveArtifacts "*.log"
         if (options.rebuildUSD) {
             archiveArtifacts "USD/*.log"
-        }
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
-            if (options.rebuildUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../UMS/", "*.log")
-            }
-            options.universeManager.finishBuildStage(osName)
         }
     }
 }
@@ -715,7 +673,6 @@ def executePreBuild(Map options) {
         }
     }
 
-    options.groupsUMS = []
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_houdini') {
             checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
@@ -729,18 +686,12 @@ def executePreBuild(Map options) {
                 def groupNames = readJSON(file: "jobs/${options.testsPackage}")["groups"].collect { it.key }
                 // json means custom test suite. Split doesn't supported
                 options.tests = groupNames.join(" ")
-                options.groupsUMS = groupNames
                 options.testsPackage = "none"
-            } else {
-                options.groupsUMS = options.tests.split(" ")
             }
             options.testsList = ['']
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
-        }
-        if (options.sendToUMS) {
-            options.universeManager.createBuilds(options)
         }
     }
 
@@ -800,9 +751,6 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
                             writeJSON file: 'retry_info.json', json: JSONSerializer.toJSON(retryInfo, new JsonConfig()), pretty: 4
-                        }
-                        if (options.sendToUMS) {
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         if (options.buildType == "Houdini") {
                             def tool = "Houdini ${options.houdiniVersion}"
@@ -933,7 +881,7 @@ def call(String projectRepo = PROJECT_REPO,
         String parallelExecutionTypeString = "TakeOneNodePerGPU",
         Boolean enableNotifications = true,
         Boolean forceBuild = false,
-        Boolean sendToUMS = true || updateRefs.contains('Update')) {
+        Boolean sendToUMS = false) {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
@@ -976,17 +924,10 @@ def call(String projectRepo = PROJECT_REPO,
                         problemMessageManager: problemMessageManager,
                         platforms: platforms,
                         parallelExecutionType: parallelExecutionType,
-                        sendToUMS: false,
-                        universePlatforms: convertPlatforms(platforms),
                         storeOnNAS: true,
                         flexibleUpdates: true,
                         finishedBuildStages: new ConcurrentHashMap()
                         ]
-            if (sendToUMS) {
-                UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
-                manager.init()
-                options["universeManager"] = manager
-            }
         }
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
@@ -995,8 +936,5 @@ def call(String projectRepo = PROJECT_REPO,
         throw e
     } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
-        if (sendToUMS) {
-            options.universeManager.closeBuild(problemMessage, options)
-        }
     }
 }

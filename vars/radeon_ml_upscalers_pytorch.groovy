@@ -94,6 +94,8 @@ def executeTestCommand(String osName, String asicName, Map options)
             
 
             for (test in options.tests) {
+                run_with_retries.abortOldBuilds(options)
+
                 dir ("nbs") {
                     try {
                         if (fileExists("${test}.ipynb")) {
@@ -259,8 +261,9 @@ def call(String projectBranch = "",
                         recreateCondaEnv:recreateCondaEnv,
                         executeBuild:false,
                         executeTests:true,
-                        TEST_TIMEOUT:70,
-                        retriesForTestStage:1]
+                        TEST_TIMEOUT:90,
+                        retriesForTestStage:1,
+                        abortOldAutoBuilds:true]
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
