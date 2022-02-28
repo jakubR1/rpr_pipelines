@@ -791,8 +791,39 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+            withNotifications(options: options, configuration: NotificationConfiguration.ENGINES_PARAM) {
+                if (!enginesNames) {
+                    throw new Exception()
+                }
+            }
+            
+            enginesNames = enginesNames.split(',') as List
+            def formattedEngines = []
+            enginesNames.each {
+                formattedEngines.add(it.replace(' ', '_'))
+            }
 
             Boolean isPreBuilt = customBuildLinkWindows
+
+            if (isPreBuilt) {
+                //remove platforms for which pre built plugin is not specified
+                String filteredPlatforms = ""
+
+                platforms.split(';').each() { platform ->
+                    List tokens = platform.tokenize(':')
+                    String platformName = tokens.get(0)
+
+                    switch(platformName) {
+                        case 'Windows':
+                            if (customBuildLinkWindows) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                    }
+                }
+
+                platforms = filteredPlatforms
+            }
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
@@ -855,6 +886,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         iter: iter,
                         theshold: theshold,
                         customBuildLinkWindows: customBuildLinkWindows,
+                        engines: formattedEngines,
                         enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
                         errorsInSuccession: errorsInSuccession,
