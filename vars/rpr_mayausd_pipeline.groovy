@@ -124,7 +124,7 @@ def executeTests(String osName, String asicName, Map options) {
         timeout(time: "15", unit: "MINUTES") {
             installRPRMayaUSDPlugin(osName, options)
         }
-    catch (e) {
+    } catch (e) {
         String additionalDescription = ""
         if (options.currentTry + 1 < options.nodeReallocateTries) {
             stashResults = false
