@@ -750,6 +750,15 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     } finally {}
 }
 
+def appendPlatform(String filteredPlatforms, String platform) {
+    if (filteredPlatforms) {
+        filteredPlatforms +=  ";" + platform
+    } else  {
+        filteredPlatforms += platform
+    }
+    return filteredPlatforms
+}
+
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaUSD.git",
         String projectBranch = "",
         String testsBranch = "master",
