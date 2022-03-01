@@ -132,10 +132,6 @@ def executeTests(String osName, String asicName, Map options) {
     options.parsedTests = options.tests.split("-")[0]
     options.engine = options.tests.split("-")[1]
 
-    if (options.sendToUMS){
-        options.universeManager.startTestsStage(osName, asicName, options)
-    }
-
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
     try {
@@ -291,19 +287,12 @@ def executeTests(String osName, String asicName, Map options) {
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
-            if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
-            }
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Maya/session_report.json")) {
 
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Maya/session_report.json'
-
-                        if (options.sendToUMS) {
-                            options.universeManager.finishTestsStage(osName, asicName, options)
-                        }
 
                         if (sessionReport.summary.error > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
@@ -743,10 +732,6 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         dir("..\\summaryTestResults") {
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                        }
-                        if (options.sendToUMS) {
-                            options.engine = engine
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         try {
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
