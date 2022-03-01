@@ -45,6 +45,8 @@ def installRPRMayaUSDPlugin(String osName, Map options) {
         throw new Exception("Failed to install plugin")
     }
 
+    String modulesPath = "C:\\Program Files\\Common Files\\Autodesk Shared\\Modules\\maya\\${options.toolVersion}"
+
     // Move mayausd.mod due to conflict with RPRMayaUSD.mod
     status = bat(returnStatus: true, script: "MOVE /Y \"${modulesPath}\\mayausd.mod\" \"${modulesPath}\\..\"")
     
@@ -95,7 +97,35 @@ def buildRenderCache(String osName, String toolVersion, String log_name, Integer
 }
 
 def executeTestCommand(String osName, String asicName, Map options) {
-    
+    def testTimeout = options.timeouts["${options.parsedTests}"]
+    String testsNames = options.parsedTests
+    String testsPackageName = options.testsPackage
+    if (options.testsPackage != "none" && !options.isPackageSplitted) {
+        if (options.parsedTests.contains(".json")) {
+            // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
+            testsPackageName = options.parsedTests
+            testsNames = ""
+        } else {
+            // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
+            testsPackageName = "none"
+        }
+    }
+
+    println "Set timeout to ${testTimeout}"
+
+    timeout(time: testTimeout, unit: 'MINUTES') { 
+        switch(osName) {
+            case 'Windows':
+                dir('scripts') {
+                    bat """
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                    """
+                }
+                break
+            default:
+                println("[WARNING] ${osName} is not supported")
+        }
+    }
 }
 
 def executeTests(String osName, String asicName, Map options) {
@@ -109,20 +139,105 @@ def executeTests(String osName, String asicName, Map options) {
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
     try {
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-            timeout(time: "15", unit: "MINUTES") {
-                getProduct(osName, options)
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "15", unit: "MINUTES") {                
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
         }
 
-        timeout(time: "15", unit: "MINUTES") {
-            uninstallRPRMayaPlugin(osName, options)
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_maya_autotests_assets" : "/mnt/c/TestResources/usd_maya_autotests_assets"
+            downloadFiles("/volume1/Assets/usd_maya_autotests/", assets_dir)
+        }
+        try {
+            Boolean newPluginInstalled = false
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
+                timeout(time: "15", unit: "MINUTES") {
+                    getProduct(osName, options)
+                }
+            }
+
+            timeout(time: "15", unit: "MINUTES") {
+                uninstallRPRMayaPlugin(osName, options)
+            }
+
+            println "Start plugin installation"
+
+            timeout(time: "15", unit: "MINUTES") {
+                installRPRMayaUSDPlugin(osName, options)
+                newPluginInstalled = true
+            }
+
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
+                if (newPluginInstalled) {
+                    timeout(time: "20", unit: "MINUTES") {
+                        String cacheImgPath = "./Work/Results/Maya/cache_building.jpg"
+                        utils.removeFile(this, osName, cacheImgPath)
+                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
+                        if(!fileExists(cacheImgPath)){
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                        }
+                    }
+                }
+            }
+        } catch(e) {
+            println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
+            // deinstalling broken addon
+            uninstallRPRMayaUSDPlugin(osName, options)
+            // remove installer of broken addon
+            removeInstaller(osName: osName, options: options)
+            throw e
         }
 
-        println "Start plugin installation"
+        String enginePostfix = ""
+        String REF_PATH_PROFILE="/volume1/Baselines/usd_maya_autotests/${asicName}-${osName}"
+        switch(options.engine) {
+            case 'Northstar':
+                enginePostfix = "NorthStar"
+                break
+        }
+        REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
 
-        timeout(time: "15", unit: "MINUTES") {
-            installRPRMayaUSDPlugin(osName, options)
+        options.REF_PATH_PROFILE = REF_PATH_PROFILE
+
+        outputEnvironmentInfo(osName, options.stageName, options.currentTry)
+
+        if (options["updateRefs"].contains("Update")) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+                executeTestCommand(osName, asicName, options)
+                executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                // delete generated baselines when they're sent 
+                switch(osName) {
+                    case "Windows":
+                        bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
+                        break       
+                }
+            }
+        } else {
+            withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
+                String baseline_dir = "/mnt/c/TestResources/usd_maya_autotests_baselines"
+                baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
+                println "[INFO] Downloading reference images for ${options.parsedTests}"
+                options.parsedTests.split(" ").each() {
+                    if (it.contains(".json")) {
+                        downloadFiles("${REF_PATH_PROFILE}/", baseline_dir)
+                    } else {
+                        downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                    }
+                }
+            }
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+                executeTestCommand(osName, asicName, options)
+            }
+        }
+        options.executeTestsFinished = true
+
+        if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] != -1) {
+            // mark that one group was finished and counting of errored groups in succession must be stopped
+            options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
         }
     } catch (e) {
         String additionalDescription = ""
