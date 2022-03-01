@@ -1,14 +1,6 @@
-def executeGenTestRefCommand(String osName, Map options)
-{
-}
+import groovy.transform.Field
 
-def executeTestCommand(String osName, Map options)
-{
-}
-
-def executeTests(String osName, String asicName, Map options)
-{   
-}
+@Field final String PROJECT_REPO = "git@github.com:Radeon-Pro/WebUsdViewer.git"
 
 def executeBuildWindows(Map options)
 {
@@ -31,7 +23,6 @@ def executeBuildWindows(Map options)
             """
 
             zip archive: true, dir: "Build/Install", glob: '', zipFile: "WebUsdViewer_Windows.zip"
-            makeStash(includes: "WebUsdViewer_Windows.zip", name: 'WebUsdViewer_Windows', preZip: false)
         }
     } catch(e) {
         println("Error during build on Windows")
@@ -73,7 +64,6 @@ def executeBuildLinux(Map options)
         """
         
         archiveArtifacts "WebUsdViewer_Ubuntu20.tar.gz"
-        makeStash(includes: "WebUsdViewer_Ubuntu20.tar.gz", name: 'WebUsdViewer_Ubuntu20', preZip: false)
     } catch(e) {
         println("Error during build on Linux")
         println(e.toString())
@@ -131,18 +121,13 @@ def executePreBuild(Map options)
 }
 
 
-def executeDeploy(Map options, List platformList, List testResultList)
-{
-}
-
-
 def call(String projectBranch = "",
          String platforms = 'Windows;Ubuntu20',
          Boolean enableNotifications = true) {
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [projectBranch:projectBranch,
-                            projectRepo:"git@github.com:Radeon-Pro/WebUsdViewer.git",
+                            projectRepo:PROJECT_REPO,
                             enableNotifications:enableNotifications,
                             PRJ_NAME:'WebUsdViewer',
                             PRJ_ROOT:'radeon-pro',
