@@ -315,8 +315,9 @@ def executeBuildWindows(String osName, Map options) {
                     python --version >> ..\\${STAGE_NAME}.log  2>&1
                     python -m pip install PySide2 >> ..\\${STAGE_NAME}.log  2>&1
                     python -m pip install PyOpenGL >> ..\\${STAGE_NAME}.log  2>&1
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
-                    call python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    waitfor 1 /t 10 2>NUL || type nul>nul
+                    python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
                 """
 
                 if (options.updateDeps) {
@@ -325,7 +326,8 @@ def executeBuildWindows(String osName, Map options) {
             } else {
                 bat """
                     python --version >> ..\\${STAGE_NAME}.log  2>&1
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    waitfor 1 /t 10 2>NUL || type nul>nul
                     python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
                 """
             }
