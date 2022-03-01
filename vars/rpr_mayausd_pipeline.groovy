@@ -1,5 +1,4 @@
 import groovy.transform.Field
-import universe.*
 import groovy.json.JsonOutput;
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -60,10 +59,6 @@ def executeBuildWindows(Map options) {
 }
 
 def executeBuild(String osName, Map options) {
-    if (options.sendToUMS){
-        options.universeManager.startBuildStage(osName)
-    }
-
     try {
         dir("RPRMayaUSD") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -86,10 +81,6 @@ def executeBuild(String osName, Map options) {
         throw e
     } finally {
         archiveArtifacts "*.log"
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
-            options.universeManager.finishBuildStage(osName)
-        }
     }
 }
 
@@ -238,7 +229,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String toolVersion = "2022",
         Boolean forceBuild = false,
         Boolean splitTestsExecution = true,
-        Boolean sendToUMS = true,
+        Boolean sendToUMS = false,
         String resX = '0',
         String resY = '0',
         String SPU = '25',
@@ -280,8 +271,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            def universePlatforms = convertPlatforms(platforms);
-
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
             println "Platforms: ${platforms}"
@@ -289,8 +278,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
-            println "Send to UMS: ${sendToUMS} "
-            println "UMS platforms: ${universePlatforms}"
 
             String prRepoName = ""
             String prBranchName = ""
@@ -321,7 +308,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         forceBuild:forceBuild,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
-                        sendToUMS:false,
                         gpusCount:gpusCount,
                         TEST_TIMEOUT:120,
                         ADDITIONAL_XML_TIMEOUT:15,
@@ -329,7 +315,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         DEPLOY_TIMEOUT:180,
                         BUILDER_TAG:"MayaUSDBuilder",
                         TESTER_TAG:tester_tag,
-                        universePlatforms: universePlatforms,
                         resX: resX,
                         resY: resY,
                         SPU: SPU,
@@ -349,12 +334,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         storeOnNAS: true,
                         flexibleUpdates: true
                         ]
-
-            if (sendToUMS) {
-                UniverseManager universeManager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
-                universeManager.init()
-                options["universeManager"] = universeManager
-            }
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
@@ -365,9 +344,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         throw e
     } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
-        if (options.sendToUMS) {
-            options.universeManager.closeBuild(problemMessage, options)
-        }
     }
 
 }

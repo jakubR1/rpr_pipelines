@@ -1,6 +1,5 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
-import universe.*
 import utils
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -49,22 +48,20 @@ def buildRenderCache(String osName, String logName, Integer currentTry) {
 }
 
 def executeTestCommand(String osName, String asicName, Map options) {
-    UniverseManager.executeTests(osName, asicName, options) {
-        switch(osName) {
-            case "Windows":
-                dir("scripts") {
-                    bat """
-                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                    """
-                }
-                break
-            default:
-                dir("scripts") {
-                    sh """
-                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                    """
-                }
-        }
+    switch(osName) {
+        case "Windows":
+            dir("scripts") {
+                bat """
+                    run.bat ${options.testsPackage} \"${options.tests}\" ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                """
+            }
+            break
+        default:
+            dir("scripts") {
+                sh """
+                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                """
+            }
     }
 }
 

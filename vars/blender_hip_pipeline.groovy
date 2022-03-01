@@ -1,6 +1,5 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
-import universe.*
 import utils
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
