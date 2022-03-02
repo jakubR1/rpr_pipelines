@@ -871,8 +871,7 @@ def call(String projectRepo = PROJECT_REPO,
         Boolean incrementVersion = true,
         String parallelExecutionTypeString = "TakeOneNodePerGPU",
         Boolean enableNotifications = true,
-        Boolean forceBuild = false,
-        Boolean sendToUMS = false) {
+        Boolean forceBuild = false) {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
