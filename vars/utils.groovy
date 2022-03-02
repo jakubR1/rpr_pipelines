@@ -435,6 +435,7 @@ class utils {
      * @return percentage difference of images (0 - similar, 100 - different)
      */
     static Double compareImages(Object self, String img1, String img2) {
+        self.python3("-m pip install -r ./jobs_launcher/install/requirements.txt")
         return self.python3("./jobs_launcher/common/scripts/CompareMetrics.py --img1 ${img1} --img2 ${img2}").with {
             (self.isUnix() ? it : it.split(" ").last()) as Double
         }
