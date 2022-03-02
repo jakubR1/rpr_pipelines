@@ -26,7 +26,11 @@ def call(String osName, Map options) {
             break
 
         case 'OSX':
-            println "Not supported"
+            println("[WARNING] Matlib installation is not supported on OSX")
+            break
+
+        case 'MacOS_ARM':
+            println("[WARNING] Matlib installation is not supported on MacOS ARM")
             break
 
         default:

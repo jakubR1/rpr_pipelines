@@ -160,17 +160,15 @@ def executeTests(String osName, String asicName, Map options)
                 }
             }
         
-            if (osName != "MacOS_ARM") {
-                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
-                    if (newPluginInstalled) {                         
-                        timeout(time: "12", unit: "MINUTES") {
-                            buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
-                            String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
-                            if(!fileExists(cacheImgPath)){
-                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
-                            } else {
-                                verifyMatlib("Blender", cacheImgPath, 70, osName, options)
-                            }
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
+                if (newPluginInstalled) {                         
+                    timeout(time: "12", unit: "MINUTES") {
+                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
+                        String cacheImgPath = "./Work/Results/Blender/cache_building.jpg"
+                        if(!fileExists(cacheImgPath)){
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                        } else {
+                            verifyMatlib("Blender", cacheImgPath, 70, osName, options)
                         }
                     }
                 }
