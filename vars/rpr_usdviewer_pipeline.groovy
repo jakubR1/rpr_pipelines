@@ -1015,7 +1015,6 @@ def call(String projectBranch = "",
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 3,
-         Boolean sendToUMS = false,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
