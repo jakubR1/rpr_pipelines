@@ -993,7 +993,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String tests = "",
     Boolean forceBuild = false,
     Boolean splitTestsExecution = true,
-    Boolean sendToUMS = false,
     String resX = '0',
     String resY = '0',
     String SPU = '25',
