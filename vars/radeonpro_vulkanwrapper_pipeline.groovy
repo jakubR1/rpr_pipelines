@@ -129,7 +129,7 @@ def executeBuildLinux(Map options, String osName="linux")
         archiveArtifacts "*.log"
     }
    
-    if (osName == "Ubuntu18") {
+    if (osName.startsWith("Ubuntu")) {
 
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
@@ -157,7 +157,7 @@ def executeBuildLinux(Map options, String osName="linux")
             cp external/glslang/glslang/OSDependent/Unix/libOSDependent.a publish-archive-norrn/lib/libOSDependent.a
         """
 
-        zip archive: true, dir: 'build/publish-archive-norrn', glob: '', zipFile: "RadeonProVulkanWrapper-Ubuntu18-RPRNEXT_OFF.zip"
+        zip archive: true, dir: 'build/publish-archive-norrn', glob: '', zipFile: "RadeonProVulkanWrapper-Ubuntu20-RPRNEXT_OFF.zip"
    }
 
    if (failure) {
@@ -226,7 +226,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def call(String projectBranch = "",
-         String platforms = 'Windows;Ubuntu18;CentOS7',
+         String platforms = 'Windows;Ubuntu20;CentOS7',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release") {

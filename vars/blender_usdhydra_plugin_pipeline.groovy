@@ -31,7 +31,7 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
                     make_results_baseline.bat ${delete}
                 """
                 break
-            // OSX & Ubuntu18
+            // OSX & Ubuntu
             default:
                 sh """
                     ./make_results_baseline.sh ${delete}
@@ -85,7 +85,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                 """
             }
             break
-        // OSX & Ubuntu18
+        // OSX & Ubuntu
         default:
             dir("scripts") {
                 sh """

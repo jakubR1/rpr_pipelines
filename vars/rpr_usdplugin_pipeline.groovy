@@ -461,7 +461,7 @@ def executeBuildUnix(String osName, Map options) {
     }
 
     dir("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         String installation_path
         if (env.HOUDINI_INSTALLATION_PATH) {
             installation_path = "${env.HOUDINI_INSTALLATION_PATH}"
@@ -486,19 +486,10 @@ def executeBuildUnix(String osName, Map options) {
 
         dir("build") {
             if (options.buildType == "Houdini") {
-                if (osName == "Ubuntu18") {
-                    options.ubuntu_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-ubuntu18.04"
-                } else {
-                    options.centos_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${osName}"
-                }
+                options.unix_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${osName}"
             } else if (options.buildType == "USD") {
-                if (osName == "Ubuntu18") {
-                    options.ubuntu_build_name = "hdRpr-${options.pluginVersion}-USD-ubuntu18.04"
-                } else {
-                    options.centos_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
-                }
+                options.unix_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
             }
-            if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
 
             String ARTIFACT_NAME = "${options.unix_build_name}.tar.gz"
             sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"

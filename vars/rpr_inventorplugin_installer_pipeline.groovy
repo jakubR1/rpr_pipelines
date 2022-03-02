@@ -410,14 +410,6 @@ def executeTests(String osName, String asicName, Map options) {
                                 // remove broken usdviewer
                                 removeInstaller(osName: osName, options: options, extension: "zip")
                                 collectCrashInfo(osName, options, options.currentTry)
-                                if (osName == "Ubuntu18") {
-                                    sh """
-                                        echo "Restarting Unix Machine...."
-                                        hostname
-                                        (sleep 3; sudo shutdown -r now) &
-                                    """
-                                    sleep(60)
-                                }
                                 String errorMessage = (options.currentTry < options.nodeReallocateTries) ? "All tests were marked as error. The test group will be restarted." : "All tests were marked as error."
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }

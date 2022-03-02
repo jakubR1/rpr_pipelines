@@ -287,7 +287,7 @@ class utils {
                         rename \"${oldName}\" \"${newName}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         mv ${oldName} ${newName}
@@ -310,7 +310,7 @@ class utils {
                         move \"${source}\" \"${destination}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         mv ${source} ${destination}
@@ -333,7 +333,7 @@ class utils {
                         echo F | xcopy /s/y/i \"${source}\" \"${destination}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         cp ${source} ${destination}
@@ -354,7 +354,7 @@ class utils {
                         if exist \"${fileName}\" del \"${fileName}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         rm -rf \"${fileName}\"
@@ -376,7 +376,7 @@ class utils {
                         if exist \"${dirName}\" rmdir /Q /S \"${dirName}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         rm -rf \"${dirName}\"
