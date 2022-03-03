@@ -212,7 +212,9 @@ def executePreBuild(Map options)
         if (options.executeAllTests) {
             dir ("nbs") {
                 options.tests = []
+                println "${options.tests}"
                 def ipynb_files = findFiles(glob: "*.ipynb")
+                println "${ipynb_files}"
                 for (file in ipynb_files) {
                     options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
                 }
