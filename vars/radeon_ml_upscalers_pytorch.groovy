@@ -169,20 +169,20 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuild(String osName, Map options) {}
 
 
-def executePreBuild(String osName, Map options)
+def executePreBuild(Map options)
 {
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
 
-    if (osName == "Windows") {
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-    } else {
+    if (options.platform.contains('Ubuntu')) {
         options.commitAuthor = sh (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = sh (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
         options.commitSHA = sh (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    } else {
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
     }
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
@@ -269,7 +269,8 @@ def call(String projectBranch = "",
                         executeTests:true,
                         TEST_TIMEOUT:90,
                         retriesForTestStage:1,
-                        abortOldAutoBuilds:true]
+                        abortOldAutoBuilds:true
+                        platforms:platforms]
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
