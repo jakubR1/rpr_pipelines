@@ -175,7 +175,7 @@ def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [platforms:platforms,
-                            projectRepo:projectRepo
+                            projectRepo:projectRepo,
                             projectBranch:projectBranch,
                             PRJ_NAME:'MIOpen',
                             PRJ_ROOT:'rpr-ml',
