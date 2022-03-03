@@ -269,7 +269,7 @@ def call(String projectBranch = "",
                         executeTests:true,
                         TEST_TIMEOUT:90,
                         retriesForTestStage:1,
-                        abortOldAutoBuilds:true
+                        abortOldAutoBuilds:true,
                         platforms:platforms]
         }
 
