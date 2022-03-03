@@ -174,15 +174,10 @@ def executePreBuild(Map options)
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
-    println "${options.platforms[0]}"
-    println "${options.platforms}"
-    println "${options.platforms.contains('Ubuntu')}"
-    options.commitAuthor = sh (script: "git log --pretty='format:%an' -1",returnStdout: true)
-    println "TEEEST ${options.commitAuthor}"
     if (options.platforms.contains('Ubuntu')) {
-        options.commitAuthor = sh (script: "git log --pretty='format:%an' -1",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = sh (script: "git log --pretty='format:%s' -1", returnStdout: true).split('\r\n')[2].trim()
-        options.commitSHA = sh (script: "git log --pretty='format:%H' -1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitAuthor = sh (script: "git log --pretty='format:%an' -1",returnStdout: true)
+        options.commitMessage = sh (script: "git log --pretty='format:%s' -1", returnStdout: true)
+        options.commitSHA = sh (script: "git log --pretty='format:%H' -1", returnStdout: true)
     } else {
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
