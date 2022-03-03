@@ -175,7 +175,7 @@ def executePreBuild(Map options)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
 
-    if (options.platform.contains('Ubuntu')) {
+    if (options.platforms.contains('Ubuntu')) {
         options.commitAuthor = sh (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = sh (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
         options.commitSHA = sh (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
