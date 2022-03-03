@@ -169,15 +169,21 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuild(String osName, Map options) {}
 
 
-def executePreBuild(Map options)
+def executePreBuild(String osName, Map options)
 {
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
 
-    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    if (osName == "Windows") {
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    } else {
+        options.commitAuthor = sh (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = sh (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = sh (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    }
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
