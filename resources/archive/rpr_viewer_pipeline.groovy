@@ -49,22 +49,22 @@ def getViewerTool(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "appUbuntu18", unzip: false)
+                makeUnstash(name: "appUbuntu20", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp RprViewer_Ubuntu18.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    cp RprViewer_Ubuntu20.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
                 """ 
 
             } else {
 
                 println "[INFO] The plugin ${options.pluginUbuntuSha}.zip exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" RprViewer_Ubuntu18.zip
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" RprViewer_Ubuntu20.zip
                 """
             }
 
-            unzip zipFile: "RprViewer_Ubuntu18.zip", dir: "RprViewer", quiet: true
+            unzip zipFile: "RprViewer_Ubuntu20.zip", dir: "RprViewer", quiet: true
     }
 }
 
@@ -269,14 +269,6 @@ def executeTests(String osName, String asicName, Map options)
                                 // remove broken rprviewer
                                 removeInstaller(osName: osName, options: options, extension: "zip")
                                 collectCrashInfo(osName, options, options.currentTry)
-                                if (osName == "Ubuntu18"){
-                                    sh """
-                                        echo "Restarting Unix Machine...."
-                                        hostname
-                                        (sleep 3; sudo shutdown -r now) &
-                                    """
-                                    sleep(60)
-                                }
                                 String errorMessage
                                 if (options.currentTry < options.nodeReallocateTries) {
                                     errorMessage = "All tests were marked as error. The test group will be restarted."
@@ -352,7 +344,7 @@ def executeBuildWindows(Map options)
 
 def executeBuildLinux(Map options)
 {
-    withNotifications(title: "Ubuntu18", options: options, logUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+    withNotifications(title: "Ubuntu20", options: options, logUrl: "${BUILD_URL}/artifact/Build-Ubuntu20.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             mkdir build
             cd build
@@ -361,7 +353,7 @@ def executeBuildLinux(Map options)
         """
     }
 
-    withNotifications(title: "Ubuntu18", options: options, artifactUrl: "${BUILD_URL}/artifact/RprViewer_Ubuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "Ubuntu20", options: options, artifactUrl: "${BUILD_URL}/artifact/RprViewer_Ubuntu20.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         sh """
             mkdir ${options.DEPLOY_FOLDER}
             cp config.json ${options.DEPLOY_FOLDER}
@@ -379,9 +371,9 @@ def executeBuildLinux(Map options)
             cp -rf build/viewer/engines ${options.DEPLOY_FOLDER}/engines
         """
 
-        zip archive: true, dir: "${options.DEPLOY_FOLDER}", glob: '', zipFile: "RprViewer_Ubuntu18.zip"
-        makeStash(includes: "RprViewer_Ubuntu18.zip", name: "appUbuntu18", preZip: false)
-        options.pluginUbuntuSha = sha1 "RprViewer_Ubuntu18.zip"
+        zip archive: true, dir: "${options.DEPLOY_FOLDER}", glob: '', zipFile: "RprViewer_Ubuntu20.zip"
+        makeStash(includes: "RprViewer_Ubuntu20.zip", name: "appUbuntu20", preZip: false)
+        options.pluginUbuntuSha = sha1 "RprViewer_Ubuntu20.zip"
     }
 }
 
@@ -743,7 +735,6 @@ def call(String projectBranch = "",
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
-         Boolean sendToUMS = false,
          String tester_tag = 'RprViewer',
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 3)
@@ -787,7 +778,6 @@ def call(String projectBranch = "",
                         tests:tests,
                         nodeRetry: nodeRetry,
                         errorsInSuccession: errorsInSuccession,
-                        sendToUMS: false,
                         universePlatforms: universePlatforms,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,

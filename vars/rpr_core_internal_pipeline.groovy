@@ -242,14 +242,6 @@ def executeTests(String osName, String asicName, Map options)
                                 // remove brocken core package
                                 removeInstaller(osName: osName, options: options, extension: "zip")
                                 collectCrashInfo(osName, options, options.currentTry)
-                                if (osName == "Ubuntu18"){
-                                    sh """
-                                        echo "Restarting Unix Machine...."
-                                        hostname
-                                        (sleep 3; sudo shutdown -r now) &
-                                    """
-                                    sleep(60)
-                                }
                                 String errorMessage
                                 if (options.currentTry < options.nodeReallocateTries) {
                                     errorMessage = "All tests were marked as error. The test group will be restarted."
@@ -656,7 +648,6 @@ def call(String projectBranch = "",
          String width = "0",
          String height = "0",
          String iterations = "0",
-         Boolean sendToUMS = false,
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
