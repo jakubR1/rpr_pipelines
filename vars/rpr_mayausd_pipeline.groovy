@@ -15,6 +15,25 @@ import java.util.concurrent.atomic.AtomicInteger
     artifactNameBase: "RPRMayaUSD_Setup"
 )
 
+def executeGenTestRefCommand(String osName, Map options, Boolean delete)
+{
+    dir('scripts') {
+        switch(osName) {
+            case 'Windows':
+                bat """
+                    make_results_baseline.bat ${delete}
+                """
+                break
+            // OSX 
+            default:
+                sh """
+                    ./make_results_baseline.sh ${delete}
+                """
+                break
+        }
+    }
+}
+
 def uninstallRPRMayaPlugin(String osName, Map options) {
     println "[INFO] Uninstalling RPR Maya plugin"
     switch(osName) {
