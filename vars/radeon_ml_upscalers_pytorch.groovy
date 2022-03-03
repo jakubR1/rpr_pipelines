@@ -174,7 +174,9 @@ def executePreBuild(Map options)
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
-
+    println "${options.platforms[0]}"
+    println "${options.platforms}"
+    println "${options.platforms[0].contains('Ubuntu')}"
     if (options.platforms[0].contains('Ubuntu')) {
         options.commitAuthor = sh (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = sh (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
