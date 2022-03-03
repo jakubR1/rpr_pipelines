@@ -177,6 +177,8 @@ def executePreBuild(Map options)
     println "${options.platforms[0]}"
     println "${options.platforms}"
     println "${options.platforms.contains('Ubuntu')}"
+    options.commitAuthor = sh (script: "git show -s --format=%%an HEAD ",returnStdout: true)
+    println "${options.commitAuthor}"
     if (options.platforms.contains('Ubuntu')) {
         options.commitAuthor = sh (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = sh (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
