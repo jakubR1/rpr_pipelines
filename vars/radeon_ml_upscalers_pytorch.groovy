@@ -33,17 +33,17 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir ("nbs") {
                     try {
                         if (fileExists("${test}.ipynb")) {
-                            // GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current notebook: ${test}.ipynb"
                             sh """
                                 expect ../sh/start_test.exp ${test} ${options.notebooksTimeout} >> ../${STAGE_NAME}_${test}.log 2>&1
                                 expect ../sh/copy_result_test.exp ${test}
                                 """
                             utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
-                            // GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                         } else {
                             currentBuild.result = "FAILURE"
-                            // GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
                             options.problemMessageManager.saveUnstableReason("tested_${test}.html wasn't found\n")
                             println "[WARNING] ${test}.ipynb wasn't found"
                             }
@@ -55,7 +55,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR')) { 
                         currentBuild.result = "FAILURE"
                         archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
-                        // GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
+                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
                         options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
                         println "[ERROR] Failed to execute ${test}"
                     }
@@ -199,16 +199,16 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    // if (env.BRANCH_NAME) {
-    //     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-    //         GithubNotificator githubNotificator = new GithubNotificator(this, options)
-    //         githubNotificator.init(options)
-    //         options.githubNotificator = githubNotificator
-    //         githubNotificator.initPreBuild(BUILD_URL)
-    //     }
-    // }
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options.githubNotificator = githubNotificator
+            githubNotificator.initPreBuild(BUILD_URL)
+        }
+    }
 
-    // withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         if (options.executeAllTests) {
             dir ("nbs") {
                 options.tests = []
@@ -223,11 +223,11 @@ def executePreBuild(Map options)
             options.tests = options.tests.split(" ")
         }
         println "[INFO] Tests to be executed: ${options.tests}"
-    //}
+    }
 
-    // if (env.BRANCH_NAME && options.githubNotificator) {
-    //     options.githubNotificator.initChecks(options, BUILD_URL, true, false, false)
-    // }
+    if (env.BRANCH_NAME && options.githubNotificator) {
+        options.githubNotificator.initChecks(options, BUILD_URL, true, false, false)
+    }
     
 }
 
