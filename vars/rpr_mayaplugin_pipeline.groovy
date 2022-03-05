@@ -35,7 +35,6 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
-
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine)
 {
     try {
@@ -154,6 +153,10 @@ def executeTests(String osName, String asicName, Map options)
         try {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+                timeout(time: "15", unit: "MINUTES") {
+                    rpr_mayausd_pipeline.uninstallRPRMayaUSDPlugin(osName, options)
+                }
+
                 timeout(time: "15", unit: "MINUTES") {
                     getProduct(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, "Maya", options)
