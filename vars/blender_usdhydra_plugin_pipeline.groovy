@@ -317,7 +317,7 @@ def executeBuildWindows(String osName, Map options) {
                     python -m pip install PyOpenGL >> ..\\${STAGE_NAME}.log  2>&1
                     call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
                     waitfor 1 /t 10 2>NUL || type nul>nul
-                    python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
+                    python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
                 """
 
                 if (options.updateDeps) {
@@ -373,7 +373,7 @@ def executeBuildLinux(String osName, Map options) {
                 rm -rf ../libs
                 export OS=
                 python --version >> ../${STAGE_NAME}.log  2>&1
-                python tools/build.py -all -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
+                python tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
             """
             
             if (options.updateDeps) {
