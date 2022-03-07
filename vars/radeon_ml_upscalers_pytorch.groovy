@@ -39,7 +39,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                                 expect ../sh/start_test.exp ${test} ${options.notebooksTimeout} >> ../${STAGE_NAME}_${test}.log 2>&1
                                 expect ../sh/copy_result_test.exp ${test}
                                 """
-                            utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
+                            // utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                         } else {
                             currentBuild.result = "FAILURE"
@@ -107,7 +107,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                                 jupyter nbconvert --to html --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch --output tested/tested_${test} ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
 
                             """
-                            utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
+                            // utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                         } else {
                             currentBuild.result = "FAILURE"
