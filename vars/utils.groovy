@@ -627,7 +627,7 @@ class utils {
 
                     Boolean allReportsExists = true
 
-                    options.engines.reverse().each() { engine ->
+                    for (engine in options.engines.reverse()) {
                         String publishedReportName = ""
 
                         if (options.enginesNames) {
@@ -647,6 +647,7 @@ class utils {
                         } catch(e1) {
                             println("[INFO] Report '${publishedReportName}' not found")
                             allReportsExists = false
+                            break
                         }
 
                         locations = locations ? "${locations}::${self.BUILD_URL}/${publishedReportName}" : "${self.BUILD_URL}/${publishedReportName}"
