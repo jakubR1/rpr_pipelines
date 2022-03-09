@@ -47,7 +47,7 @@ def executeTestCommand(String osName, String asicName, Map options)
             case 'Windows':
                 dir('scripts') {
                     bat """
-                        run.bat ${options.testsPackage} \"${options.parsedTests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
                 break
@@ -55,7 +55,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${options.parsedTests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -64,7 +64,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                         sh """
-                            ./run.sh ${options.testsPackage} \"${options.parsedTests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                 }
@@ -73,11 +73,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 }
 
 def executeTests(String osName, String asicName, Map options)
-{
-    options.parsedTests = options.tests.split("-")[0]
-    options.engine = options.tests.split("-")[-1]
-    options.stageName = "${options.stageName}-${options.engine}"
-    
+{   
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
@@ -454,25 +450,27 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
-                options.engines.each(){ engine ->
-                    tempTests["groups"].each() {
-                        // TODO: fix: duck tape - error with line ending
-                        tests << "${it}-${engine}"
-                    }
+                tempTests["groups"].each() {
+                // TODO: fix: duck tape - error with line ending
+                    tests << "${it}"
                 }
-                
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
                 options.engines.each(){ engine ->
-                    tests << "${options.tests.split("-").join(" ")}-${engine}"
+                    tests << "${options.tests.split("-").join(" ")}"
                 }
                 println("[DEBUG] TESTS: ${tests}")
                 options.tests = tests
                 options.groupsUMS = tests
             }
-            options.testsList = options.tests
+
+            options.testsList = []
+            options.engines.each(){ engine ->
+                options.testsList << engine
+            }
+            
             if (options.sendToUMS) {
                 options.universeManager.createBuilds(options)   
             }
@@ -546,7 +544,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             try {
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${engine}\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"false\" \"${options.testsPackage}\" \"[]\" \"${engine}\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -736,8 +734,7 @@ def call(String projectBranch = "",
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
          String enginesNames = "Northstar64",
-         Boolean collectTrackedMetrics = false,
-         Boolean splitTestsExecution = true)
+         Boolean collectTrackedMetrics = false)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -813,7 +810,6 @@ def call(String projectBranch = "",
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
-            println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
             println "Send to UMS: ${sendToUMS} "
             println "UMS platforms: ${universePlatforms}"
@@ -867,8 +863,7 @@ def call(String projectBranch = "",
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
                         storeOnNAS: true,
-                        flexibleUpdates: true,
-                        splitTestsExecution: splitTestsExecution
+                        flexibleUpdates: true
                         ]
 
             if (sendToUMS) {
