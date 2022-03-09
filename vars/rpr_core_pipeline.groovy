@@ -74,6 +74,8 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {   
+    options.stageName = options.stageName.replace("--", "-")
+    options.engine = options.engine.split("-")[-1]
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
@@ -465,10 +467,10 @@ def executePreBuild(Map options) {
                 options.groupsUMS = tests
             }
 
-            options.testsList = ['']
+            options.testsList = []
             options.tests = tests.join(" ")
             options.engines.each(){ engine ->
-                options.testsList << engine
+                options.testsList << "-${engine}"
             }
 
             if (options.sendToUMS) {
