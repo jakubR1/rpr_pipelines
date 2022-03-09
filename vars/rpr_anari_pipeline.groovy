@@ -307,6 +307,7 @@ def executeBuildMacOS(Map options, Boolean isx86 = true) {
                 cp -R /usr/local/lib/*anari* .
                 cp -R /usr/local/bin/*anari* .
                 cp -R ../*.dylib .
+                install_name_tool -add_rpath "@executable_path" anari_regression_tests
                 tar cf Anari_${isx86 ? 'MacOS' : 'MacOS_ARM'}.tar *
             """
 
