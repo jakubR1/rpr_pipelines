@@ -451,26 +451,26 @@ def executePreBuild(Map options) {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
                 tempTests["groups"].each() {
-                // TODO: fix: duck tape - error with line ending
-                    tests << "${it}"
+                    // TODO: fix: duck tape - error with line ending
+                    tests << it.key
                 }
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
-                options.engines.each(){ engine ->
-                    tests << "${options.tests.split("-").join(" ")}"
+                options.tests.split(" ").each() {
+                    tests << "${it}"
                 }
-                println("[DEBUG] TESTS: ${tests}")
                 options.tests = tests
                 options.groupsUMS = tests
             }
 
-            options.testsList = []
+            options.testsList = ['']
+            options.tests = tests.join(" ")
             options.engines.each(){ engine ->
                 options.testsList << engine
             }
-            
+
             if (options.sendToUMS) {
                 options.universeManager.createBuilds(options)   
             }
