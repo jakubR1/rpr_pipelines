@@ -361,7 +361,7 @@ def getReportBuildArgs(Map options) {
     if (options["isPreBuilt"]) {
         return """Anari "PreBuilt" "PreBuilt" "PreBuilt" \"\" \"\""""
     } else {
-        return """Anari ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"\""""
+        return """Anari ${options.commitSHA} ${options.rprAnariBranch} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"\""""
     }
 }
 
