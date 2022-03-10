@@ -101,7 +101,7 @@ def executeTestCommand(String osName, String asicName, Map options)
         case 'Windows':
             dir('scripts') {
                 bat """
-                    run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.enginesNames} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                 """
             }
             break
@@ -109,7 +109,7 @@ def executeTestCommand(String osName, String asicName, Map options)
             dir('scripts') {
                 withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                     sh """
-                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.enginesNames} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
             }
@@ -118,7 +118,7 @@ def executeTestCommand(String osName, String asicName, Map options)
             dir('scripts') {
                 withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                     sh """
-                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.enginesNames} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
             }
@@ -651,7 +651,8 @@ def call(String projectBranch = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
-         Boolean collectTrackedMetrics = true)
+         Boolean collectTrackedMetrics = true,
+         String enginesNames = "Northstar64")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -709,6 +710,7 @@ def call(String projectBranch = "",
                         executeBuild:true,
                         executeTests:true,
                         reportName:'Test_20Report',
+                        enginesNames:enginesNames,
                         TEST_TIMEOUT:180,
                         width:width,
                         gpusCount:gpusCount,
