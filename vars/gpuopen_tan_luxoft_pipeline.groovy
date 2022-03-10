@@ -23,7 +23,11 @@ def getTanTool(String osName, Map options) {
                 """
             }
 
-            unzip zipFile: "binWindows.zip", dir: "TAN", quiet: true
+            bat """
+                    mkdir FilesToCheck
+                """
+
+            unzip zipFile: "binWindows.zip", dir: "FilesToCheck", quiet: true
 
             break
 
@@ -49,7 +53,8 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                tar -zxvf binMacOS.tar.gz
+                mkdir FilesToCheck
+                tar -zxvf binMacOS.tar.gz --directory FilesToCheck/
             """
             
             break
@@ -61,26 +66,28 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "TAN_Ubuntu18", unzip: false)
+                makeUnstash(name: "TAN_Ubuntu", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binUbuntu18.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
+                    cp binUbuntu.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
                 """ 
 
             } else {
 
                 println "[INFO] The plugin ${options.pluginUbuntuSha}.tar.gz exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu18.tar.gz
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu.tar.gz
                 """
             }
 
             sh """
-                tar -zxvf binUbuntu18.tar.gz
+                mkdir FilesToCheck
+                tar -zxvf binUbuntu.tar.gz --directory FilesToCheck/
             """
     }
 }
+
 
 
 def executeTestCommand(String osName, Map options) {
@@ -88,21 +95,23 @@ def executeTestCommand(String osName, Map options) {
         case 'Windows':
             dir('Launcher') {
                 bat """
-                    run.bat "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                    run.bat "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         case 'OSX':
             dir('Launcher') {
                 sh """
-                    ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         default:
             dir('Launcher') {
+                // todo need to add switch between tests
+                // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
                 sh """
-                    ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
     }
@@ -165,7 +174,7 @@ def executeBuildWindows(Map options) {
         @echo off
         mkdir thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
         echo Copying Qt to thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
-        xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i >nul 2>&1
+        xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i >> nul 2>&1
     """
 
     options.buildConfiguration.each() { win_build_conf ->
@@ -250,7 +259,7 @@ def executeBuildWindows(Map options) {
                     dir (win_build_name) {
                         bat """
                             SET CMAKE_PREFIX_PATH=../../../thirdparty/Qt/Qt5.9.9/5.9.9/msvc2017_64/lib/cmake/Qt5Widgets
-                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DAMF_OPEN_DIR=../../../amfOpen -DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
+                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag} -DDEFINE_AMD_OPENCL_EXTENSION=1 -DAMF_OPEN_DIR=../../../amfOpen ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
@@ -258,23 +267,22 @@ def executeBuildWindows(Map options) {
                         dir (win_build_name) {
                             bat """
                                 set msbuild="${options.msBuildPath}"
-                                %msbuild% TAN-CL.sln /target:build /maxcpucount /property:Configuration=${win_build_conf};Platform=x64 >> ../../../../${STAGE_NAME}.${win_build_name}.log 2>&1
+                                %msbuild% TAN-CL.sln /target:build /maxcpucount /p:Configuration=${win_build_conf} /p:Platform=x64 >> ../../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                             """
                         }
                     } else if (win_tool == "cmake") {
                         bat """
-                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../${STAGE_NAME}.${win_build_name}.log 2>&1
+                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../${STAGE_NAME}_${win_build_name}.log 2>&1
                         """
                     }
 
                     bat """
-                        mkdir binWindows
-                        xcopy /s/y/i vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf} binWindows\\cmake-TALibTestConvolution-bin
-                        xcopy /s/y/i vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf} binWindows\\cmake-TALibDopplerTest-bin
-                        xcopy /s/y/i vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf} binWindows\\cmake-RoomAcousticQT-bin
-                    """
-                    
-                    zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
+                        mkdir FilesToCheck
+                        xcopy /s/y/i ..\\..\\..\\bin FilesToCheck\\bin
+                        xcopy /s/y/i ..\\..\\..\\scenes FilesToCheck\\scenes
+                    """   
+
+                    zip archive: true, dir: "FilesToCheck", glob: '', zipFile: "Windows_${win_build_name}.zip"
 
                     bat """
                         rename Windows_${win_build_name}.zip binWindows.zip
@@ -374,27 +382,32 @@ def executeBuildOSX(Map options) {
 
                         if (osx_tool == "cmake") {
                             sh """
-                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} \
+                                ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} \
+                                -DAMF_OPEN_DIR=../../../amfOpen \
+                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                             """
                         } else if (osx_tool == "xcode") {
                             sh """
-                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake  .. -G "Xcode" ${cmake_flag} ${opencl_flag} \
+                                ${portaudio_flag} ${fftw_flag} ${tan_no_opencl_flag} ${amf_core_static_flag} \
+                                -DAMF_OPEN_DIR=../../../amfOpen \
+                                -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                             """
                         }
                         
                         sh """
-                            make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                            make VERBOSE=1 >> ../../../../${STAGE_NAME}_${osx_build_name}.log 2>&1
                         """
 
                         sh """
-                            mkdir binMacOS
-                            cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
-                            cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
-                            cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
+                            mkdir FilesToCheck
+                            cp -rf ../../../../bin FilesToCheck/bin
+                            cp -rf ../../../../scenes FilesToCheck/scenes
                         """
 
                         sh """
-                            tar -czvf "MacOS_${osx_build_name}.tar.gz" ./binMacOS
+                            tar -czvf "MacOS_${osx_build_name}.tar.gz" ./FilesToCheck
                         """
                         
                         archiveArtifacts "MacOS_${osx_build_name}.tar.gz"
@@ -493,7 +506,8 @@ def executeBuildLinux(String osName, Map options) {
                         fftw_flag = "-DFFTW_DIR=../../thirdparty/fftw "
                     }
 
-                    String tan_no_opencl_flag ="-DTAN_NO_OPENCL=0"
+                    String tan_no_opencl_flag = "-DTAN_NO_OPENCL=0"
+
                     if (options.TAN_NO_OPENCL == "on") {
                         tan_no_opencl_flag = "-DTAN_NO_OPENCL=1"
                     }
@@ -508,32 +522,38 @@ def executeBuildLinux(String osName, Map options) {
                     options.ub18_portaudio = "../../../../../thirdparty/portaudio"
 
                     sh """
-                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc \
+                        ${opencl_flag} ${opencl_lib_flag} ${tan_no_opencl_flag} \
+                        ${portaudio_flag} ${fftw_flag} \
+                        ${amf_core_static_flag} -DAMF_OPEN_DIR="../../../amfOpen" >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>&1
                     """
 
                     sh """
-                        make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                        make VERBOSE=1 >> ../../../../${STAGE_NAME}_${ub18_build_name}.log 2>&1
+                    """
+
+                    // todo return tests after fix
+                    // cp -rf cmake-TALibTestConvolution-bin binUbuntu/cmake-TALibTestConvolution-bin
+                    // cp -rf cmake-TALibDopplerTest-bin binUbuntu/cmake-TALibDopplerTest-bin
+                    // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
+                    sh """
+                        mkdir binUbuntu
+                        cp -rf ../../../../bin FilesToCheck/bin
+                        cp -rf ../../../../scenes FilesToCheck/scenes
                     """
 
                     sh """
-                        mkdir binUbuntu18
-                        cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
-                        cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
-                        cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
-                    """
-
-                    sh """
-                        tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
+                        tar -czvf "Ubuntu_${ub18_build_name}.tar.gz" ./FilesToCheck
                     """
                     
-                    archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+                    archiveArtifacts "Ubuntu_${ub18_build_name}.tar.gz"
 
                     sh """
-                        mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
+                        mv Ubuntu_${ub18_build_name}.tar.gz binUbuntu.tar.gz
                     """
 
-                    makeStash(includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18', preZip: false)
-                    options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
+                    makeStash(includes: "binUbuntu.tar.gz", name: 'TAN_Ubuntu', preZip: false)
+                    options.pluginUbuntuSha = sha1 "binUbuntu.tar.gz"
 
                 } catch (FlowInterruptedException error) {
                     println "[INFO] Job was aborted during build stage"
@@ -541,7 +561,7 @@ def executeBuildLinux(String osName, Map options) {
                 } catch (e) {
                     println(e.getMessage())
                     currentBuild.result = "FAILED"
-                    println "[ERROR] Failed to build TAN on Ubuntu18"
+                    println "[ERROR] Failed to build TAN on Ubuntu"
                 } 
             }
         }
@@ -713,7 +733,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows;OSX;Ubuntu20',
+    String platforms = 'Windows:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII',
     String buildConfiguration = "release",
     String IPP = "off",
     String OMP = "off",

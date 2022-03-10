@@ -47,7 +47,9 @@ import groovy.json.JsonSlurperClassic
     "tahoe": "",
     "northstar": "NorthStar",
     "hdrprplugin": "RPR",
-    "hdstormrendererplugin": "GL"
+    "hdstormrendererplugin": "GL",
+    "gl": "GL",
+    "rpr": "RPR"
 ]
 
 
@@ -250,111 +252,6 @@ def call(String jobName,
 
                         default:
                             throw new Exception("Unknown updateType ${updateType}")
-                    }
-
-                    //TODO: actualize updating of baselines on UMS
-                    def testCaseInfo
-
-                    // Update baselines on UMS
-                    if (testCaseInfo && (testCaseInfo.job_id_prod || testCaseInfo.job_id_dev)) {
-                        List umsInstances = [
-                            [urlCredential: "prodUniverseURL", jobIdKey: "job_id_prod", buildIdKey: "build_id_prod", instanceName: "Production"],
-                            [urlCredential: "devUniverseURL", jobIdKey: "job_id_dev", buildIdKey: "build_id_dev", instanceName: "Testing"]
-                        ]
-
-                        umsInstances.each() { instanceInfo ->
-                            try {
-                                withCredentials([string(credentialsId: instanceInfo["urlCredential"], variable: "UMS_URL")]) {
-                                    // Receive token
-                                    def response = httpRequest(
-                                        consoleLogResponseBody: true,
-                                        authentication: "universeMonitoringSystem",
-                                        httpMode: "POST",
-                                        url: UMS_URL + "/user/login",
-                                        validResponseCodes: "200"
-                                    )
-
-                                    def token = readJSON(text: "${response.content}")["token"]
-
-                                    // Find necessary result suite
-                                    response = httpRequest(
-                                        consoleLogResponseBody: true,
-                                        customHeaders: [
-                                            [name: "Authorization", value: "Token ${token}"]
-                                        ],
-                                        httpMode: "GET",
-                                        ignoreSslErrors: true,
-                                        url: UMS_URL + "/api/build?id=${testCaseInfo[instanceInfo['buildIdKey']]}&jobId=${testCaseInfo[instanceInfo['jobIdKey']]}"
-                                    )
-
-                                    def content = parseResponse(response.content)
-
-                                    def targetSuiteResultId
-
-                                    String platformName = "${osName}-${gpuName}"
-
-                                    suiteLoop: for (suite in content["suites"]) {
-                                        if (suite["suite"]["name"] == groupName) {
-                                            for (suiteResult in suite["envs"]) {
-                                                if (suiteResult["env"] == platformName) {
-                                                    targetSuiteResultId = suiteResult["_id"]
-                                                    break suiteLoop
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if (caseName) {
-                                        // Receive list of test case result
-                                        response = httpRequest(
-                                            consoleLogResponseBody: true,
-                                            customHeaders: [
-                                                [name: "Authorization", value: "Token ${token}"]
-                                            ],
-                                            httpMode: "GET",
-                                            ignoreSslErrors: true,
-                                            url: UMS_URL + "/api/testSuiteResult?jobId=${testCaseInfo[instanceInfo['jobIdKey']]}&id=${targetSuiteResultId}"
-                                        )
-
-                                        content = parseResponse(response.content)
-
-                                        def targetCaseResultId
-
-                                        for (testCaseResult in content["results"]) {
-                                            if (testCaseResult["test_case"]["name"] == caseName) {
-                                                targetCaseResultId = testCaseResult["_id"]
-                                                break
-                                            }
-                                        }
-
-                                        httpRequest(
-                                            consoleLogResponseBody: true,
-                                            customHeaders: [
-                                                [name: "Authorization", value: "Token ${token}"]
-                                            ],
-                                            httpMode: "POST",
-                                            ignoreSslErrors: true,
-                                            url: UMS_URL + "/baselines/testCaseResult?id=${targetCaseResultId}&product_id=${testCaseInfo[instanceInfo['jobIdKey']]}"
-                                        )
-                                    } else {
-                                        // Make baselines the whole test suite result
-                                        httpRequest(
-                                            consoleLogResponseBody: true,
-                                            customHeaders: [
-                                                [name: "Authorization", value: "Token ${token}"]
-                                            ],
-                                            httpMode: "POST",
-                                            ignoreSslErrors: true,
-                                            url: UMS_URL + "/baselines/testSuiteResult?id=${targetSuiteResultId}&product_id=${testCaseInfo[instanceInfo['jobIdKey']]}"
-                                        )
-                                    }
-                                }
-                            } catch (e) {
-                                println("[ERROR] Failed to update baselines on UMS ${instanceInfo.instanceName}")
-                                problemMessageManager.saveGlobalFailReason(NotificationConfiguration.FAILED_UPDATE_BASELINES_UMS.replace("<name>", instanceInfo.instanceName))
-                                currentBuild.result = "FAILURE"
-                            }
-                        }
                     }
                 } catch (e) {
                     println("[ERROR] Failed to update baselines on NAS")

@@ -94,6 +94,10 @@ class utils {
         }
     }
 
+    static String getPublishedReportName(Object self, String defaultReportName) {
+        return defaultReportName.replace("_", "_5f").replace(" ", "_20")
+    }
+
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = [:]) {
         Map params
 
@@ -283,7 +287,7 @@ class utils {
                         rename \"${oldName}\" \"${newName}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         mv ${oldName} ${newName}
@@ -306,7 +310,7 @@ class utils {
                         move \"${source}\" \"${destination}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         mv ${source} ${destination}
@@ -329,7 +333,7 @@ class utils {
                         echo F | xcopy /s/y/i \"${source}\" \"${destination}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         cp ${source} ${destination}
@@ -350,7 +354,7 @@ class utils {
                         if exist \"${fileName}\" del \"${fileName}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         rm -rf \"${fileName}\"
@@ -372,7 +376,7 @@ class utils {
                         if exist \"${dirName}\" rmdir /Q /S \"${dirName}\"
                     """
                     break
-                // OSX & Ubuntu18
+                // OSX & Ubuntu
                 default:
                     self.sh """
                         rm -rf \"${dirName}\"
@@ -596,6 +600,72 @@ class utils {
             self.println("[WARNING] Failed to update history of tracked metrics.")
             self.println(e.toString())
             self.println(e.getMessage())
+        }
+    }
+
+    static def generateOverviewReport(Object self, def buildArgsFunc, Map options) {
+        if (options.engines) {
+            self.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+                try {
+                    String publishedReportName = getPublishedReportName("Test_Report")
+
+                    // check that overview report isn't deployed yet
+                    self.httpRequest(
+                        url: "${self.BUILD_URL}/${publishedReportName}/",
+                        authentication: 'jenkinsCredentials',
+                        httpMode: 'GET'
+                    )
+
+                    self.println("[INFO] Overview report exists")
+                } catch(e) {
+                    self.println("[INFO] Overview report not found, publish it")
+
+                    // take only first 4 arguments: tool name, commit sha, project branch name and commit message
+                    String buildScriptArgs = (buildArgsFunc("", options).split() as List).subList(0, 4).join(" ")
+
+                    String locations = ""
+
+                    Boolean allReportsExists = true
+
+                    for (engine in options.engines.reverse()) {
+                        String publishedReportName = ""
+
+                        if (options.enginesNames) {
+                            String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
+                            publishedReportName = getPublishedReportName(self, "Test Report ${originalEngineName}")
+                        } else {
+                            publishedReportName = getPublishedReportName(self, "Test Report ${engine}")
+                        }
+
+                        try {
+                            // check that all necessary reports are published
+                            self.httpRequest(
+                                url: "${self.BUILD_URL}/${publishedReportName}/",
+                                authentication: 'jenkinsCredentials',
+                                httpMode: 'GET'
+                            )
+                        } catch(e1) {
+                            println("[INFO] Report '${publishedReportName}' not found")
+                            allReportsExists = false
+                            break
+                        }
+
+                        locations = locations ? "${locations}::${self.BUILD_URL}/${publishedReportName}" : "${self.BUILD_URL}/${publishedReportName}"
+                    }
+
+                    if (allReportsExists) {
+                        self.dir("jobs_launcher") {
+                            self.withEnv(["BUILD_NAME=${options.baseBuildName}"]) {
+                                self.bat """
+                                    build_overview_reports.bat ..\\OverviewReport ${locations} ${self.JENKINS_USERNAME}:${self.JENKINS_PASSWORD} ${buildScriptArgs}
+                                """
+                            }
+                        }
+
+                        publishReport(self, "${self.BUILD_URL}", "OverviewReport", "summary_report.html", "Test Report", "Summary Report (Overview)", false)
+                    }
+                }
+            }
         }
     }
 }

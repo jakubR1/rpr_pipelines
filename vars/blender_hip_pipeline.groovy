@@ -1,6 +1,5 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
-import universe.*
 import utils
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -8,6 +7,13 @@ import net.sf.json.JsonConfig
 import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.Synchronized
+
+
+@Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
+    supportedOS: ["Windows"],
+    productExtensions: ["Windows": "zip"],
+    artifactNameBase: "Blender_"
+)
 
 
 @NonCPS
@@ -20,12 +26,12 @@ def saveBlenderInfo(String osName, String blenderVersion, String blenderHash) {
     }
 }
 
-String installBlender(String osName) {
+String installBlender(String osName, Map options) {
+    getProduct(osName, options, ".", true, 300)
+
     switch(osName) {
         case "Windows":
-            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"Blender_*.zip\"")
             bat(script: "move blender-* daily_blender_build")
-
             return "${env.WORKSPACE}\\daily_blender_build\\blender.exe"
         default:
             throw new Exception("Unexpected OS name ${osName}")
@@ -67,7 +73,7 @@ def executeTests(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_BLENDER) {
             makeUnstash(name: getProduct.getStashName(osName), unzip: false, storeOnNAS: options.storeOnNAS)
-            blenderLocation = installBlender(osName)
+            blenderLocation = installBlender(osName, options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
@@ -76,17 +82,17 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            if (asicName.contains("AMD")) {
+            if (asicName.contains("AMD") && options.hipConfiguration.contains("HIP")) {
                 executeTestCommand(osName, asicName, blenderLocation, "HIP", options)
                 utils.moveFiles(this, osName, "Work", "Work-HIP")
-
-                if (options.configuration == "AMD_HIP_CPU") {
-                    executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
-                    utils.moveFiles(this, osName, "Work", "Work-CPU")
-                }
-            } else {
+            } else if (asicName.contains("NVIDIA") && options.hipConfiguration.contains("CUDA")) {
                 executeTestCommand(osName, asicName, blenderLocation, "CUDA", options)
                 utils.moveFiles(this, osName, "Work", "Work-CUDA")
+            }
+
+            if (options.hipConfiguration.contains("CPU")) {
+                executeTestCommand(osName, asicName, blenderLocation, "CPU", options)
+                utils.moveFiles(this, osName, "Work", "Work-CPU")
             }
         }
 
@@ -113,19 +119,19 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
 
             if (stashResults) {
-                if (asicName.contains("AMD")) {
+                if (asicName.contains("AMD") && options.hipConfiguration.contains("HIP")) {
                     dir("Work-HIP/Results/Blender") {
                         makeStash(includes: "**/*", name: "${options.testResultsName}-HIP", storeOnNAS: options.storeOnNAS)
                     }
-
-                    if (options.configuration == "AMD_HIP_CPU") {
-                        dir("Work-CPU/Results/Blender") {
-                            makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
-                        }
-                    }
-                } else {
+                } else if (asicName.contains("NVIDIA") && options.hipConfiguration.contains("CUDA")) {
                     dir("Work-CUDA/Results/Blender") {
                         makeStash(includes: "**/*", name: "${options.testResultsName}-CUDA", storeOnNAS: options.storeOnNAS)
+                    }
+                }
+
+                if (options.hipConfiguration.contains("CPU")) {
+                    dir("Work-CPU/Results/Blender") {
+                        makeStash(includes: "**/*", name: "${options.testResultsName}-CPU", storeOnNAS: options.storeOnNAS)
                     }
                 }
             } else {
@@ -190,26 +196,32 @@ def executeBuild(String osName, Map options) {
         String artifactURL = makeArchiveArtifacts(name: packageName, storeOnNAS: options.storeOnNAS)
 
         makeStash(includes: packageName, name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+
+        options[getProduct.getIdentificatorKey(osName)] = blenderHash
     }
 }
 
 def executePreBuild(Map options) {
+    if (options['isPreBuilt']) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Blender version:</b> custom build<br/>"
+        options['executeBuild'] = false
+        options['executeTests'] = true
+    } else {
+        options['executeBuild'] = true
+        options['executeTests'] = true
+    }
+
     // manual job
     if (!env.BRANCH_NAME) {
         println "[INFO] Manual job launch detected"
-        options['executeBuild'] = true
-        options['executeTests'] = true
     // auto job
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options['executeBuild'] = true
-            options['executeTests'] = true
             options['testsPackage'] = "regression.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options['executeBuild'] = true
-           options['executeTests'] = true
            options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
@@ -250,7 +262,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             dir("summaryTestResults") {
                 testResultList.each {
-                    if (it.contains("AMD")) {
+                    if (it.contains("AMD") && options.hipConfiguration.contains("HIP")) {
                         dir("HIP") {
                             dir(it.replace("testResult-", "")) {
                                 try {
@@ -261,20 +273,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                                 }
                             }
                         }
-
-                        if (options.configuration == "AMD_HIP_CPU") {
-                            dir("CPU") {
-                                dir(it.replace("testResult-", "")) {
-                                    try {
-                                        makeUnstash(name: "${it}-CPU", storeOnNAS: options.storeOnNAS)
-                                    } catch (e) {
-                                        println("Can't unstash ${it}-CPU")
-                                        println(e.toString())
-                                    }
-                                }
-                            }
-                        }
-                    } else {
+                    } else if (it.contains("NVIDIA") && options.hipConfiguration.contains("CUDA")) {
                         dir("CUDA") {
                             dir(it.replace("testResult-", "")) {
                                 try {
@@ -286,15 +285,33 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             }
                         }
                     }
+
+                    if (options.hipConfiguration.contains("CPU")) {
+                        dir("CPU") {
+                            dir(it.replace("testResult-", "")) {
+                                try {
+                                    makeUnstash(name: "${it}-CPU", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println("Can't unstash ${it}-CPU")
+                                    println(e.toString())
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                if (options.configuration == "AMD_HIP_CPU") {
+                if (options.hipConfiguration == "AMD_HIP_CPU") {
                     bat """
                         del local_config.py
                         move local_config_hip_cpu.py local_config.py
+                    """
+                } else if (options.hipConfiguration == "Nvidia_CUDA_CPU") {
+                    bat """
+                        del local_config.py
+                        move local_config_cuda_cpu.py local_config.py
                     """
                 } else {
                     bat """
@@ -305,15 +322,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
                 dir("jobs_launcher") {
                     withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
-                        if (options.configuration == "AMD_HIP_CPU") {
-                            bat """
-                                build_comparison_reports.bat ..\\\\summaryTestResults
-                            """
-                        } else {
-                            bat """
-                                build_comparison_reports.bat ..\\\\summaryTestResults
-                            """
-                        }
+                        bat """
+                            build_comparison_reports.bat ..\\\\summaryTestResults
+                        """
                     }
                 }
             } catch (e) {
@@ -393,14 +404,25 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 
+def appendPlatform(String filteredPlatforms, String platform) {
+    if (filteredPlatforms) {
+        filteredPlatforms +=  ";" + platform
+    } else {
+        filteredPlatforms += platform
+    }
+    return filteredPlatforms
+}
+
+
 def call(String testsBranch = "master",
     String platforms = 'Windows',
-    String configuration = 'AMD_HIP_CPU',
+    String hipConfiguration = 'AMD_HIP_CPU',
     Boolean enableNotifications = true,
     String testsPackage = "",
     String tests = "",
     String testerTag = "Blender",
-    Integer testCaseRetries = 2)
+    Integer testCaseRetries = 2,
+    String customBuildLinkWindows = "")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -414,9 +436,11 @@ def call(String testsBranch = "master",
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             // set necessary GPUs
             if (platforms.contains("Windows")) {
-                if (configuration == "AMD_HIP_CPU") {
+                if (hipConfiguration == "AMD_HIP_CPU") {
                     platforms = platforms.replace("Windows", "Windows:AMD_RX6800")
-                } else if (configuration == "Nvidia_HIP_CUDA") {
+                } else if (hipConfiguration == "Nvidia_CUDA_CPU") {
+                    platforms = platforms.replace("Windows", "Windows:NVIDIA_RTX3070")
+                } else if (hipConfiguration == "HIP_CUDA") {
                     platforms = platforms.replace("Windows", "Windows:AMD_RX6800,NVIDIA_RTX3070")
                 }
             }
@@ -432,23 +456,46 @@ def call(String testsBranch = "master",
                 }
             }
 
+            Boolean isPreBuilt = customBuildLinkWindows
+
+            if (isPreBuilt) {
+                //remove platforms for which pre built plugin is not specified
+                String filteredPlatforms = ""
+
+                platforms.split(';').each() { platform ->
+                    List tokens = platform.tokenize(':')
+                    String platformName = tokens.get(0)
+
+                    switch(platformName) {
+                        case 'Windows':
+                            if (customBuildLinkWindows) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                        }
+                }
+
+                platforms = filteredPlatforms
+            }
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
-            println "Configuration: ${configuration}"
+            println "HIP Configuration: ${hipConfiguration}"
 
-            options << [testRepo:"git@github.com:luxteam/jobs_test_blender.git",
+            options << [configuration: PIPELINE_CONFIGURATION,
+                        testRepo:"git@github.com:luxteam/jobs_test_blender.git",
                         testsBranch:testsBranch,
                         enableNotifications:enableNotifications,
                         testsPackage:testsPackage,
                         testsPackageOriginal:testsPackage,
                         tests:tests,
-                        configuration:configuration,
+                        hipConfiguration:hipConfiguration,
                         PRJ_NAME:"BlenderHIP",
                         PRJ_ROOT:"rpr-plugins",
                         reportName:'Test_20Report',
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:180,
+                        TEST_TIMEOUT:300,
                         ADDITIONAL_XML_TIMEOUT:15,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:30,
@@ -462,7 +509,9 @@ def call(String testsBranch = "master",
                         errorsInSuccession: errorsInSuccession,
                         platforms:platforms,
                         testCaseRetries:testCaseRetries,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        isPreBuilt:isPreBuilt,
+                        customBuildLinkWindows: customBuildLinkWindows
                         ]
         }
 

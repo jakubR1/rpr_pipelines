@@ -6,6 +6,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
+import java.text.SimpleDateFormat
 
 
 @Field final PipelineConfiguration PIPELINE_CONFIGURATION = new PipelineConfiguration(
@@ -30,7 +31,7 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
                     make_results_baseline.bat ${delete}
                 """
                 break
-            // OSX & Ubuntu18
+            // OSX & Ubuntu
             default:
                 sh """
                     ./make_results_baseline.sh ${delete}
@@ -84,7 +85,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                 """
             }
             break
-        // OSX & Ubuntu18
+        // OSX & Ubuntu
         default:
             dir("scripts") {
                 sh """
@@ -314,8 +315,9 @@ def executeBuildWindows(String osName, Map options) {
                     python --version >> ..\\${STAGE_NAME}.log  2>&1
                     python -m pip install PySide2 >> ..\\${STAGE_NAME}.log  2>&1
                     python -m pip install PyOpenGL >> ..\\${STAGE_NAME}.log  2>&1
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
-                    call python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 15 2017 Win64" >> ..\\${STAGE_NAME}.log  2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    waitfor 1 /t 10 2>NUL || type nul>nul
+                    python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
                 """
 
                 if (options.updateDeps) {
@@ -324,8 +326,9 @@ def executeBuildWindows(String osName, Map options) {
             } else {
                 bat """
                     python --version >> ..\\${STAGE_NAME}.log  2>&1
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
-                    python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 15 2017 Win64" >> ..\\${STAGE_NAME}.log  2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    waitfor 1 /t 10 2>NUL || type nul>nul
+                    python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
                 """
             }
         }
@@ -370,7 +373,7 @@ def executeBuildLinux(String osName, Map options) {
                 rm -rf ../libs
                 export OS=
                 python --version >> ../${STAGE_NAME}.log  2>&1
-                python tools/build.py -all -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
+                python tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
             """
             
             if (options.updateDeps) {
@@ -398,12 +401,6 @@ def executeBuildLinux(String osName, Map options) {
             String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", ARTIFACT_NAME)                            
-                }
-            }
-
             sh """
                 mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
@@ -419,7 +416,22 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
         if (!options.rebuildDeps) {
-            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin/*", "bin")
+            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
+
+            dir("bin") {
+                def files = findFiles()
+
+                for (file in files) {
+                    if (file.name == "USD") {
+                        def dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
+                        def formattedTime = dateFormat.format(new Date(file.lastModified))
+                        currentBuild.description += "<b>Dependencies creation time (${osName}):</b> ${formattedTime}<br/>"
+                        break
+                    }
+                }
+            }
+        } else {
+            currentBuild.description += "<b>Rebuild dependencies (${osName}):</b><br/>"
         }
 
         dir("BlenderUSDHydraAddon") {
@@ -510,7 +522,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('BlenderUSDHydraAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -611,7 +623,6 @@ def executePreBuild(Map options)
 
     def tests = []
     options.timeouts = [:]
-    options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdblender') {
@@ -649,17 +660,13 @@ def executePreBuild(Map options)
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
-                options.groupsUMS = tempTests.clone()
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
-                        options.groupsUMS << it.key
                     } else {
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it.key}"
-                        } else {
-                            options.groupsUMS << it.key
                         }
                     }
                 }
@@ -687,7 +694,6 @@ def executePreBuild(Map options)
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else if (options.tests) {
-                options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -736,7 +742,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         String engineName = options.enginesNames[options.engines.indexOf(engine)]
 
         if (options['executeTests'] && testResultList) {
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
@@ -781,7 +787,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
@@ -803,15 +809,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
-                        if (options.sendToUMS) {
-                            options.engine = engine
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
-                        }
                         try {
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
-                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                             if (utils.isReportFailCritical(e.getMessage())) {
                                 throw e
                             } else {
@@ -824,7 +826,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
@@ -899,7 +901,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 options["testsStatus-${engine}"] = ""
             }
 
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
@@ -907,9 +909,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
 
@@ -920,6 +922,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         println(e.toString())
         println(e.getMessage())
         throw e
+    } finally {
+        if (!options.storeOnNAS) {
+            utils.generateOverviewReport(this, this.&getReportBuildArgs, options)
+        }
     }
 }
 
@@ -937,7 +943,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = PROJECT_REPO,
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800,AMD_WX9100,AMD_RXVEGA;Ubuntu20:AMD_RadeonVII',
+    String platforms = 'Windows:AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800,AMD_WX9100,AMD_RXVEGA,NVIDIA_RTX3070;Ubuntu20:AMD_RadeonVII',
     Boolean rebuildDeps = false,
     Boolean updateDeps = false,
     String updateRefs = 'No',
@@ -954,8 +960,8 @@ def call(String projectRepo = PROJECT_REPO,
     String customBuildLinkWindows = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "RPR,GL",
-    String tester_tag = "Blender2.8",
+    String enginesNames = "RPR,GL,Hybrid",
+    String tester_tag = "Blender",
     String toolVersion = "3.0",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
@@ -1070,7 +1076,7 @@ def call(String projectRepo = PROJECT_REPO,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:210,
+                        TEST_TIMEOUT:240,
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:90,
                         DEPLOY_TIMEOUT:30,

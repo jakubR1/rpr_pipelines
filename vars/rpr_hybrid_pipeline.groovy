@@ -110,7 +110,7 @@ def executeTestCommand(String asicName, String osName, Map options) {
 
 
 def executeTestsCustomQuality(String osName, String asicName, Map options) {
-    validateDriver(osName, asicName, ["Ubuntu-NVIDIA": "455.46.04"], options)
+    validateDriver(osName, asicName, ["Ubuntu-NVIDIA": "510.54"], options)
        
     cleanWS(osName)
     String error_message = ""
@@ -745,7 +745,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 def call(String projectBranch = "",
-         String platforms = "Windows:NVIDIA_RTX2080TI,AMD_RX6800;Ubuntu18:NVIDIA_RTX2070",
+         String platforms = "Windows:NVIDIA_RTX2080TI,AMD_RX6800;Ubuntu20:NVIDIA_RTX2070",
          String testsQuality = "none",
          String scenarios = "all",
          Boolean updateRefs = false,

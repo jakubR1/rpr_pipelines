@@ -25,6 +25,8 @@ def getPreparedUE(Map options, String projectName) {
             checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
         }
 
+        // start script which presses enter to register UE file types
+        bat("start cmd.exe /k \"C:\\Python39\\python.exe %CIS_TOOLS%\\register_ue_file_types.py && exit 0\"")
         bat("0_SetupUE.bat > \"0_SetupUE_${projectName}.log\" 2>&1")
 
         println("[INFO] Prepared UE is ready. Saving it for use in future builds...")
@@ -45,6 +47,10 @@ def getPreparedUE(Map options, String projectName) {
 
 
 def executeBuildWindows(String projectName, Map options) {
+    // clear unused directories (Hybrid UE workspace takes a lot of disk space)
+    String unusedWorkspacePath = env.WORKSPACE.contains("@") ? env.WORKSPACE.split('@')[0] : env.WORKSPACE + "@2"
+    bat("if exist ${unusedWorkspacePath} rmdir /Q /S ${unusedWorkspacePath}")
+
     if (!projectsInfo.containsKey(projectName)) {
         throw new Exception("Unknown project name: ${projectName}")
     }
@@ -105,7 +111,12 @@ def executeBuildWindows(String projectName, Map options) {
     if (options.saveEngine) {
         dir("RPRHybrid-UE") {
             String ARTIFACT_NAME = "${projectName}_editor.zip"
-            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!.vs -xr!.git -xr!*@tmp*")
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" . -xr!*.obj -xr!*.pdb -xr!*.vs -xr!*.git -xr!*@tmp*")
+            makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+            utils.removeFile(this, "Windows", ARTIFACT_NAME)
+
+            ARTIFACT_NAME = "${projectName}_debug.zip"
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" -ir!*.pdb -xr!*@tmp*")
             makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
             utils.removeFile(this, "Windows", ARTIFACT_NAME)
         }

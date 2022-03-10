@@ -38,10 +38,18 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
         case 'OSX':
             customBuildLink = options['customBuildLinkOSX']
             break
+        case 'MacOS':
+            customBuildLink = options['customBuildLinkMacOS']
+            break
+        case 'MacOS_ARM':
+            customBuildLink = options['customBuildLinkMacOSARM']
+            break
         case 'Ubuntu':
             customBuildLink = options['customBuildLinkLinux']
+            break
         case 'Ubuntu18':
             customBuildLink = options['customBuildLinkUbuntu18']
+            break
         // Ubuntu20
         default:
             customBuildLink = options['customBuildLinkUbuntu20']
@@ -81,7 +89,7 @@ def call(String osName, Map options, String credentialsId = '', Integer oneTryTi
                 runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
             }
         } else {
-            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${customBuildLink}\"", 5, oneTryTimeout)
+            runCurl("curl -L -o ${artifactNameBase}_${osName}.${extension} \"${customBuildLink}\"", 5, oneTryTimeout)
         }
     }
 

@@ -1,5 +1,4 @@
 import groovy.transform.Field
-import universe.*
 import groovy.json.JsonOutput;
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -35,7 +34,6 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
         }
     }
 }
-
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine)
 {
@@ -80,25 +78,23 @@ def executeTestCommand(String osName, String asicName, Map options)
     println "Set timeout to ${testTimeout}"
 
     timeout(time: testTimeout, unit: 'MINUTES') { 
-        UniverseManager.executeTests(osName, asicName, options) {
-            switch(osName) {
-                case 'Windows':
-                    dir('scripts') {
-                        bat """
-                            run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
-                        """
-                    }
-                    break
-                case 'OSX':
-                    dir('scripts') {
-                        sh """
-                            ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
-                        """
-                    }
-                    break
-                default:
-                    println("[WARNING] ${osName} is not supported")
-            }
+        switch(osName) {
+            case 'Windows':
+                dir('scripts') {
+                    bat """
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                    """
+                }
+                break
+            case 'OSX':
+                dir('scripts') {
+                    sh """
+                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
+                    """
+                }
+                break
+            default:
+                println("[WARNING] ${osName} is not supported")
         }
     }
 }
@@ -107,10 +103,6 @@ def executeTests(String osName, String asicName, Map options)
 {
     options.parsedTests = options.tests.split("-")[0]
     options.engine = options.tests.split("-")[1]
-
-    if (options.sendToUMS){
-        options.universeManager.startTestsStage(osName, asicName, options)
-    }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -161,6 +153,10 @@ def executeTests(String osName, String asicName, Map options)
         try {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+                timeout(time: "15", unit: "MINUTES") {
+                    rpr_mayausd_pipeline.uninstallRPRMayaUSDPlugin(osName, options)
+                }
+
                 timeout(time: "15", unit: "MINUTES") {
                     getProduct(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, "Maya", options)
@@ -305,19 +301,12 @@ def executeTests(String osName, String asicName, Map options)
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
-            if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
-            }
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Maya/session_report.json")) {
 
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Maya/session_report.json'
-
-                        if (options.sendToUMS) {
-                            options.universeManager.finishTestsStage(osName, asicName, options)
-                        }
 
                         if (sessionReport.summary.error > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
@@ -389,12 +378,6 @@ def executeBuildWindows(Map options)
         String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
         String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-        if (options.sendToUMS) {
-            dir ("../..") {
-                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMayaPlugin\\MayaPkg", ARTIFACT_NAME, false)
-            }
-        }
-
         bat """
             rename RadeonProRender*.msi RadeonProRenderMaya.msi
         """
@@ -436,12 +419,6 @@ def executeBuildOSX(Map options)
             String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
             String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            if (options.sendToUMS) {
-                dir ("../../..") {
-                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderMayaPlugin/MayaPkg/.installer_build", ARTIFACT_NAME, false)
-                }                
-            }
-
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
             makeStash(includes: 'RadeonProRenderMaya.dmg', name: getProduct.getStashName("OSX"), preZip: false, storeOnNAS: options.storeOnNAS)
 
@@ -456,10 +433,6 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    if (options.sendToUMS){
-        options.universeManager.startBuildStage(osName)
-    }
-
     try {
         dir("RadeonProRenderMayaPlugin") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -485,10 +458,6 @@ def executeBuild(String osName, Map options)
         throw e
     } finally {
         archiveArtifacts "*.log"
-        if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
-            options.universeManager.finishBuildStage(osName)
-        }
     }
 }
 
@@ -550,7 +519,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderMayaPlugin') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -627,7 +596,6 @@ def executePreBuild(Map options)
     
     def tests = []
     options.timeouts = [:]
-    options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_maya')  {
@@ -665,7 +633,6 @@ def executePreBuild(Map options)
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
-                options.groupsUMS = tempTests.clone()
 
                 // receive list of group names from package
                 List groupsFromPackage = []
@@ -682,13 +649,10 @@ def executePreBuild(Map options)
                 groupsFromPackage.each() {
                     if (options.isPackageSplitted) {
                         tempTests << it
-                        options.groupsUMS << it
                     } else {
                         if (tempTests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it}"
-                        } else {
-                            options.groupsUMS << it
                         }
                     }
                 }
@@ -729,7 +693,6 @@ def executePreBuild(Map options)
                     }
                 }
             } else if (options.tests) {
-                options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -753,10 +716,6 @@ def executePreBuild(Map options)
         options.testsList = options.tests
 
         println "timeouts: ${options.timeouts}"
-
-        if (options.sendToUMS){
-            options.universeManager.createBuilds(options)
-        }
     }
 
     if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
@@ -772,7 +731,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         String engineName = options.enginesNames[options.engines.indexOf(engine)]
 
         if (options['executeTests'] && testResultList) {
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
@@ -814,7 +773,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 boolean saveTrackedMetrics = env.JOB_NAME.contains("WeeklyFullNorthstar")
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/RadeonProRenderMayaPlugin"
 
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 
                 if (useTrackedMetrics) {
                     utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
@@ -841,15 +800,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
-                        if (options.sendToUMS) {
-                            options.engine = engine
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
-                        }
                         try {
                             bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
                         } catch (e) {
                             String errorMessage = utils.getReportFailReason(e.getMessage())
-                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                             if (utils.isReportFailCritical(e.getMessage())) {
                                 throw e
                             } else {
@@ -866,7 +821,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
@@ -941,7 +896,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 options["testsStatus-${engine}"] = ""
             }
 
-            withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+            withNotifications(title: "Building test report for ${engineName}", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
@@ -949,9 +904,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName}", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
         }
@@ -959,7 +914,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
         println(e.toString())
         println(e.getMessage())
         throw e
-    } finally {}
+    } finally {
+        if (!options.storeOnNAS) {
+            utils.generateOverviewReport(this, this.&getReportBuildArgs, options)
+        }
+    }
 }
 
 def appendPlatform(String filteredPlatforms, String platform) {
@@ -984,7 +943,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String toolVersion = "2022",
         Boolean forceBuild = false,
         Boolean splitTestsExecution = true,
-        Boolean sendToUMS = true,
         String resX = '0',
         String resY = '0',
         String SPU = '25',
@@ -1022,8 +980,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             if (env.BRANCH_NAME && env.BRANCH_NAME == "PR-278") {
                 testsBranch = "inemankov/remove_tahoe"
             }
-
-            sendToUMS = updateRefs.contains('Update') || sendToUMS
             
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
@@ -1069,8 +1025,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            def universePlatforms = convertPlatforms(platforms);
-
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
             println "Platforms: ${platforms}"
@@ -1078,8 +1032,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
-            println "Send to UMS: ${sendToUMS} "
-            println "UMS platforms: ${universePlatforms}"
 
             String prRepoName = ""
             String prBranchName = ""
@@ -1110,14 +1062,12 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         forceBuild:forceBuild,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
-                        sendToUMS:false,
                         gpusCount:gpusCount,
                         TEST_TIMEOUT:120,
                         ADDITIONAL_XML_TIMEOUT:15,
                         NON_SPLITTED_PACKAGE_TIMEOUT:75,
                         DEPLOY_TIMEOUT:180,
                         TESTER_TAG:tester_tag,
-                        universePlatforms: universePlatforms,
                         resX: resX,
                         resY: resY,
                         SPU: SPU,
@@ -1139,12 +1089,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         storeOnNAS: true,
                         flexibleUpdates: true
                         ]
-
-            if (sendToUMS) {
-                UniverseManager universeManager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
-                universeManager.init()
-                options["universeManager"] = universeManager
-            }
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
@@ -1155,9 +1099,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         throw e
     } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
-        if (options.sendToUMS) {
-            options.universeManager.closeBuild(problemMessage, options)
-        }
     }
 
 }

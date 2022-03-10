@@ -179,7 +179,7 @@ public class GithubNotificator {
             if (hasDeployStage) {
                 if (options.enginesNames) {
                     options.enginesNames.each { engine ->
-                        String message = "Building test report for ${engine} engine"
+                        String message = "Building test report for ${engine}"
                         paramsBase["name"] = "[DEPLOY] ${message}"
                         githubApiProvider.createOrUpdateStatusCheck(paramsBase)
                         deployCases << message
@@ -403,24 +403,37 @@ public class GithubNotificator {
         }
     }
 
+    private String findSHA(String description) {
+        if (description) {
+            for (sha in description.split("<br/>")) {
+                if (sha.contains("Commit SHA")) {
+                    return sha.split("</b>")[1].trim()
+                }
+            }
+        }
+
+        return null
+    }
+
     private Boolean isBuildWithSameSHA(String commitSHA) {
         try {
             //check that some of next builds (if it exists) has different sha of target commit
             RunWrapper nextBuild = context.currentBuild.getNextBuild()
             while(nextBuild) {
-                String nextBuildSHA = ""
-                nextBuildSHA = commitSHA
+                String nextBuildSHA = findSHA(nextBuild.description)
+
                 //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
                 if(!nextBuildSHA) {
                     context.sleep(60)
                 }
-                //if it still isn't possible to get SHA or SHAs are same - it isn't necessary to close status checks (next build will do it if it'll be necessary)
-                if((nextBuild && !nextBuildSHA) || nextBuildSHA == commitSHA) {
-                    return true
-                }
+
+                nextBuildSHA = findSHA(nextBuild.description)
+
                 nextBuild = nextBuild.getNextBuild()
 
-                return false
+                if (nextBuildSHA == commitSHA) {
+                    return true
+                }
             }
         } catch (e) {
             context.println("[ERROR] Failed to find build with same SHA")

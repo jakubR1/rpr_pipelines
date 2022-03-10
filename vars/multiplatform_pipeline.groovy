@@ -110,7 +110,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                     if (engine) {
                                         // remove engine name from testName
-                                        List testNameParts = it.split("-") as List
+                                        List testNameParts = testName.split("-") as List
                                         String rawTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                                         skip = options["skipCallback"](options, asicName, osName, rawTestName, engine)
                                     } else {
@@ -371,6 +371,32 @@ def makeDeploy(Map options, String engine = "") {
                 } else {
                     executeDeploy(options, platformList, testResultList)
                 }
+
+                if (engine && options.reportUpdater) {
+                    options.reportUpdater.updateReport()
+                }
+
+                try {
+                    dir("summaryTestResults") {
+                        if (fileExists("summary_status.json")) {
+                            if (engine) {
+                                if (options.enginesNames && options.engines) {
+                                    String originalEngineName = options.enginesNames[options.engines.indexOf(engine)]
+                                    bat("move summary_status.json summary_status_${originalEngineName}.json")
+                                    archiveArtifacts artifacts: "summary_status_${originalEngineName}.json"
+                                } else {
+                                    bat("move summary_status.json summary_status_${engine}.json")
+                                    archiveArtifacts artifacts: "summary_status_${engine}.json"
+                                }
+                            } else {
+                                archiveArtifacts artifacts: "summary_status.json"
+                            }
+                        }
+                    }
+                } catch (e) {
+                    println("[ERROR] Failed to save summary_status.json")
+                }
+
                 println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
                 cleanWS("Windows")
             }
@@ -379,6 +405,7 @@ def makeDeploy(Map options, String engine = "") {
     }
 }
 
+// TODO: pass platforms only through options (it allows to modify it in PreBuild stage)
 def call(String platforms, def executePreBuild, def executeBuild, def executeTests, def executeDeploy, Map options) {
     try {
         this.executeDeploy = executeDeploy
@@ -506,6 +533,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 }
 
                 Map tasks = [:]
+
+                if (options.platforms) {
+                    platforms = options.platforms
+                }
 
                 platforms.split(';').each() {
                     if (it) {

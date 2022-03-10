@@ -87,7 +87,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {}
 
 def call(String projectBranch = "",
          String projectRepo = 'git@github.com:Radeon-Pro/RadeonProRenderPkgPlugin.git',
-         String platforms = 'Windows;OSX;Ubuntu18',
+         String platforms = 'Windows;OSX;Ubuntu20',
          Boolean enableNotifications = true) {
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,

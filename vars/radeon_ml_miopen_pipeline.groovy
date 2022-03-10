@@ -147,7 +147,7 @@ def executeBuild(String osName, Map options)
         }
 
         if (options.updateBinaries) {
-            uploadFiles("release", "/volume1/CIS/rpr-ml/MIOpen/${osName}")
+            uploadFiles("release", "/volume1/${PRJ_NAME}/${PRJ_ROOT}/MIOpen/${osName}")
         }
 
     } catch (e) {
@@ -168,22 +168,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
          String projectBranch = "master",
-         String platforms = 'Windows;Ubuntu18;CentOS7',
-         Boolean updateBinaries = false,
-         String PRJ_ROOT='rpr-ml',
-         String PRJ_NAME='MIOpen'
-         )
+         String platforms = 'Windows;Ubuntu20;CentOS7',
+         Boolean updateBinaries = false
+        )
 {
-
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [platforms:platforms,
+                            projectRepo:projectRepo,
                             projectBranch:projectBranch,
-                            PRJ_NAME:PRJ_NAME,
-                            PRJ_ROOT:PRJ_ROOT,
+                            PRJ_NAME:'MIOpen',
+                            PRJ_ROOT:'rpr-ml',
                             updateBinaries:updateBinaries,
                             executeBuild:true,
                             executeTests:false,
-                            projectRepo:projectRepo
                             ])
 }

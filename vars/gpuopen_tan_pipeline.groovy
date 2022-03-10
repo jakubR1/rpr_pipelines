@@ -59,23 +59,23 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "TAN_Ubuntu18", unzip: false)
+                makeUnstash(name: "TAN_Ubuntu20", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binUbuntu18.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
+                    cp binUbuntu20.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
                 """ 
 
             } else {
 
                 println "[INFO] The plugin ${options.pluginUbuntuSha}.tar.gz exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu18.tar.gz
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu20.tar.gz
                 """
             }
 
             sh """
-                tar -zxvf binUbuntu18.tar.gz
+                tar -zxvf binUbuntu20.tar.gz
             """
     }
 }
@@ -402,23 +402,23 @@ def executeBuildLinux(String osName, Map options) {
                         """
 
                         sh """
-                            mkdir binUbuntu18
-                            cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
-                            cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
-                            cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
+                            mkdir binUbuntu20
+                            cp -rf cmake-TALibTestConvolution-bin binUbuntu20/cmake-TALibTestConvolution-bin
+                            cp -rf cmake-TALibDopplerTest-bin binUbuntu20/cmake-TALibDopplerTest-bin
+                            cp -rf cmake-RoomAcousticQT-bin binUbuntu20/cmake-RoomAcousticQT-bin
                         """
 
                         sh """
-                            tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
+                            tar -czvf "Ubuntu20_${ub18_build_name}.tar.gz" ./binUbuntu20
                         """
                         
-                        archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+                        archiveArtifacts "Ubuntu20_${ub18_build_name}.tar.gz"
 
                         sh """
-                            mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
+                            mv Ubuntu20_${ub18_build_name}.tar.gz binUbuntu20.tar.gz
                         """
-                        makeStash(includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18', preZip: false)
-                        options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
+                        makeStash(includes: "binUbuntu20.tar.gz", name: 'TAN_Ubuntu20', preZip: false)
+                        options.pluginUbuntuSha = sha1 "binUbuntu20.tar.gz"
 
                     } catch (FlowInterruptedException error) {
                         println "[INFO] Job was aborted during build stage"
@@ -426,7 +426,7 @@ def executeBuildLinux(String osName, Map options) {
                     } catch (e) {
                         println(e.getMessage())
                         currentBuild.result = "FAILED"
-                        println "[ERROR] Failed to build TAN on Ubuntu18"
+                        println "[ERROR] Failed to build TAN on Ubuntu20"
                     } 
                 }
             }
@@ -598,7 +598,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows;OSX;Ubuntu18',
+    String platforms = 'Windows;OSX;Ubuntu20',
     String buildConfiguration = "release",
     String ipp = "off",
     String winTool = "msbuild",

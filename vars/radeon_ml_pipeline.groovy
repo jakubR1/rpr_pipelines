@@ -111,7 +111,7 @@ def executeTests(String osName, String asicName, Map options) {
         outputEnvironmentInfo(osName, "${STAGE_NAME}.UnitTests")
         makeUnstash(name: "app${osName}", storeOnNAS: options.storeOnNAS)
         executeUnitTestsCommand(osName, options)
-        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "success", options, NotificationConfiguration.UNIT_TESTS_PASSED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests")
+        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "success", options, NotificationConfiguration.UNIT_TESTS_PASSED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests.log")
     } catch (FlowInterruptedException error) {
         println("[INFO] Job was aborted during executing tests.")
         throw error
@@ -119,7 +119,7 @@ def executeTests(String osName, String asicName, Map options) {
         println(e.toString())
         println(e.getMessage())
         currentBuild.result = "UNSTABLE"
-        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "failure", options, NotificationConfiguration.UNIT_TESTS_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests")
+        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "failure", options, NotificationConfiguration.UNIT_TESTS_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests.log")
     } finally {
         archiveArtifacts "*.log"
         junit "*gtest.xml"
