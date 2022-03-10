@@ -534,37 +534,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
-<<<<<<< HEAD
-                        if (options.sendToUMS) {
-                            options.engine = engine
-                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
-                        }
-
-                        try {
-                            bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
-                        } catch (e) {
-                            String errorMessage = utils.getReportFailReason(e.getMessage())
-                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
-                            if (utils.isReportFailCritical(e.getMessage())) {
-                                throw e
-                            } else {
-                                currentBuild.result = "FAILURE"
-                                options.problemMessageManager.saveGlobalFailReason(errorMessage)
-                            }
-                        }
-                        try {
-                            bat "get_status.bat ..\\summaryTestResults"
-                        } catch(e) {
-                            println("[ERROR] Failed to generate slack status.")
-                            println(e.toString())
-                            println(e.getMessage())
-                        }
-=======
                     
-                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
+                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(engineName, options)}"
 
                         bat "get_status.bat ..\\summaryTestResults"
->>>>>>> f2ca7447c254d39af7c6606fe77e9b1faac31988
                     }
                 }
                 if (options.collectTrackedMetrics) {
