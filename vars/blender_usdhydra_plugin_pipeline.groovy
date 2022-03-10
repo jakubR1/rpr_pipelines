@@ -1101,7 +1101,8 @@ def call(String projectRepo = PROJECT_REPO,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS:true,
                         flexibleUpdates: true,
-                        skipCallback: this.&hybridProFilter
+                        skipCallback: this.&hybridProFilter,
+                        forceReinstall: true
                         ]
         }
 
