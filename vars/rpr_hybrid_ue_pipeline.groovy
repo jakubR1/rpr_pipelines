@@ -69,7 +69,7 @@ def clearPreparedUE(Map options) {
             }
 
             bat """
-                rmdir /Q /S \"${preparedUEFolredPath}\\${file.name}\"
+                rmdir /Q /S \"${preparedUEFolredPath}\\${fileToDelete.name}\"
             """
         }
     }
