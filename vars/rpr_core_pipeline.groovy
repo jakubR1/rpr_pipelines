@@ -432,16 +432,9 @@ def executePreBuild(Map options) {
 
             options.testsList = []
             options.tests = tests.join(" ")
-<<<<<<< HEAD
             options.engines.each(){ engine ->
                 options.testsList << "-${engine}"
             }
-
-            if (options.sendToUMS) {
-                options.universeManager.createBuilds(options)   
-            }
-=======
->>>>>>> f2ca7447c254d39af7c6606fe77e9b1faac31988
         }
 
         if (env.BRANCH_NAME && options.githubNotificator) {
