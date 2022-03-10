@@ -44,6 +44,9 @@ def call(String osName, String pluginName, String tool_version, Map options, Boo
 
 def checkExistenceOfBlenderAddon(String osName, String pluginName, String tool_version, Map options) 
 {
+    if (options.containsKey("forceReinstall") && options["forceReinstall"]) {
+        return false
+    }
 
     println "[INFO] Checking existence of the Blender Addon on test PC."
     println "[INFO] Installer name: ${options.commitSHA}_${osName}.zip"
