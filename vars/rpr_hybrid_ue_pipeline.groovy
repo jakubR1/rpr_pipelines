@@ -14,12 +14,17 @@ import groovy.transform.Field
 
 @Field finishedProjects = []
 
+@Field MAX_PREPARED_UE = 2
+
 
 def getPreparedUE(Map options, String projectName) {
     String targetFolderPath = "${CIS_TOOLS}\\..\\PreparedUE\\${options.ueSha}"
 
     if (!fileExists(targetFolderPath)) {
         println("[INFO] UnrealEngine will be downloaded and configured")
+
+        println("[INFO] Clear prepared UnrealEngine directories")
+        clearPreparedUE(options)
 
         dir("RPRHybrid-UE") {
             checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
@@ -40,6 +45,31 @@ def getPreparedUE(Map options, String projectName) {
         dir("RPRHybrid-UE") {
             bat """
                 xcopy /s/y/i ${targetFolderPath} . >> nul
+            """
+        }
+    }
+}
+
+
+def clearPreparedUE(Map options) {
+    String preparedUEFolredPath = "${CIS_TOOLS}\\..\\PreparedUE"
+
+    dir(preparedUEFolredPath) {
+        def files = findFiles()
+
+        if (files.size() >= MAX_PREPARED_UE) {
+            def oldestCommit = files[0].lastModified
+            def fileToDelete = files[0]
+
+            for (file in files) {
+                if (oldestCommit > file.lastModified) {
+                    oldestCommit = file.lastModified
+                    fileToDelete = file
+                }
+            }
+
+            bat """
+                rmdir /Q /S \"${preparedUEFolredPath}\\${fileToDelete.name}\"
             """
         }
     }
