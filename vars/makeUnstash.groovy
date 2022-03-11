@@ -70,7 +70,6 @@ def call(Map params) {
             if (debug) {
                 println(stdout)
             }
-            
             if (unzip) {
                 if (isUnix()) {
                     sh "rm -rf \"${zipName}\""
