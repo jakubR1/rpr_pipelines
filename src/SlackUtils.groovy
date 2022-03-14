@@ -150,9 +150,9 @@ class SlackUtils {
             ]]
         ]]
 
-        for (report in reports) {
-            String pretext = report ? options.enginesNames[options.engines.indexOf(report)] : ""
-            String text = report ? options['testsStatus-' + report] : options['testsStatus']
+        for (int i = 0; i < reports.size(); i++) {
+            String pretext = reports[i] ? options.enginesNames[i] : ""
+            String text = reports[i] ? options['testsStatus-' + reports[i]] : options['testsStatus']
 
             attachments << [
                 "mrkdwn_in": ["text"],
