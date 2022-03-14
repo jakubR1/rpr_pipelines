@@ -617,11 +617,11 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             try {
-                options.testsStatus = readFile("summaryTestResults/slack_status.json")
+                options['testsStatus-' + engine] = readFile("summaryTestResults/slack_status.json")
             } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
-                options.testsStatus = ""
+                options['testsStatus-' + engine] = ""
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
