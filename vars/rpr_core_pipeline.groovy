@@ -491,32 +491,12 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch (e) {
                 println("[ERROR] Can't download json files with core tests configuration")
             }
-            /* DEBUG CHECK BLENDER count_lost_tests params
-            try {
-                dir("jobs_launcher") {
-                    bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.parsedTests}\" \"${engine}\" \"{}\"
-                    """
-                }
-            } catch (e) {
-                println("[ERROR] Can't generate number of lost tests")
-            }
-            */
-            try {
-                dir("jobs_launcher") {
-                    bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"false\" \"${options.testsPackage}\" \"[]\" \"${engine}\" \"{}\"
-                    """
-                }
-            } catch (e) {
-                println("[ERROR] Can't generate number of lost tests")
-            }
 
             try {
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}/${engine}"
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
-                if (useTrackedMetrics) {
+                if (options.collectTrackedMetrics) {
                     utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
                 }
 
