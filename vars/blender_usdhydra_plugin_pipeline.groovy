@@ -308,8 +308,8 @@ def executeBuildWindows(String osName, Map options) {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
         def pyPath = options.toolVersion == "3.1" ? "PATH=c:\\python310\\;c:\\python310\\scripts\\" : "PATH=c:\\python39\\;c:\\python39\\scripts\\"
-
-        withEnv(["${pyPath};${PATH}"]) {
+        def cmakePath = "PATH=c:\\CMake323\\bin"
+        withEnv(["${pyPath};${cmakePath};${PATH}"]) {
             if (options.rebuildDeps) {
                 bat """
                     if exist ..\\bin rmdir /Q /S ..\\bin
