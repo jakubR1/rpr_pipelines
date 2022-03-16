@@ -307,7 +307,13 @@ def executeBuildWindows(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
-        withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
+        if (options.toolVersion == "3.1"){
+            def pyPath =  "PATH=c:\\python310\\;c:\\python310\\scripts\\"
+        } else{
+            def pyPath =  "PATH=c:\\python310\\;c:\\python310\\scripts\\"
+        }
+
+        withEnv(["${pyPath};${PATH}"]) {
             if (options.rebuildDeps) {
                 bat """
                     if exist ..\\bin rmdir /Q /S ..\\bin
