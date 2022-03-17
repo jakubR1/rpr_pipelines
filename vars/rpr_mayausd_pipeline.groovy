@@ -453,15 +453,15 @@ def executePreBuild(Map options) {
             println "[INFO] Branch was detected as Pull Request"
             options['executeBuild'] = true
             options['executeTests'] = true
-            options['testsPackage'] = "regression.json"
+            options['testsPackage'] = "Full.json"
         } else if (env.BRANCH_NAME == "main" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
            options['executeTests'] = true
-           options['testsPackage'] = "regression.json"
+           options['testsPackage'] = "Full.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options['testsPackage'] = "regression.json"
+            options['testsPackage'] = "Full.json"
         }
     }
 
