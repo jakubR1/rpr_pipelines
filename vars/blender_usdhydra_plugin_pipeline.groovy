@@ -344,7 +344,7 @@ def executeBuildWindows(String osName, Map options) {
 
                 String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_Windows"
 
-                ARTIFACT_NAME += options.branch_postfix ? "*.(${options.branch_postfix}).zip" : ".zip"
+                ARTIFACT_NAME += options.branch_postfix ? ".(${options.branch_postfix}).zip" : ".zip"
 
                 bat """
                     rename hdusd*.zip ${ARTIFACT_NAME}
