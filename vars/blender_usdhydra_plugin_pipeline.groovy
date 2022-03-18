@@ -306,56 +306,62 @@ def executeTests(String osName, String asicName, Map options) {
 def executeBuildWindows(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-        
-        def pyPath = options.toolVersion == "3.1" ? "c:\\python310\\;c:\\python310\\scripts\\" : "c:\\python39\\;c:\\python39\\scripts\\"
-        def cmakePath = "c:\\CMake323\\bin"
-        withEnv(["PATH=${pyPath};${cmakePath};${PATH}"]) {
-            if (options.rebuildDeps) {
-                bat """
-                    if exist ..\\bin rmdir /Q /S ..\\bin
-                    if exist ..\\libs rmdir /Q /S ..\\libs
-                    python --version >> ..\\${STAGE_NAME}.log  2>&1
-                    python -m pip install PySide2 >> ..\\${STAGE_NAME}.log  2>&1
-                    python -m pip install PyOpenGL >> ..\\${STAGE_NAME}.log  2>&1
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
-                    waitfor 1 /t 10 2>NUL || type nul>nul
-                    python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
-                """
+        def pyVersions = ["3.9"]
 
-                if (options.updateDeps) {
-                    uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+        options.toolVersion < "3.1" ?: pyVersions << "3.10"
+
+        pyVersions.each() {
+            def pathes = ["c:\\python${it.remove(".")}\\;c:\\python${it.remove(".")}\\scripts\\"]
+            options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
+
+            withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
+                if (options.rebuildDeps) {
+                    bat """
+                        if exist ..\\bin rmdir /Q /S ..\\bin
+                        if exist ..\\libs rmdir /Q /S ..\\libs
+                        python --version >> ..\\${STAGE_NAME}.log  2>&1
+                        python -m pip install PySide2 >> ..\\${STAGE_NAME}.log  2>&1
+                        python -m pip install PyOpenGL >> ..\\${STAGE_NAME}.log  2>&1
+                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                        waitfor 1 /t 10 2>NUL || type nul>nul
+                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
+                    """
+
+                    if (options.updateDeps) {
+                        uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                    }
+                } else {
+                    bat """
+                        python --version >> ..\\${STAGE_NAME}.log  2>&1
+                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                        waitfor 1 /t 10 2>NUL || type nul>nul
+                        python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
+                    """
                 }
-            } else {
-                bat """
-                    python --version >> ..\\${STAGE_NAME}.log  2>&1
-                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
-                    waitfor 1 /t 10 2>NUL || type nul>nul
-                    python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}.log  2>&1
-                """
             }
-        }
+            dir("install") {
+                println "Stashing Artifact for Python ${it}"
 
-        dir("install") {
-            bat """
-                rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip
-            """
+                String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_Windows"
 
-            if (options.branch_postfix) {
+                ARTIFACT_NAME += options.branch_postfix ? "*.(${options.branch_postfix}).zip" : ".zip"
+
                 bat """
-                    rename BlenderUSDHydraAddon*zip *.(${options.branch_postfix}).zip
+                    rename hdusd*.zip ${ARTIFACT_NAME}
                 """
+
+                String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+                
+                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
+                    bat """
+                        rename ${ARTIFACT_NAME} BlenderUSDHydraAddon_Windows.zip
+                    """
+
+                    makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
+
+                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                }
             }
-
-            String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip"
-            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
-
-            bat """
-                rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_Windows.zip
-            """
-
-            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
-
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
