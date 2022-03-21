@@ -308,6 +308,9 @@ def executeBuildWindows(String osName, Map options) {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         def pyVersions = []
 
+        /*
+            After Blender 3.1 release we need to create to builds for 3.9 and 3.10 Python for checking compatibility
+        */
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
         pyVersions.each() {
@@ -329,7 +332,7 @@ def executeBuildWindows(String osName, Map options) {
                         """
 
                         if (options.updateDeps) {
-                            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${it}/bin")
                         }
                     } else {
                         bat """
@@ -387,23 +390,25 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
+                        export PATH=~/usr/cmake-path/bin:$PATH
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
+                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}_${it}.log  2>&1
                     """
                     
                     if (options.updateDeps) {
-                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
                     }
                 } else {
                 sh """
+                        export PATH=~/usr/cmake-path/bin:$PATH
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
+                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log  2>&1
                     """
                 }
 
