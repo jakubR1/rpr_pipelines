@@ -311,56 +311,60 @@ def executeBuildWindows(String osName, Map options) {
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
         pyVersions.each() {
-            def pathes = ["c:\\python${it.replace(".","")}\\;c:\\python${it.replace(".","")}\\scripts\\"]
-            options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
+            try{ 
+                def pathes = ["c:\\python${it.replace(".","")}\\;c:\\python${it.replace(".","")}\\scripts\\"]
+                options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
 
-            withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
-                if (options.rebuildDeps) {
-                    bat """
-                        if exist ..\\bin rmdir /Q /S ..\\bin
-                        if exist ..\\libs rmdir /Q /S ..\\libs
-                        python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
-                        waitfor 1 /t 10 2>NUL || type nul>nul
-                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                    """
+                withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
+                    if (options.rebuildDeps) {
+                        bat """
+                            if exist ..\\bin rmdir /Q /S ..\\bin
+                            if exist ..\\libs rmdir /Q /S ..\\libs
+                            python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                            python -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                            python -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                            waitfor 1 /t 10 2>NUL || type nul>nul
+                            python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        """
 
-                    if (options.updateDeps) {
-                        uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                        if (options.updateDeps) {
+                            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                        }
+                    } else {
+                        bat """
+                            python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                            waitfor 1 /t 10 2>NUL || type nul>nul
+                            python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        """
                     }
-                } else {
-                    bat """
-                        python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        waitfor 1 /t 10 2>NUL || type nul>nul
-                        python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                    """
                 }
-            }
-            dir("install") {
-                println "Stashing Artifact for Python ${it}"
+                dir("install") {
+                    println "Stashing Artifact for Python ${it}"
 
-                String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_Windows"
+                    String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_Windows"
 
-                ARTIFACT_NAME += options.branch_postfix ? ".(${options.branch_postfix}).zip" : ".zip"
+                    ARTIFACT_NAME += options.branch_postfix ? ".(${options.branch_postfix}).zip" : ".zip"
 
-                bat """
-                    rename hdusd*.zip ${ARTIFACT_NAME}
-                """
-
-                String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
-                
-                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
                     bat """
-                        rename ${ARTIFACT_NAME} BlenderUSDHydraAddon_Windows.zip
+                        rename hdusd*.zip ${ARTIFACT_NAME}
                     """
 
-                    makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
+                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+                    
+                    if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
+                        bat """
+                            rename ${ARTIFACT_NAME} BlenderUSDHydraAddon_Windows.zip
+                        """
 
-                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                        makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
+
+                        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                    }
                 }
+            } catch(e){
+                println("[ERROR] Build failed on Windows system. Python ${it}")
             }
         }
     }
@@ -375,54 +379,57 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        def pyVersions = []
+        def pyVersions = [""]
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
-        pyVersions ?: pyVersions << ""
         pyVersions.each() {
-            if (options.rebuildDeps) {
+            try{
+                if (options.rebuildDeps) {
+                    sh """
+                        rm -rf ../bin
+                        rm -rf ../libs
+                        export OS=
+                        python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
+                    """
+                    
+                    if (options.updateDeps) {
+                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                    }
+                } else {
                 sh """
-                    rm -rf ../bin
-                    rm -rf ../libs
-                    export OS=
-                    python${it} --version >> ../${STAGE_NAME}.log  2>&1
-                    python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                    python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                    python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
-                """
-                
-                if (options.updateDeps) {
-                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                        export OS=
+                        python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
+                    """
                 }
-            } else {
-            sh """
-                    export OS=
-                    python${it} --version >> ../${STAGE_NAME}.log  2>&1
-                    python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                    python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                    python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
-                """
-            }
 
-            dir("install") {
-                println "Stashing Artifact for Python ${it != "" ?: "3.9"}"
+                dir("install") {
+                    println "Stashing Artifact for Python ${it != "" ?: "3.9"}"
 
-                String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
+                    String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
 
-                sh """
-                    mv hdusd*.zip ${ARTIFACT_NAME}
-                """
-                
-                String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+                    sh """
+                        mv hdusd*.zip ${ARTIFACT_NAME}
+                    """
+                    
+                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-                sh """
-                    mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
-                """
+                    sh """
+                        mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
+                    """
 
-                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
-                    makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+                    if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
+                        makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
 
-                    GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                        GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                    }
                 }
+            } catch(e){
+                println("[ERROR] Build failed on Linux system. Python ${it}")
             }
         }
     }
