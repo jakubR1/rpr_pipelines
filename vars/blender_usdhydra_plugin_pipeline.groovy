@@ -306,7 +306,7 @@ def executeTests(String osName, String asicName, Map options) {
 def executeBuildWindows(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-        def pyVersions = ["3.9"]
+        def pyVersions = []
 
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
@@ -375,9 +375,9 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        def pyVersions = [""]
+        def pyVersions = []
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
-
+        pyVersions ?: pyVersions << ""
         pyVersions.each() {
             if (options.rebuildDeps) {
                 sh """
@@ -385,6 +385,8 @@ def executeBuildLinux(String osName, Map options) {
                     rm -rf ../libs
                     export OS=
                     python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                    python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                    python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
                     python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
                 """
                 
@@ -395,6 +397,8 @@ def executeBuildLinux(String osName, Map options) {
             sh """
                     export OS=
                     python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                    python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                    python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
                     python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
                 """
             }
@@ -413,7 +417,7 @@ def executeBuildLinux(String osName, Map options) {
                 sh """
                     mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
                 """
-                
+
                 if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
                     makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
 
