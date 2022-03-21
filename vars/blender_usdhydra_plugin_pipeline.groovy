@@ -375,47 +375,51 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        if (options.rebuildDeps) {
-            sh """
-                rm -rf ../bin
-                rm -rf ../libs
-                export OS=
-                python --version >> ../${STAGE_NAME}.log  2>&1
-                python tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
-            """
-            
-            if (options.updateDeps) {
-                uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
-            }
-        } else {
-           sh """
-                export OS=
-                python --version >> ../${STAGE_NAME}.log  2>&1
-                python tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
-            """
-        }
+        def pyVersions = [""]
+        options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
-        dir("install") {
-            sh """
-                mv hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
-            """
-
-            if (options.branch_postfix) {
+        pyVersions.each() {
+            if (options.rebuildDeps) {
                 sh """
-                    for i in BlenderUSDHydraAddon*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
+                    rm -rf ../bin
+                    rm -rf ../libs
+                    export OS=
+                    python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                    python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
+                """
+                
+                if (options.updateDeps) {
+                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                }
+            } else {
+            sh """
+                    export OS=
+                    python${it} --version >> ../${STAGE_NAME}.log  2>&1
+                    python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
                 """
             }
 
-            String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
-            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+            dir("install") {
+                println "Stashing Artifact for Python ${it != "" ?: "3.9"}"
 
-            sh """
-                mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
-            """
+                String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
 
-            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+                sh """
+                    mv hdusd*.zip ${ARTIFACT_NAME}
+                """
+                
+                String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                sh """
+                    mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
+                """
+                
+                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
+                    makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+
+                    GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                }
+            }
         }
     }
 }
