@@ -385,37 +385,38 @@ def executeBuildLinux(String osName, Map options) {
         def pyVersions = [""]
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
         pyVersions.each() {
+            def bufVer = it != "" ?: "3.9"
             try{
                 if (options.rebuildDeps) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
-                        export PATH=~/usr/Cmake323/bin:$PATH
+                        export PATH=~/usr/Cmake323/bin:${PATH}
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}_${it}.log  2>&1
+                        python${it} --version >> ../${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}_${bufVer}.log  2>&1
                     """
                     
                     if (options.updateDeps) {
-                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
+                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${bufVer}/bin")
                     }
                 } else {
                 sh """
                         export PATH=~/usr/Cmake323/bin:$PATH
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log  2>&1
+                        python${it} --version >> ../${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${bufVer}.log  2>&1
                     """
                 }
 
                 dir("install") {
-                    println "Stashing Artifact for Python ${it != "" ?: "3.9"}"
+                    println "Stashing Artifact for Python ${bufVer}"
 
-                    String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
+                    String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${bufVer}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${bufVer}.zip"
 
                     sh """
                         mv hdusd*.zip ${ARTIFACT_NAME}
@@ -434,7 +435,7 @@ def executeBuildLinux(String osName, Map options) {
                     }
                 }
             } catch(e){
-                println("[ERROR] Build failed on Linux system. Python ${it}")
+                println("[ERROR] Build failed on Linux system. Python ${it == "" ?: "3.9"}")
             }
         }
     }
