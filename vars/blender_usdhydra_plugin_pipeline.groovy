@@ -315,7 +315,7 @@ def executeBuildWindows(String osName, Map options) {
 
         pyVersions.each() {
             try{ 
-                def pathes = ["c:\\python${it.replace(".","")}\\;c:\\python${it.replace(".","")}\\scripts\\"]
+                def pathes = ["c:\\python${it.replace(".","")}\\","c:\\python${it.replace(".","")}\\scripts\\"]
                 options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
 
                 withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
@@ -382,41 +382,38 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        def pyVersions = [""]
+        def pyVersions = ["3.9"]
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
         pyVersions.each() {
-            def bufVer = it != "" ?: "3.9"
             try{
                 if (options.rebuildDeps) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
-                        export PATH=~/usr/Cmake323/bin:${PATH}
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}_${bufVer}.log  2>&1
-                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
-                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
-                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
+                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}_${it}.log  2>&1
                     """
                     
                     if (options.updateDeps) {
-                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${bufVer}/bin")
+                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
                     }
                 } else {
                 sh """
-                        export PATH=~/usr/Cmake323/bin:$PATH
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}_${bufVer}.log  2>&1
-                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
-                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${bufVer}.log  2>&1
-                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${bufVer}.log  2>&1
+                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
+                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
+                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log  2>&1
                     """
                 }
 
                 dir("install") {
-                    println "Stashing Artifact for Python ${bufVer}"
+                    println "Stashing Artifact for Python ${it}"
 
-                    String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${bufVer}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${bufVer}.zip"
+                    String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${it}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${it}.zip"
 
                     sh """
                         mv hdusd*.zip ${ARTIFACT_NAME}
@@ -435,7 +432,7 @@ def executeBuildLinux(String osName, Map options) {
                     }
                 }
             } catch(e){
-                println("[ERROR] Build failed on Linux system. Python ${it == "" ?: "3.9"}")
+                println("[ERROR] Build failed on Linux system. Python ${it}")
             }
         }
     }
