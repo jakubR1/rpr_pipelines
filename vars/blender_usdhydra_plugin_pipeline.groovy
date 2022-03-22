@@ -323,6 +323,7 @@ def executeBuildWindows(String osName, Map options) {
                         bat """
                             if exist ..\\bin rmdir /Q /S ..\\bin
                             if exist ..\\libs rmdir /Q /S ..\\libs
+                            if exist *.log rm -r *.log
                             python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             python -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             python -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
@@ -336,6 +337,7 @@ def executeBuildWindows(String osName, Map options) {
                         }
                     } else {
                         bat """
+                            if exist *.log rm -r *.log
                             python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             waitfor 1 /t 10 2>NUL || type nul>nul
@@ -368,6 +370,9 @@ def executeBuildWindows(String osName, Map options) {
                 }
             } catch(e){
                 println("[ERROR] Build failed on Windows system. Python ${it}")
+                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
+                    throw e
+                }
             }
         }
     }
@@ -435,6 +440,9 @@ def executeBuildLinux(String osName, Map options) {
                 }
             } catch(e){
                 println("[ERROR] Build failed on Linux system. Python ${it}")
+                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
+                    throw e
+                }
             }
         }
     }
