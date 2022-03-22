@@ -313,6 +313,10 @@ def executeBuildWindows(String osName, Map options) {
         */
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
+        bat """
+            if exist *.log rm -r *.log
+        """
+
         pyVersions.each() {
             try{ 
                 def pathes = ["c:\\python${it.replace(".","")}\\","c:\\python${it.replace(".","")}\\scripts\\"]
@@ -323,7 +327,6 @@ def executeBuildWindows(String osName, Map options) {
                         bat """
                             if exist ..\\bin rmdir /Q /S ..\\bin
                             if exist ..\\libs rmdir /Q /S ..\\libs
-                            if exist *.log rm -r *.log
                             python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             python -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             python -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
@@ -337,7 +340,6 @@ def executeBuildWindows(String osName, Map options) {
                         }
                     } else {
                         bat """
-                            if exist *.log rm -r *.log
                             python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
                             waitfor 1 /t 10 2>NUL || type nul>nul
@@ -389,13 +391,17 @@ def executeBuildLinux(String osName, Map options) {
         
         def pyVersions = []
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
+        
+        sh """
+            rm -rf *.log
+        """
+
         pyVersions.each() {
             try{
                 if (options.rebuildDeps) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
-                        rm -rf *.log
                         export OS=
                         python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
