@@ -390,6 +390,7 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
+                        rm -rf *.log
                         export OS=
                         python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
@@ -402,6 +403,7 @@ def executeBuildLinux(String osName, Map options) {
                     }
                 } else {
                 sh """
+                        rm -rf *.log
                         export OS=
                         python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
