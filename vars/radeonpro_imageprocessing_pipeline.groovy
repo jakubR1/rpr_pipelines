@@ -189,8 +189,8 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
 def executeBuildUnix(String cmakeKeys, String osName, Map options, String compilerName="gcc")
 {
-    String EXPORT_CXX = compilerName == "clang-5.0" ? "export CXX=clang-5.0" : ""
-    String SRC_BUILD = compilerName == "clang-5.0" ? "RadeonImageFilters" : "all"
+    String EXPORT_CXX = compilerName == "clang-9.0" ? "export CXX=clang-9.0" : ""
+    String SRC_BUILD = compilerName == "clang-9.0" ? "RadeonImageFilters" : "all"
 
     sh """
         ${EXPORT_CXX}
@@ -306,7 +306,7 @@ def executeBuild(String osName, Map options)
             case 'MacOS_ARM':
                 executeBuildUnix(options.cmakeKeys, osName, options, 'clang')
                 break
-            case 'Ubuntu18-Clang':
+            case 'Ubuntu20-Clang':
                 executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DRIF_ADL_INCLUDE=ON -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
                 break
             default:
@@ -383,7 +383,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;Ubuntu18-Clang;MacOS_ARM:AppleM1',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;Ubuntu20-Clang;MacOS_ARM:AppleM1',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
@@ -393,7 +393,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu18-Clang;Ubuntu20;OSX;CentOS7;MacOS_ARM;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu20-Clang;Ubuntu20;OSX;CentOS7;MacOS_ARM;" : platforms
 
     def nodeRetry = []
 
