@@ -312,10 +312,14 @@ def executeBuildWindows(String osName, Map options) {
             After Blender 3.1 release we need to create to builds for 3.9 and 3.10 Python for checking compatibility
         */
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
-
-        bat """
-            if exist ../*.log rm -r ../*.log
-        """
+        try{
+            bat """
+                del ..\\*.log
+            """
+        } catch(e){
+            println("[ERROR] Failed to delete old log files")
+        }
+            
 
         pyVersions.each() {
             try{ 
@@ -393,9 +397,13 @@ def executeBuildLinux(String osName, Map options) {
         def pyVersions = ["3.9"]
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
         
-        sh """
-            rm -rf ../*.log
-        """
+        try{
+            sh """
+                rm -rf ../*.log
+            """
+        } catch(e){
+            println("[ERROR] Failed to delete old log files")
+        }
 
         pyVersions.each() {
             try{
