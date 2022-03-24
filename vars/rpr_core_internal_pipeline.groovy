@@ -636,7 +636,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def call(String projectBranch = "",
-         String testsBranch = "updated_skips",
+         String testsBranch = "master",
          String unitTestsBranch = "master",
          String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI',
          String renderPlatforms = 'Windows:AMD_RX5700XT,NVIDIA_RTX2080TI',
