@@ -312,6 +312,7 @@ def executeBuildWindows(String osName, Map options) {
             After Blender 3.1 release we need to create to builds for 3.9 and 3.10 Python for checking compatibility
         */
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
+
         try{
             bat """
                 del ..\\*.log
@@ -411,7 +412,7 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
-                        export CPATH=/usr/include/python3.10
+                        export CPATH=/usr/include/python${it}
                         export OS=
                         python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
@@ -425,7 +426,7 @@ def executeBuildLinux(String osName, Map options) {
                 } else {
                 sh """
                         rm -rf *.log
-                        export CPATH=/usr/include/python3.10
+                        export CPATH=/usr/include/python${it}
                         export OS=
                         python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
                         python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
@@ -437,7 +438,7 @@ def executeBuildLinux(String osName, Map options) {
                 dir("install") {
                     println "Stashing Artifact for Python ${it}"
 
-                    String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_${osname}"
+                    String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_${osName}"
 
                     ARTIFACT_NAME += options.branch_postfix ? ".${options.branch_postfix}.zip" : ".zip"
 
