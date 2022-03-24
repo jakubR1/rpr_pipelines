@@ -314,7 +314,7 @@ def executeBuildWindows(String osName, Map options) {
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
         bat """
-            if exist *.log rm -r *.log
+            if exist ../*.log rm -r ../*.log
         """
 
         pyVersions.each() {
@@ -389,11 +389,11 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        def pyVersions = []
+        def pyVersions = ["3.9"]
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
         
         sh """
-            rm -rf *.log
+            rm -rf ../*.log
         """
 
         pyVersions.each() {
@@ -428,7 +428,9 @@ def executeBuildLinux(String osName, Map options) {
                 dir("install") {
                     println "Stashing Artifact for Python ${it}"
 
-                    String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${it}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}_${it}.zip"
+                    String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_${osname}"
+
+                    ARTIFACT_NAME += options.branch_postfix ? ".${options.branch_postfix}.zip" : ".zip"
 
                     sh """
                         mv hdusd*.zip ${ARTIFACT_NAME}
