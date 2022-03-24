@@ -373,6 +373,7 @@ def executeBuildWindows(String osName, Map options) {
             } catch(e){
                 println("[ERROR] Build failed on Windows system. Python ${it}")
                 if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
+                    println("[ERROR] Main Python ${it} version build failed")
                     throw e
                 }
             }
@@ -451,6 +452,7 @@ def executeBuildLinux(String osName, Map options) {
             } catch(e){
                 println("[ERROR] Build failed on Linux system. Python ${it}")
                 if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
+                    println("[ERROR] Main Python ${it} version build failed")
                     throw e
                 }
             }
