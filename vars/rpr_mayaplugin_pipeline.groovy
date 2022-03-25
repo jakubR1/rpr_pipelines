@@ -108,8 +108,8 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
     
     try {
-        // FIXME: too many random errors on Maya Auto on Vega Mac machines
-        if (env.JOB_NAME.contains("Auto") && osName == "OSX") {
+        // FIXME: too many random errors on Maya on Mac machines
+        if (osName == "OSX") {
             utils.reboot(osName)
         }
 
