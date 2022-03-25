@@ -403,7 +403,7 @@ def executeBuildLinux(String osName, Map options) {
                 println("[ERROR] Failed due python env creating")
             }
         }
-        
+
         pyVersions.each() {
             try{
                 if (options.rebuildDeps) {
@@ -479,7 +479,6 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-        cleanws()
         if (!options.rebuildDeps) {
             downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
 
