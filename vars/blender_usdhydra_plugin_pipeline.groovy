@@ -306,7 +306,7 @@ def executeTests(String osName, String asicName, Map options) {
 def executeBuildWindows(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-        def pyVersions = []
+        def pyVersions = ["3.9"]
 
         /*
             After Blender 3.1 release we need to create to builds for 3.9 and 3.10 Python for checking compatibility
