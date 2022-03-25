@@ -389,14 +389,21 @@ def executeBuildLinux(String osName, Map options) {
         def pyVersions = ["3.9"]
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
         
-        try{
-            sh """
-                rm -rf ../*.log
-            """
-        } catch(e){
-            println("[ERROR] Failed to delete old log files")
-        }
+        def isPyenvActive = false
 
+        //activate pyenv if python 3.10 in pyVersions lists
+        if (pyVersions.get("3.10","")) {
+            try{
+                isPyenvActive = true
+                sh """
+                    source venv/bin/activate
+                    python -V
+                """
+            } catch(e){
+                println("[ERROR] Failed due python env creating")
+            }
+        }
+        
         pyVersions.each() {
             try{
                 if (options.rebuildDeps) {
@@ -454,6 +461,16 @@ def executeBuildLinux(String osName, Map options) {
                 if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
                     println("[ERROR] Main Python ${it} version build failed")
                     throw e
+                }
+            } finally {
+                if (isPyenvActive) {
+                    try{
+                        sh """
+                            deactivate
+                        """
+                    } catch(e){
+                        println("[ERROR] Failed due python env deactivating")
+                    }
                 }
             }
         }
