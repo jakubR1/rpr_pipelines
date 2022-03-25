@@ -110,7 +110,7 @@ def executeTests(String osName, String asicName, Map options)
     try {
         // FIXME: too many random errors on Maya on Mac machines
         if (osName == "OSX") {
-            utils.reboot(osName)
+            utils.reboot(this, osName)
         }
 
         // FIXME: remove this ducktape when CPUs on that machines will be changes
