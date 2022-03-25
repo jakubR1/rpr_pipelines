@@ -314,10 +314,10 @@ def executeBuildWindows(String osName, Map options) {
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
         pyVersions.each() {
-            try{ 
+            try{
                 def pathes = ["c:\\python${it.replace(".","")}\\","c:\\python${it.replace(".","")}\\scripts\\"]
                 options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
-
+                println "DEBUG STEP 1"
                 withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
                     if (options.rebuildDeps) {
                         bat """
@@ -330,7 +330,7 @@ def executeBuildWindows(String osName, Map options) {
                             waitfor 1 /t 10 2>NUL || type nul>nul
                             python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
                         """
-
+                        
                         if (options.updateDeps) {
                             uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${it}/bin")
                         }
@@ -391,21 +391,20 @@ def executeBuildLinux(String osName, Map options) {
         
         def isPyenvActive = false
 
-        //activate pyenv if python 3.10 in pyVersions lists
-        if (pyVersions.get("3.10","")) {
-            try{
-                isPyenvActive = true
-                sh """
-                    source venv/bin/activate
-                    python -V
-                """
-            } catch(e){
-                println("[ERROR] Failed due python env creating")
-            }
-        }
-
         pyVersions.each() {
             try{
+                //activate pyenv if python 3.10 in pyVersions lists
+                if (it == "3.10") {
+                    try{
+                        isPyenvActive = true
+                        sh """
+                            source venv/bin/activate
+                            python -V
+                        """
+                    } catch(e){
+                        println("[ERROR] Failed due python env creating")
+                    }
+                }
                 if (options.rebuildDeps) {
                     sh """
                         rm -rf ../bin
@@ -479,6 +478,7 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
+        cleanWS(osName)
         if (!options.rebuildDeps) {
             downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
 
