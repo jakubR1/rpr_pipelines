@@ -388,7 +388,7 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String cmakeKeys = '',
          Boolean testPerformance = false,
-         String tester_tag = 'RIF') {
+         String tester_tag = 'Tester') {
 
     println "TAG_NAME: ${env.TAG_NAME}"
 

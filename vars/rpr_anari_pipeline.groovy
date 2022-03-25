@@ -632,7 +632,7 @@ def call(String anariSdkRepo = ANARI_SDK_REPO,
     String customBuildLinkWindows = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkMacOS = "",
-    String testerTag = "Anari")
+    String testerTag = "Tester")
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
