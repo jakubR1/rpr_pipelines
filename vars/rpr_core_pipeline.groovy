@@ -771,6 +771,7 @@ def call(String projectBranch = "",
                         customBuildLinkUbuntu18: customBuildLinkUbuntu18,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
+                        splitTestsExecution: false,
                         storeOnNAS: true,
                         flexibleUpdates: true
                         ]
