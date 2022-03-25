@@ -308,9 +308,6 @@ def executeBuildWindows(String osName, Map options) {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         def pyVersions = ["3.9"]
 
-        /*
-            After Blender 3.1 release we need to create to builds for 3.9 and 3.10 Python for checking compatibility
-        */
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
         pyVersions.each() {
@@ -396,7 +393,7 @@ def executeBuildLinux(String osName, Map options) {
                 if (it == "3.10") {
                     try{
                         isPyenvActive = true
-                        sh """
+                        sh """#!/bin/bash
                             source venv/bin/activate
                             python -V
                         """
