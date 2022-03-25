@@ -390,19 +390,22 @@ def executeBuildLinux(String osName, Map options) {
         pyVersions.each() {
             try{
                 if (options.rebuildDeps) {
-                    sh """#!/bin/bash
+                    sh """
+                        rm -rf ../bin
+                        rm -rf ../libs
+
+                    """
+                    sh '''#!/bin/bash
                         virtualenv -p python3.10 venv
                         source venv/bin/activate
                         python -V
-                        rm -rf ../bin
-                        rm -rf ../libs
-                        export CPATH=/usr/include/python${it}
+                        export CPATH=/usr/include/python3.10
                         export OS=
-                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} tools/build.py -all -clean -bin-dir ../bin -j 8 >> ../${STAGE_NAME}_${it}.log  2>&1
-                    """
+                        python --version
+                        python -m pip install PySide2
+                        python -m pip install PyOpenGL
+                        python tools/build.py -all -clean -bin-dir ../bin -j 8
+                    '''
                     
                     if (options.updateDeps) {
                         uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
