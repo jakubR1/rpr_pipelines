@@ -382,7 +382,7 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        def pyVersions = ["3.9"]
+        def pyVersions = []
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
         
         def isPyenvActive = false
