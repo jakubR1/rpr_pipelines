@@ -391,6 +391,7 @@ def executeBuildLinux(String osName, Map options) {
             try{
                 if (options.rebuildDeps) {
                     sh """#!/bin/bash
+                        virtualenv -p python3.10 venv
                         source venv/bin/activate
                         python -V
                         rm -rf ../bin
