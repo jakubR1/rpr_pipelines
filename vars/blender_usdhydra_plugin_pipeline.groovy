@@ -447,16 +447,6 @@ def executeBuildLinux(String osName, Map options) {
                     println("[ERROR] Main Python ${it} version build failed")
                     throw e
                 }
-            } finally {
-                if (isPyenvActive) {
-                    try{
-                        sh """#!/bin/bash
-                            deactivate
-                        """
-                    } catch(e){
-                        println("[ERROR] Failed due python env deactivating")
-                    }
-                }
             }
         }
     }
