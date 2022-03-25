@@ -500,20 +500,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}/Northstar64"
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
 
                 if (options.collectTrackedMetrics) {
-                    try {
-                        dir("summaryTestResults/tracked_metrics") {
-                            downloadFiles("${metricsRemoteDir}/", ".")
-                        }
-                    } catch (e) {
-                        println("[WARNING] Failed to download history of tracked metrics.")
-                        println(e.toString())
-                        println(e.getMessage())
-                    }
+                    utils.downloadMetrics(this, "summaryTestResults/tracked_metrics", "${metricsRemoteDir}/")
                 }
+
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         options.commitMessage = options.commitMessage.replace("'", "")
@@ -529,17 +522,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         bat "get_status.bat ..\\summaryTestResults"
                     }
                 }
+
                 if (options.collectTrackedMetrics) {
-                    try {
-                        dir("summaryTestResults/tracked_metrics") {
-                            uploadFiles(".", "${metricsRemoteDir}")
-                        }
-                    } catch (e) {
-                        println("[WARNING] Failed to update history of tracked metrics.")
-                        println(e.toString())
-                        println(e.getMessage())
-                    }
-                }  
+                    utils.uploadMetrics(this, "summaryTestResults/tracked_metrics", metricsRemoteDir)
+                }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
