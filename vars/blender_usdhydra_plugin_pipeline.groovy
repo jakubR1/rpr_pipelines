@@ -460,7 +460,7 @@ def executeBuildLinux(String osName, Map options) {
             } finally {
                 if (isPyenvActive) {
                     try{
-                        sh """
+                        sh """#!/bin/bash
                             deactivate
                         """
                     } catch(e){
