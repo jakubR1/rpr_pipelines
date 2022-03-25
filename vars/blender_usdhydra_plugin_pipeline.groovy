@@ -313,15 +313,6 @@ def executeBuildWindows(String osName, Map options) {
         */
         options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
-        try{
-            bat """
-                del ..\\*.log
-            """
-        } catch(e){
-            println("[ERROR] Failed to delete old log files")
-        }
-            
-
         pyVersions.each() {
             try{ 
                 def pathes = ["c:\\python${it.replace(".","")}\\","c:\\python${it.replace(".","")}\\scripts\\"]
@@ -471,6 +462,7 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
+        cleanws()
         if (!options.rebuildDeps) {
             downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
 
