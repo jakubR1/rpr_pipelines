@@ -389,20 +389,10 @@ def executeBuildLinux(String osName, Map options) {
 
         pyVersions.each() {
             try{
-                //activate pyenv if python 3.10 in pyVersions lists
-                if (it == "3.10") {
-                    try{
-                        isPyenvActive = true
-                        sh """#!/bin/bash
-                            source venv/bin/activate
-                            python -V
-                        """
-                    } catch(e){
-                        println("[ERROR] Failed due python env creating")
-                    }
-                }
                 if (options.rebuildDeps) {
-                    sh """
+                    sh """#!/bin/bash
+                        source venv/bin/activate
+                        python -V
                         rm -rf ../bin
                         rm -rf ../libs
                         export CPATH=/usr/include/python${it}
