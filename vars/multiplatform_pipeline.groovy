@@ -53,15 +53,12 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     // TODO: replace testsList check to splitExecution var
                     options.testsList = options.testsList ?: ['']
 
-                    def testerTag = "Tester"
+                    def testerLabels
                     if (options.TESTER_TAG) {
-                        if (options.TESTER_TAG.indexOf(' ') > -1){
-                            testerTag = options.TESTER_TAG
-                        } else {
-                            testerTag = "${options.TESTER_TAG} && Tester"
-                        }
-                    } 
-                    def testerLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
+                        testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName}"
+                    } else {
+                        testerLabels = "${osName} && Tester && gpu${asicName}"
+                    }
 
                     Iterator testsIterator = options.testsList.iterator()
                     Integer launchingGroupsNumber = 1
