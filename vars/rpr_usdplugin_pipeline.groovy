@@ -679,6 +679,11 @@ def executePreBuild(Map options) {
                 options.tests = groupNames.join(" ")
                 options.testsPackage = "none"
             }
+
+            if (!options.tests) {
+                options.executeTests = false
+            }
+
             options.testsList = ['']
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
