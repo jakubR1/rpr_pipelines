@@ -537,7 +537,7 @@ def executeBuildLinux(String osName, Map options) {
                     // cp -rf cmake-TALibDopplerTest-bin binUbuntu/cmake-TALibDopplerTest-bin
                     // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
                     sh """
-                        mkdir binUbuntu
+                        mkdir FilesToCheck
                         cp -rf ../../../../bin FilesToCheck/bin
                         cp -rf ../../../../scenes FilesToCheck/scenes
                     """
@@ -732,8 +732,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
-    String testsBranch = "master",
-    String platforms = 'Windows:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII',
+    String testsBranch = "RA_testing",
+    String platforms = 'Windows:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String buildConfiguration = "release",
     String IPP = "off",
     String OMP = "off",
