@@ -402,9 +402,8 @@ def executeBuildLinux(String osName, Map options) {
                         export CPATH=/usr/include/python3.10
                         export OS=
                         python --version
-                        python -m pip install PySide2
-                        python -m pip install PyOpenGL
-                        python tools/build.py -all -clean -bin-dir ../bin -j 8
+                        python -m pip install -r requirments.txt
+                        python tools/build.py -all -clean -bin-dir bin/test_venv
                     '''
                     
                     if (options.updateDeps) {
