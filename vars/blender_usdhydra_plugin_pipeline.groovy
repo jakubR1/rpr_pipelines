@@ -395,15 +395,19 @@ def executeBuildLinux(String osName, Map options) {
                         rm -rf ../libs
 
                     """
-                    sh """#!/bin/bash
-                        virtualenv -p python3.10 venv 
-                        source venv/bin/activate 
-                        export CPATH=/usr/include/python3.10
-                        export OS= 
-                        python --version 
-                        python -m pip install -r requirements.txt 
-                        pip install -r requirements.txt 
-                        python tools/build.py -all -clean -bin-dir ../bin 
+                    sh """
+                        rm -rf build.sh
+                        echo "#!/bin/bash" > build.sh
+                        echo "virtualenv -p python3.10 venv" > build.sh
+                        echo "source venv/bin/activate" > build.sh
+                        echo "export CPATH=/usr/include/python3.10" > build.sh
+                        echo "export OS=" > build.sh
+                        echo "python --version" > build.sh
+                        echo "python -m pip install -r requirements.txt" > build.sh
+                        echo "pip install -r requirements.txt" > build.sh
+                        echo "python tools/build.py -all -clean -bin-dir ../bin" > build.sh
+                        chmod +x build.sh
+                        ./build.sh >> ../${STAGE_NAME}_${it}.log  2>&1
                     """
                     
                     if (options.updateDeps) {
