@@ -53,8 +53,7 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                mkdir FilesToCheck
-                tar -zxvf binMacOS.tar.gz --directory FilesToCheck/
+                tar -zxvf binMacOS.tar.gz
             """
             
             break
@@ -82,8 +81,7 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                mkdir FilesToCheck
-                tar -zxvf binUbuntu.tar.gz --directory FilesToCheck/
+                tar -zxvf binUbuntu.tar.gz
             """
     }
 }
