@@ -179,7 +179,7 @@ def executeTests(String osName, String asicName, Map options) {
 
             println "Start plugin installation"
 
-            timeout(time: "15", unit: "MINUTES") {
+            timeout(time: "30", unit: "MINUTES") {
                 installRPRMayaUSDPlugin(osName, options)
                 newPluginInstalled = true
             }
