@@ -393,35 +393,32 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         rm -rf ../bin
                         rm -rf ../libs
-
                     """
-                    sh """
-                        rm -rf build.sh
-                        echo "#!/bin/bash" > build.sh
-                        echo "virtualenv -p python3.10 venv" > build.sh
-                        echo "source venv/bin/activate" > build.sh
-                        echo "export CPATH=/usr/include/python3.10" > build.sh
-                        echo "export OS=" > build.sh
-                        echo "python --version" > build.sh
-                        echo "python -m pip install -r requirements.txt" > build.sh
-                        echo "pip install -r requirements.txt" > build.sh
-                        echo "python tools/build.py -all -clean -bin-dir ../bin" > build.sh
-                        chmod +x build.sh
-                        ./build.sh >> ../${STAGE_NAME}_${it}.log  2>&1
+                    sh """#!/bin/bash
+                        virtualenv -p python${it} venv >> ../${STAGE_NAME}_${it}.log 
+                        source venv/bin/activate >> ../${STAGE_NAME}_${it}.log
+                        export CPATH=/usr/include/python${it} >> ../${STAGE_NAME}_${it}.log 
+                        export OS= >> ../${STAGE_NAME}_${it}.log 
+                        python --version >> ../${STAGE_NAME}_${it}.log 
+                        python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log  
+                        pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log  
+                        python tools/build.py -all -clean -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log
                     """
                     
                     if (options.updateDeps) {
                         uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
                     }
                 } else {
-                sh """
-                        rm -rf *.log
-                        export CPATH=/usr/include/python${it}
+                    sh """#!/bin/bash
+                        virtualenv -p python${it} venv >> ../${STAGE_NAME}_${it}.log 
+                        source venv/bin/activate >> ../${STAGE_NAME}_${it}.log
+                        export CPATH=/usr/include/python${it} >> ../${STAGE_NAME}_${it}.log 
                         export OS=
                         python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log  2>&1
+                        python --version >> ../${STAGE_NAME}_${it}.log 
+                        python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log  
+                        pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log 
+                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log 
                     """
                 }
 
