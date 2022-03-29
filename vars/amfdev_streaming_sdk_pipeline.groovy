@@ -430,7 +430,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log,**/*_android.log', name: "${options.testResultsName}_serv_l", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
-                        makeStash(includes: '**/*.jpg,**/*.mp4', name: "${options.testResultsName}_and_cl", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.jpg,**/*.mp4', name: "${options.testResultsName}_serv_art", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                         makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_ser_t", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     }
                 }
@@ -1337,7 +1337,14 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                         [ERROR] Failed to unstash ${it}
                                         ${e.toString()}
                                     """
-
+                                try {
+                                    makeUnstash(name: "${it}_serv_art", storeOnNAS: options.storeOnNAS)
+                                } catch (e) {
+                                    println """
+                                        [ERROR] Failed to unstash ${it}_serv_art
+                                        ${e.toString()}
+                                    """
+                                }
                                     lostStashesAndroid << ("'${it}'".replace("testResult-", ""))
                                 }
                             } else {
@@ -1375,15 +1382,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 }
 
                                 try {
-                                    makeUnstash(name: "${it}_and_cl", storeOnNAS: options.storeOnNAS)
-                                } catch (e) {
-                                    println """
-                                        [ERROR] Failed to unstash ${it}_and_cl
-                                        ${e.toString()}
-                                    """
-                                }
-
-                                try {
                                     makeUnstash(name: "${it}_ser_t", storeOnNAS: options.storeOnNAS)
                                 } catch (e) {
                                     println """
@@ -1395,6 +1393,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 if (groupLost) {
                                     lostStashesWindows << ("'${it}'".replace("testResult-", ""))
                                 }
+                            }
+
+                            try {
+                                makeUnstash(name: "${it}_serv_art", storeOnNAS: options.storeOnNAS)
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_serv_art
+                                    ${e.toString()}
+                                """
                             }
                         }
                     }
