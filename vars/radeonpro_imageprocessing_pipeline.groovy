@@ -12,7 +12,7 @@ def executeTestCommand(String osName, String libType, Boolean testPerformance)
                 } else {
                     bat """
                     set RIF_AI_FP16_ENABLED=1
-                    ..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ..\\${STAGE_NAME}.${libType}.log  2>&1
+                    ..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/1\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ..\\${STAGE_NAME}.${libType}.log  2>&1
                     """
                 }
             }
@@ -24,7 +24,7 @@ def executeTestCommand(String osName, String libType, Boolean testPerformance)
                 if (testPerformance) {
                     sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
                 } else {
-                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
+                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/1\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
                 }
             }
             break
@@ -34,7 +34,7 @@ def executeTestCommand(String osName, String libType, Boolean testPerformance)
                 if (testPerformance) {
                     sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
                 } else {
-                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
+                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/1\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
                 }
             }
     }
