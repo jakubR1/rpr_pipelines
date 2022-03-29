@@ -395,16 +395,16 @@ def executeBuildLinux(String osName, Map options) {
                         rm -rf ../libs
 
                     """
-                    sh '''#!/bin/bash
-                        virtualenv -p python3.10 venv
-                        source venv/bin/activate
-                        python -V
-                        export CPATH=/usr/include/python3.10
-                        export OS=
-                        python --version
-                        python -m pip install -r requirments.txt
-                        python tools/build.py -all -clean -bin-dir bin/test_venv
-                    '''
+                    sh """#!/bin/bash ../${STAGE_NAME}_${it}.log  2>&1
+                        virtualenv -p python3.10 venv ../${STAGE_NAME}_${it}.log  2>&1
+                        source venv/bin/activate ../${STAGE_NAME}_${it}.log  2>&1
+                        export CPATH=/usr/include/python3.10 ../${STAGE_NAME}_${it}.log  2>&1
+                        export OS= ../${STAGE_NAME}_${it}.log  2>&1
+                        python --version ../${STAGE_NAME}_${it}.log  2>&1
+                        python -m pip install -r requirements.txt ../${STAGE_NAME}_${it}.log  2>&1
+                        pip install -r requirements.txt ../${STAGE_NAME}_${it}.log  2>&1
+                        python tools/build.py -all -clean -bin-dir bin/test_venv ../${STAGE_NAME}_${it}.log  2>&1
+                    """
                     
                     if (options.updateDeps) {
                         uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
