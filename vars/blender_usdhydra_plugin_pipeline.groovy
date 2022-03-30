@@ -303,74 +303,69 @@ def executeTests(String osName, String asicName, Map options) {
 }
 
 
-def executeBuildWindows(String osName, Map options) {
+def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-        def pyVersions = ["3.9"]
 
-        options.toolVersion < "3.1" ?: pyVersions << "3.10"
-
-        pyVersions.each() {
-            try{
-                def pathes = ["c:\\python${it.replace(".","")}\\","c:\\python${it.replace(".","")}\\scripts\\"]
-                //options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
-                pathes << "c:\\CMake323\\bin"
-                withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
-                    if (options.rebuildDeps) {
-                        bat """
-                            if exist ..\\bin rmdir /Q /S ..\\bin
-                            if exist ..\\libs rmdir /Q /S ..\\libs
-                            python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                            python -m pip install PySide2 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                            python -m pip install PyOpenGL >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                            waitfor 1 /t 10 2>NUL || type nul>nul
-                            python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        """
-                        
-                        if (options.updateDeps) {
-                            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${it}/bin")
-                        }
-                    } else {
-                        bat """
-                            python --version >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                            waitfor 1 /t 10 2>NUL || type nul>nul
-                            python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${it}.log  2>&1
-                        """
-                    }
-                }
-                dir("install") {
-                    println "Stashing Artifact for Python ${it}"
-
-                    String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_Windows"
-
-                    ARTIFACT_NAME += options.branch_postfix ? ".(${options.branch_postfix}).zip" : ".zip"
-
+        try {
+            def pathes = ["c:\\python${pyVersion.replace(".","")}\\","c:\\python${pyVersion.replace(".","")}\\scripts\\"]
+            //options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
+            pathes << "c:\\CMake323\\bin"
+            withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
+                if (options.rebuildDeps) {
                     bat """
-                        rename hdusd*.zip ${ARTIFACT_NAME}
+                        if exist ..\\bin rmdir /Q /S ..\\bin
+                        if exist ..\\libs rmdir /Q /S ..\\libs
+                        python --version >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log 2>&1
+                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        waitfor 1 /t 10 2>NUL || type nul>nul
+                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                     """
-
-                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
                     
-                    if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
-                        bat """
-                            rename ${ARTIFACT_NAME} BlenderUSDHydraAddon_Windows.zip
-                        """
-
-                        makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
-
-                        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                    if (options.updateDeps) {
+                        uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${pyVersion}/bin")
                     }
-                }
-            } catch(e){
-                println("[ERROR] Build failed on Windows system. Python ${it}")
-                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
-                    println("[ERROR] Main Python ${it} version build failed")
-                    throw e
+                } else {
+                    bat """
+                        python --version >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        waitfor 1 /t 10 2>NUL || type nul>nul
+                        python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                    """
                 }
             }
+            dir("install") {
+                println "Stashing Artifact for Python ${pyVersion}"
+
+                String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${pyVersion}_Windows"
+
+                ARTIFACT_NAME += options.branch_postfix ? ".(${options.branch_postfix}).zip" : ".zip"
+
+                bat """
+                    rename hdusd*.zip ${ARTIFACT_NAME}
+                """
+
+                String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+                
+                if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+                    bat """
+                        rename ${ARTIFACT_NAME} BlenderUSDHydraAddon_Windows.zip
+                    """
+
+                    makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: getProduct.getStashName("Windows"), preZip: false, storeOnNAS: options.storeOnNAS)
+
+                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
+                }
+            }
+        } catch(e) {
+            println "[ERROR] Python ${pyVersion} build was failed"
+            if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+                println "[ERROR] Failed main version of build"
+                throw e
+            }
         }
+
     }
 }
 
@@ -379,79 +374,72 @@ def executeBuildOSX(String osName, Map options) {
 }
 
 
-def executeBuildLinux(String osName, Map options) {
+def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
-        
-        def pyVersions = ["3.9"]
-        options.toolVersion < "3.1" ?: pyVersions << "3.10"
-        
-        def isPyenvActive = false
 
-        pyVersions.each() {
-            try{
-                if (options.rebuildDeps) {
-                    sh """
-                        rm -rf ../bin
-                        rm -rf ../libs
-                    """
-                    sh """#!/bin/bash
-                        virtualenv -p python${it} venv >> ../${STAGE_NAME}_${it}.log 
-                        source venv/bin/activate >> ../${STAGE_NAME}_${it}.log
-                        export CPATH=/usr/include/python${it} >> ../${STAGE_NAME}_${it}.log 
-                        export OS= >> ../${STAGE_NAME}_${it}.log 
-                        python --version >> ../${STAGE_NAME}_${it}.log 
-                        python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log  
-                        pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log  
-                        python tools/build.py -all -clean -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log
-                    """
-                    
-                    if (options.updateDeps) {
-                        uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${it}/bin")
-                    }
-                } else {
-                    sh """#!/bin/bash
-                        virtualenv -p python${it} venv >> ../${STAGE_NAME}_${it}.log 
-                        source venv/bin/activate >> ../${STAGE_NAME}_${it}.log
-                        export CPATH=/usr/include/python${it} >> ../${STAGE_NAME}_${it}.log 
-                        export OS=
-                        python${it} --version >> ../${STAGE_NAME}_${it}.log  2>&1
-                        python --version >> ../${STAGE_NAME}_${it}.log 
-                        python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log  
-                        pip install -r requirements.txt >> ../${STAGE_NAME}_${it}.log 
-                        python${it} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${it}.log 
-                    """
+        try {
+            if (options.rebuildDeps) {
+                sh """
+                    rm -rf ../bin
+                    rm -rf ../libs
+                """
+                sh """#!/bin/bash
+                    virtualenv -p python${pyVersion} venv >> ../${STAGE_NAME}_${pyVersion}.log 
+                    source venv/bin/activate >> ../${STAGE_NAME}_${pyVersion}.log
+                    export CPATH=/usr/include/python${pyVersion} >> ../${STAGE_NAME}_${pyVersion}.log 
+                    export OS= >> ../${STAGE_NAME}_${pyVersion}.log 
+                    python --version >> ../${STAGE_NAME}_${pyVersion}.log 
+                    python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log  
+                    pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log  
+                    python tools/build.py -all -clean -bin-dir ../bin >> ../${STAGE_NAME}_${pyVersion}.log
+                """
+                
+                if (options.updateDeps) {
+                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${pyVersion}/bin")
                 }
+            } else {
+                sh """#!/bin/bash
+                    virtualenv -p python${pyVersion} venv >> ../${STAGE_NAME}_${pyVersion}.log 
+                    source venv/bin/activate >> ../${STAGE_NAME}_${pyVersion}.log
+                    export CPATH=/usr/include/python${pyVersion} >> ../${STAGE_NAME}_${pyVersion}.log 
+                    export OS=
+                    python${pyVersion} --version >> ../${STAGE_NAME}_${pyVersion}.log  2>&1
+                    python --version >> ../${STAGE_NAME}_${pyVersion}.log 
+                    python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log  
+                    pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log 
+                    python${pyVersion} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${pyVersion}.log 
+                """
+            }
 
-                dir("install") {
-                    println "Stashing Artifact for Python ${it}"
+            dir("install") {
+                println "Stashing Artifact for Python ${pyVersion}"
 
-                    String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${it}_${osName}"
+                String ARTIFACT_NAME  = "BlenderUSDHydraAddon_${options.pluginVersion}_${pyVersion}_${osName}"
 
-                    ARTIFACT_NAME += options.branch_postfix ? ".${options.branch_postfix}.zip" : ".zip"
+                ARTIFACT_NAME += options.branch_postfix ? ".${options.branch_postfix}.zip" : ".zip"
 
-                    sh """
-                        mv hdusd*.zip ${ARTIFACT_NAME}
-                    """
-                    
-                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+                sh """
+                    mv hdusd*.zip ${ARTIFACT_NAME}
+                """
+                
+                String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-                    sh """
-                        mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
-                    """
+                sh """
+                    mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
+                """
 
-                    if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10") {
-                        makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
+                if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+                    makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
 
-                        GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
-                    }
+                    GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
-            } catch(e){
-                println("[ERROR] Build failed on Linux system. Python ${it}")
-                if (options.toolVersion >= "3.1" && it == "3.10" || options.toolVersion < "3.1" && it != "3.10"){
-                    println("[ERROR] Main Python ${it} version build failed")
-                    throw e
-                }
+            }
+        } catch(e) {
+            println "[ERROR] Python ${pyVersion} build was failed"
+            if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+                println "[ERROR] Failed main version of build"
+                throw e
             }
         }
     }
@@ -459,55 +447,59 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-        cleanWS(osName)
-        if (!options.rebuildDeps) {
-            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
+        def pyVersions = ["3.9"]
+        options.toolVersion < "3.1" ?: pyVersions << "3.10"
 
-            dir("bin") {
-                def files = findFiles()
+        pyVersions.each() {
+            cleanWS(osName)
+            if (!options.rebuildDeps) {
+                downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
 
-                for (file in files) {
-                    if (file.name == "USD") {
-                        def dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
-                        def formattedTime = dateFormat.format(new Date(file.lastModified))
-                        currentBuild.description += "<b>Dependencies creation time (${osName}):</b> ${formattedTime}<br/>"
-                        break
+                dir("bin") {
+                    def files = findFiles()
+
+                    for (file in files) {
+                        if (file.name == "USD") {
+                            def dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
+                            def formattedTime = dateFormat.format(new Date(file.lastModified))
+                            currentBuild.description += "<b>Dependencies creation time (${osName}):</b> ${formattedTime}<br/>"
+                            break
+                        }
+                    }
+                }
+            } else {
+                currentBuild.description += "<b>Rebuild dependencies (${osName}):</b><br/>"
+            }
+
+            dir("BlenderUSDHydraAddon") {
+                withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
+                }
+
+                if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
+                    dir("deps/HdRPR/deps/RPR") {
+                        hybrid_to_blender_workflow.replaceHybrid(osName, options)
                     }
                 }
             }
-        } else {
-            currentBuild.description += "<b>Rebuild dependencies (${osName}):</b><br/>"
-        }
 
-        dir("BlenderUSDHydraAddon") {
-            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
-            }
+            outputEnvironmentInfo(osName)
 
-            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith(hybrid_to_blender_workflow.BRANCH_NAME_PREFIX)) {
-                dir("deps/HdRPR/deps/RPR") {
-                    hybrid_to_blender_workflow.replaceHybrid(osName, options)
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+                switch(osName) {
+                    case "Windows":
+                        executeBuildWindows(osName, options, it)
+                        break
+                    case "OSX":
+                        println("Unsupported OS")
+                        break
+                    default:
+                        executeBuildLinux(osName, options, it)                
                 }
             }
+            options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
         }
-
-        outputEnvironmentInfo(osName)
-
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
-            switch(osName) {
-                case "Windows":
-                    executeBuildWindows(osName, options)
-                    break
-                case "OSX":
-                    println("Unsupported OS")
-                    break
-                default:
-                    executeBuildLinux(osName, options)
-                    
-            }
-        }
-
-        options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
+        
     } catch (e) {
         throw e
     } finally {
