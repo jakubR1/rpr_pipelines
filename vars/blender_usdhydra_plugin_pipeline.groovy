@@ -364,6 +364,8 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
                 println "[ERROR] Failed main version of build"
                 throw e
             }
+        }  finally {
+            archiveArtifacts artifacts: "${STAGE_NAME}_${pyVersion}.log ", allowEmptyArchive: true
         }
 
     }
