@@ -365,7 +365,7 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
                 throw e
             }
         }  finally {
-            archiveArtifacts artifacts: "${STAGE_NAME}_${pyVersion}.log ", allowEmptyArchive: true
+            archiveArtifacts artifacts: "../*.log ", allowEmptyArchive: true
         }
 
     }
@@ -444,7 +444,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                 throw e
             }
         } finally {
-            archiveArtifacts artifacts: "${STAGE_NAME}_${pyVersion}.log ", allowEmptyArchive: true
+            archiveArtifacts artifacts: "../*.log ", allowEmptyArchive: true
         }
     }
 }
