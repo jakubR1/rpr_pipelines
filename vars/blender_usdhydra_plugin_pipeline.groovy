@@ -1094,6 +1094,7 @@ def call(String projectRepo = PROJECT_REPO,
             }
 
             options << [configuration: PIPELINE_CONFIGURATION,
+                        BUILD_TIMEOUT:60,
                         projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_usdblender.git",
