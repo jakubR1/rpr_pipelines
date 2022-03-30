@@ -304,10 +304,9 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
-    dir('BlenderUSDHydraAddon') {
-        GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-
-        try {
+    try {
+        dir('BlenderUSDHydraAddon') {
+            GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
             def pathes = ["c:\\python${pyVersion.replace(".","")}\\","c:\\python${pyVersion.replace(".","")}\\scripts\\"]
             //options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
             pathes << "c:\\CMake323\\bin"
@@ -358,16 +357,17 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
                     GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
-        } catch(e) {
-            println "[ERROR] Python ${pyVersion} build was failed"
-            if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
-                println "[ERROR] Failed main version of build"
-                throw e
-            }
-        }  finally {
-            archiveArtifacts artifacts: "../*.log ", allowEmptyArchive: true
-        }
+            
 
+        }
+    } catch(e) {
+        println "[ERROR] Python ${pyVersion} build was failed"
+        if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+            println "[ERROR] Failed main version of build"
+            throw e
+        }
+    }  finally {
+        archiveArtifacts artifacts: "*.log ", allowEmptyArchive: true
     }
 }
 
@@ -377,10 +377,9 @@ def executeBuildOSX(String osName, Map options) {
 
 
 def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
-    dir('BlenderUSDHydraAddon') {
-        GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
-
-        try {
+    try {
+        dir('BlenderUSDHydraAddon') {
+            GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
             if (options.rebuildDeps) {
                 sh """
                     rm -rf ../bin
@@ -437,15 +436,16 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                     GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
-        } catch(e) {
-            println "[ERROR] Python ${pyVersion} build was failed"
-            if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
-                println "[ERROR] Failed main version of build"
-                throw e
-            }
-        } finally {
-            archiveArtifacts artifacts: "../*.log ", allowEmptyArchive: true
+            
         }
+    } catch(e) {
+        println "[ERROR] Python ${pyVersion} build was failed"
+        if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+            println "[ERROR] Failed main version of build"
+            throw e
+        }
+    } finally {
+        archiveArtifacts artifacts: "*.log ", allowEmptyArchive: true
     }
 }
 
