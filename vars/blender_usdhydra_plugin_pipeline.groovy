@@ -313,7 +313,8 @@ def executeBuildWindows(String osName, Map options) {
         pyVersions.each() {
             try{
                 def pathes = ["c:\\python${it.replace(".","")}\\","c:\\python${it.replace(".","")}\\scripts\\"]
-                options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
+                //options.toolVersion < "3.1" ?: pathes << "c:\\CMake323\\bin"
+                pathes << "c:\\CMake323\\bin"
                 withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
                     if (options.rebuildDeps) {
                         bat """
