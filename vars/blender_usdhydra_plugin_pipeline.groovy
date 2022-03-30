@@ -307,9 +307,11 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
     try {
         dir('BlenderUSDHydraAddon') {
             GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-            def paths = ["c:\\python${pyVersion.replace(".","")}\\","c:\\python${pyVersion.replace(".","")}\\scripts\\"]
-            pathes << "c:\\CMake323\\bin"
-            withEnv(["PATH=${pathes.join(";")};${PATH}"]) {
+            def paths = ["c:\\python${pyVersion.replace(".","")}\\",
+                         "c:\\python${pyVersion.replace(".","")}\\scripts\\",
+                         "c:\\CMake323\\bin"]
+
+            withEnv(["PATH=${paths.join(";")};${PATH}"]) {
                 if (options.rebuildDeps) {
                     bat """
                         if exist ..\\bin rmdir /Q /S ..\\bin
@@ -346,7 +348,7 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
 
                 String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
                 
-                if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+                if (options.toolVersion == "3.1" && pyVersion == "3.10" || options.toolVersion != "3.1" && pyVersion != "3.10") {
                     bat """
                         rename ${ARTIFACT_NAME} BlenderUSDHydraAddon_Windows.zip
                     """
@@ -361,7 +363,7 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
         }
     } catch(e) {
         println "[ERROR] Python ${pyVersion} build was failed"
-        if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+        if (options.toolVersion == "3.1" && pyVersion == "3.10" || options.toolVersion != "3.1" && pyVersion != "3.10") {
             println "[ERROR] Failed main version of build"
             throw e
         }
@@ -429,7 +431,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                     mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
                 """
 
-                if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+                if (options.toolVersion == "3.1" && pyVersion == "3.10" || options.toolVersion != "3.1" && pyVersion != "3.10") {
                     makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: getProduct.getStashName(osName), preZip: false, storeOnNAS: options.storeOnNAS)
 
                     GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
@@ -439,7 +441,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
         }
     } catch(e) {
         println "[ERROR] Python ${pyVersion} build was failed"
-        if (options.toolVersion >= "3.1" && pyVersion == "3.10" || options.toolVersion < "3.1" && pyVersion != "3.10") {
+        if (options.toolVersion == "3.1" && pyVersion == "3.10" || options.toolVersion != "3.1" && pyVersion != "3.10") {
             println "[ERROR] Failed main version of build"
             throw e
         }
