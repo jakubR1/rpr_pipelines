@@ -18,7 +18,12 @@ import java.text.SimpleDateFormat
 @Field final String PROJECT_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git"
 
 
-Boolean hybridProFilter(Map options, String asicName, String osName, String testName, String engine) {
+Boolean filterTests(Map options, String asicName, String osName, String testName, String engine) {
+    if (osName.startsWith("Ubuntu") && engine == "HdStormRendererPlugin") {
+        return true
+    }
+
+    // run HybridPro only on RTX cards
     return (engine == "Hybrid" && !(asicName.contains("RTX") || asicName == "AMD_RX6800"))
 }
 
@@ -794,7 +799,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                     if (it.endsWith(engine)) {
                         List testNameParts = it.replace("testResult-", "").split("-") as List
 
-                        if (hybridProFilter(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
+                        if (filterTests(options, testNameParts.get(0), testNameParts.get(1), testNameParts.get(2), engine)) {
                             return
                         }
 
@@ -1142,7 +1147,7 @@ def call(String projectRepo = PROJECT_REPO,
                         testCaseRetries:testCaseRetries,
                         storeOnNAS:true,
                         flexibleUpdates: true,
-                        skipCallback: this.&hybridProFilter,
+                        skipCallback: this.&filterTests,
                         forceReinstall: true
                         ]
         }
