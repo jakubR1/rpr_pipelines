@@ -355,7 +355,9 @@ def makeDeploy(Map options, String engine = "") {
         stage(stageName) {
             def reportBuilderLabels = ""
 
-            if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
+            if (options.DEPLOY_TAG) {
+                reportBuilderLabels = options.DEPLOY_TAG
+            } else if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
                 reportBuilderLabels = "Windows && GitPublisher && !NoDeploy"
             } else {
                 reportBuilderLabels = "Windows && Tester && !NoDeploy"
