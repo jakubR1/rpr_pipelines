@@ -411,13 +411,40 @@ def executePreBuild(Map options) {
             println "Commit shortSHA: ${options.commitShortSHA}"
             println "Branch name: ${options.branchName}"
 
-            if (env.BRANCH_NAME) {
-                withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-                    GithubNotificator githubNotificator = new GithubNotificator(this, options)
-                    githubNotificator.init(options)
-                    options["githubNotificator"] = githubNotificator
-                    githubNotificator.initPreBuild("${BUILD_URL}")
-                    options.projectBranchName = githubNotificator.branchName
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
+                options.anariVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', ' ')
+
+                if (env.BRANCH_NAME) {
+                    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        githubNotificator.init(options)
+                        options["githubNotificator"] = githubNotificator
+                        githubNotificator.initPreBuild("${BUILD_URL}")
+                        options.projectBranchName = githubNotificator.branchName
+                    }
+
+                    if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+                        println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                        println "[INFO] Current build version: ${options.anariVersion}"
+
+                        def newVersion = version_inc(options.anariVersion, 1, ' ')
+                        println "[INFO] New build version: ${newVersion}"
+                        version_write("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', newVersion, ' ')
+
+                        options.anariVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', ' ')
+                        println "[INFO] Updated build version: ${options.anariVersion}"
+
+                        bat """
+                            git add version.h
+                            git commit -m "buildmaster: version update to ${options.anariVersion}"
+                            git push origin HEAD:develop
+                        """
+
+                        //get commit's sha which have to be build
+                        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                        options.projectBranch = options.commitSHA
+                        println "[INFO] Project branch hash: ${options.projectBranch}"
+                    }
                 }
             }
 
@@ -429,6 +456,7 @@ def executePreBuild(Map options) {
 
             currentBuild.description = "<b>Anari SDK branch:</b> ${options.anariSdkBranch}<br/>"
             currentBuild.description = "<b>RPR Anari branch:</b> ${options.rprAnariBranch}<br/>"
+            currentBuild.description += "<b>Version:</b> ${options.anariVersion}<br/>"
             currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
             currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
