@@ -8,7 +8,7 @@ import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
 
 
-@Field final String ANARI_SDK_REPO = "git@github.com:KhronosGroup/ANARI-SDK.git"
+@Field final String ANARI_SDK_REPO = "git@github.com:Piromancer/ANARI-SDK.git"
 @Field final String RPR_ANARI_REPO = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderANARI.git"
 
 
@@ -324,9 +324,21 @@ def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir('AnariSDK') {
+                if (isUnix()) {
+                    sh """
+                        sudo rm -rf build
+                    """
+                }
+
                 checkoutScm(branchName: options.anariSdkBranch, repositoryUrl: options.anariSdkRepo)
             }
             dir('RadeonProRenderAnari') {
+                if (isUnix()) {
+                    sh """
+                        sudo rm -rf build
+                    """
+                }
+
                 checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO)
             }
         }
@@ -412,7 +424,9 @@ def executePreBuild(Map options) {
             println "Branch name: ${options.branchName}"
 
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-                options.anariVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', ' ')
+                options.anariMajorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_MAJOR', ' ')
+                options.anariMinorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_MINOR', ' ')
+                options.anariPatchVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', ' ')
 
                 if (env.BRANCH_NAME) {
                     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -425,18 +439,18 @@ def executePreBuild(Map options) {
 
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
-                        println "[INFO] Current build version: ${options.anariVersion}"
+                        println "[INFO] Current build version: ${options.anariPatchVersion}"
 
-                        def newVersion = version_inc(options.anariVersion, 1, ' ')
+                        def newVersion = version_inc(options.anariPatchVersion, 1, ' ')
                         println "[INFO] New build version: ${newVersion}"
                         version_write("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', newVersion, ' ')
 
-                        options.anariVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', ' ')
-                        println "[INFO] Updated build version: ${options.anariVersion}"
+                        options.anariPatchVersion = version_read("${env.WORKSPACE}\\RadeonProRenderAnari\\version.h", '#define RPR_ANARI_VERSION_PATCH', ' ')
+                        println "[INFO] Updated build version: ${options.anariPatchVersion}"
 
                         bat """
                             git add version.h
-                            git commit -m "buildmaster: version update to ${options.anariVersion}"
+                            git commit -m "buildmaster: version update to ${options.anariPatchVersion}"
                             git push origin HEAD:develop
                         """
 
@@ -456,7 +470,7 @@ def executePreBuild(Map options) {
 
             currentBuild.description = "<b>Anari SDK branch:</b> ${options.anariSdkBranch}<br/>"
             currentBuild.description = "<b>RPR Anari branch:</b> ${options.rprAnariBranch}<br/>"
-            currentBuild.description += "<b>Version:</b> ${options.anariVersion}<br/>"
+            currentBuild.description += "<b>Version:</b> ${options.anariMajorVersion}.${options.anariMinorVersion}.${options.anariPatchVersion}<br/>"
             currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
             currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
