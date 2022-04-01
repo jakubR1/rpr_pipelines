@@ -267,8 +267,13 @@ def executeBuildLinux(String osName, Map options) {
         """
 
         dir("results") {
+            try {
+                sh "cp -d /usr/local/lib/*anari* ."
+            } catch (e) {
+                sh "cp -d /usr/local/lib/x86_64-linux-gnu/*anari* ."
+            }
+
             sh """
-                cp -d /usr/local/lib/*anari* .
                 cp -d /usr/local/bin/*anari* .
                 cp -d ../*.so .
                 tar cf Anari_${osName}.tar *
