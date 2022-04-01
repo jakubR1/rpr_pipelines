@@ -566,7 +566,7 @@ def executePreBuild(Map options)
 
     // TO DO: delete blender version changing after merge 3.1 support to master
     print("[DEBUG] BRANCH NAME: ${options.projectBranch}")
-    if (options.projectBranch == "BLEN-42"){
+    if (options.projectBranch == "BLEN-42" || (env.BRANCH_NAME && env.BRANCH_NAME == "PR-230")){
         print("[DEBUG] CHANGING DEFAULT BLENDER VERSION TO 3.1")
         options.toolVersion = "3.1"
     }
