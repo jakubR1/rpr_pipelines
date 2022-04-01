@@ -54,7 +54,7 @@ Boolean isIdleClient(Map options) {
 
         def parsedTests = options.tests.split("-")[0]
 
-        if (options.multiconnectionConfiguration.second_win_client.any { parsedTests.contains(it) }) {
+        if (options.multiconnectionConfiguration.second_win_client.any { parsedTests.contains(it) } || parsedTests == "regression.1.json~") {
             result = false
 
             // wait multiconnection client machine
@@ -609,7 +609,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
             sleep(5)
         }
 
-        if (options.multiconnectionConfiguration.second_win_client.any { options.tests.contains(it) }) {
+        if (options.multiconnectionConfiguration.second_win_client.any { options.tests.contains(it) } || options.parsedTests == "regression.1.json~") {
             while (!options["mcClientInfo"]["ready"]) {
                 if (options["mcClientInfo"]["failed"]) {
                     throw new Exception("Multiconnection client was failed")
@@ -890,7 +890,7 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
 
-            if (options.multiconnectionConfiguration.second_win_client.any { options.parsedTests.contains(it) }) {
+            if (options.multiconnectionConfiguration.second_win_client.any { options.parsedTests.contains(it) } || options.parsedTests == "regression.1.json~") {
                 threads["${options.stageName}-multiconnection-client"] = { 
                     node(getMulticonnectionClientLabels(options)) {
                         timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
@@ -1175,7 +1175,12 @@ def executePreBuild(Map options) {
             def packageInfo
 
             if (options.testsPackage != "none") {
-                packageInfo = readJSON file: "jobs/${options.testsPackage}"
+                if (fileExists("jobs/${options.testsPackage}")) {
+                    packageInfo = readJSON file: "jobs/${options.testsPackage}"
+                } else {
+                    packageInfo = readJSON file: "jobs/${options.testsPackage.replace('.json', '-windows.json')}"
+                }
+
                 options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
                 if (!env.BRANCH_NAME && options.isPackageSplitted && options.tests) {
@@ -1352,7 +1357,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                     groupLost = true
                                 }
 
-                                if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
+                                if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) } || testName == "regression.1.json~") {
                                     try {
                                         makeUnstash(name: "${it}_sec_cl", storeOnNAS: options.storeOnNAS)
                                     } catch (e) {
@@ -1428,14 +1433,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("secondClientTestResults") {
                 testResultList.each {
                     if (it.endsWith(game)) {
-                        if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) }) {
-                            List testNameParts = it.split("-") as List
+                        List testNameParts = it.split("-") as List
 
-                            if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                                return
-                            }
+                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
+                            return
+                        }
 
-                            String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+
+                        if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) } || testNameParts == "regression.1.json~") {
                             dir(testName.replace("testResult-", "")) {
                                 try {
                                     makeUnstash(name: "${it}_sec_cl_j", storeOnNAS: options.storeOnNAS)
