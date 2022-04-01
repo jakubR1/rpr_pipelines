@@ -564,6 +564,13 @@ def executePreBuild(Map options)
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
+    // TO DO: delete blender version changing after merge 3.1 support to master
+    print("[DEBUG] BRANCH NAME: ${options.projectBranch}")
+    if (options.projectBranch == "BLEN-42"){
+        print("[DEBUG] CHANGING DEFAULT BLENDER VERSION TO 3.1")
+        options.toolVersion = "3.1"
+    }
+
     if (!options['isPreBuilt']) {
         dir('BlenderUSDHydraAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
