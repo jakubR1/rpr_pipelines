@@ -324,21 +324,9 @@ def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir('AnariSDK') {
-                if (isUnix()) {
-                    sh """
-                        sudo rm -rf build
-                    """
-                }
-
                 checkoutScm(branchName: options.anariSdkBranch, repositoryUrl: options.anariSdkRepo)
             }
             dir('RadeonProRenderAnari') {
-                if (isUnix()) {
-                    sh """
-                        sudo rm -rf build
-                    """
-                }
-
                 checkoutScm(branchName: options.rprAnariBranch, repositoryUrl: RPR_ANARI_REPO)
             }
         }
