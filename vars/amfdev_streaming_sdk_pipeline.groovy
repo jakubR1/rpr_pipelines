@@ -1114,8 +1114,6 @@ def executePreBuild(Map options) {
         options.executeBuild = true
         options.executeTests = true
 
-        options.tests = "Smoke"
-
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
         } else if("${env.BRANCH_NAME}" == "master") {
