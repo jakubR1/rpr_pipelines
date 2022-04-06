@@ -467,8 +467,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             options['REF_PATH']="${REF_PATH}"
             options['JOB_PATH']="${JOB_PATH}"
 
-            if(options.get('BUILDER_TAG', '') == '')
-                options['BUILDER_TAG'] = 'Builder'
+
+            options['BUILDER_TAG'] = 'testBuilder'
 
             // if timeout doesn't set - use default (value in minutes)
             options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 20
