@@ -625,7 +625,7 @@ def executePreBuild(Map options)
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
 
-                        def possiblePRNumber = (options.commitMessage =~ /#\d+/).findAll()
+                        def possiblePRNumber = (options.commitMessage =~ /\(#\d+\)/).findAll()
                         
                         if (possiblePRNumber.size() > 0) {
                             GithubApiProvider apiProvider = new GithubApiProvider(this)
