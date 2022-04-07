@@ -86,30 +86,28 @@ def getTanTool(String osName, Map options) {
     }
 }
 
-
-
+// todo need to add switch between tests
+// ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
 def executeTestCommand(String osName, Map options) {
     switch(osName) {
         case 'Windows':
             dir('Launcher') {
                 bat """
-                    run.bat "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
+                    run.bat "Correlation" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         case 'OSX':
             dir('Launcher') {
                 sh """
-                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "Correlation" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         default:
             dir('Launcher') {
-                // todo need to add switch between tests
-                // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
                 sh """
-                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "Correlation" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
     }
