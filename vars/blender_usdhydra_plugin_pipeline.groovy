@@ -458,7 +458,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
 def executeBuild(String osName, Map options) {
     try {
         def pyVersions = []
-        options.toolVersion != "3.1" ? pyVersion << "3.9" : pyVersions << "3.10"
+        options.toolVersion != "3.1" ? pyVersions << "3.9" : pyVersions << "3.10"
 
         pyVersions.each() {
             cleanWS(osName)
