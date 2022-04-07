@@ -403,7 +403,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                 """
                 
                 if (options.updateDeps) {
-                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${pyVersion}/bin")
+                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${pyVersion}/bin")
                 }
             } else {
                 sh """#!/bin/bash
@@ -463,7 +463,7 @@ def executeBuild(String osName, Map options) {
         pyVersions.each() {
             cleanWS(osName)
             if (!options.rebuildDeps) {
-                downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
+                downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${it}/bin", ".")
 
                 dir("bin") {
                     def files = findFiles()
