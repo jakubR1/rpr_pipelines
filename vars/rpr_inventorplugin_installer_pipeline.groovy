@@ -1006,7 +1006,7 @@ def call(String projectBranch = "",
             if (tests.contains("Material_Library") || tests.contains("Inventor_Appearance") || testsPackage.contains("weekly")) {
                 testStageTimeout = 330
             } else {
-                testStageTimeout = 195
+                testStageTimeout = 240
             }
 
             println """
