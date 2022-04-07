@@ -11,6 +11,7 @@ import TestsExecutionType
 @Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
 @Field final String DRIVER_REPO = "git@github.com:amfdev/AMDVirtualDrivers.git"
 @Field final Map driverTestsExecuted = new ConcurrentHashMap()
+@Field final List WEEKLY_REGRESSION_CONFIGURATION = ["HeavenDX11", "HeavenOpenGL", "ValleyDX11", "ValleyOpenGL", "Dota2Vulkan"]
 
 
 String getClientLabels(Map options) {
@@ -19,17 +20,6 @@ String getClientLabels(Map options) {
 
 String getMulticonnectionClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.MULTICONNECTION_CLIENT_TAG}"
-}
-
-
-Boolean weeklyFilter(Map options, String asicName, String osName, String testName, String game) {
-    List reducedConfigurations = ["HeavenDX11", "HeavenOpenGL", "ValleyDX11", "ValleyOpenGL", "Dota2Vulkan"]
-    List testGroups = ["General"]
-    if (env.JOB_NAME.contains("Weekly")) {
-        return reducedConfigurations.contains(game) && !testGroups.contains(testName)
-    }
-
-    return false
 }
 
 
@@ -1204,9 +1194,18 @@ def executePreBuild(Map options) {
                     }
                 }
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests, collectTraces ? 90 : 70)
+
                 options.engines.each { engine ->
-                    options.tests.each() {
-                        tests << "${it}-${engine}"
+                    if (env.JOB_NAME.contains("Weekly") && WEEKLY_REGRESSION_CONFIGURATION.contains(engine)) {
+                        packageInfo = readJSON file: "jobs/regression-windows.json"
+
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                            tests << "regression.${i}.json-${engine}"
+                        }
+                    } else {
+                        options.tests.each() {
+                            tests << "${it}-${engine}"
+                        }
                     }
                 }
 
@@ -1306,10 +1305,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
 
-                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                            return
-                        }
-
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             if (it.contains("Android")) {
@@ -1389,10 +1384,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
 
-                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                            return
-                        }
-
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
@@ -1412,10 +1403,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 testResultList.each {
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
-
-                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                            return
-                        }
 
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
 
@@ -1716,8 +1703,7 @@ def call(String projectBranch = "",
                         collectTracesType:collectTracesType,
                         storeOnNAS: storeOnNAS,
                         finishedBuildStages: new ConcurrentHashMap(),
-                        isDevelopBranch: isDevelopBranch,
-                        skipCallback: this.&weeklyFilter
+                        isDevelopBranch: isDevelopBranch
                         ]
         }
 
