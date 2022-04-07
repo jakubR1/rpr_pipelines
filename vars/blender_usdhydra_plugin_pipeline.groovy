@@ -622,7 +622,7 @@ def executePreBuild(Map options)
                         if (possiblePRNumber.size() > 0) {
                             GithubApiProvider apiProvider = new GithubApiProvider(this)
 
-                            def prNumber = possiblePRNumber[possiblePRNumber.size() - 1].replace("#", "")
+                            def prNumber = possiblePRNumber[possiblePRNumber.size() - 1].replace("#", "").replace("(", "").replace(")", "")
                             def prInfo = apiProvider.getPullRequest(options["projectRepo"].replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "") + "/pull/${prNumber}")
 
                             if (prInfo["body"].contains("CIS:REBUILD_DEPS")) {
