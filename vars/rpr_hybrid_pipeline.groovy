@@ -351,9 +351,10 @@ def executePerfTests(String osName, String asicName, Map options) {
                     for (metric in reportContent) {
                         if (metric.value["Cliff_detected"]) {
                             cliffDetected = true
-                        }
-                        if (cliffDetected) {
-                            break loop
+                            options.successfulTests["cliff_detected"] = true
+                        } else if (metric.value["Unexpected_acceleration"]) {
+                            unexpectedAcceleration = true
+                            options.successfulTests["unexpected_acceleration"] = true
                         }
                     }
                 }
@@ -725,10 +726,16 @@ def executeDeploy(Map options, List platformList, List testResultList) {
         if (!options.successfulTests["unit"]) {
             commentMessage = "\\n Unit tests failures - ${env.BUILD_URL}/HTML_20Failures/"
         }
-        if (options.successfulTests["perf"]) {
-            commentMessage += "\\n Perf tests report (success) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
-        } else {
+        if (!options.successfulTests["perf"]) {
             commentMessage += "\\n Perf tests report (problems detected) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
+        } else if (options.successfulTests["cliff_detected"] && options.successfulTests["unexpected_acceleration"]) {
+            commentMessage += "\\n Perf tests report (cliff and unexpected acceleration detected) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
+        } else if (options.successfulTests["cliff_detected"]) {
+            commentMessage += "\\n Perf tests report (cliff detected) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
+        } else if (options.successfulTests["unexpected_acceleration"]) {
+            commentMessage += "\\n Perf tests report (unexpected acceleration detected) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
+        } else {
+            commentMessage += "\\n Perf tests report (success) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
         }
         String commitUrl = "${options.githubNotificator.repositoryUrl}/commit/${options.githubNotificator.commitSHA}"
         GithubNotificator.sendPullRequestComment("Jenkins build for ${commitUrl} finished as ${status} ${commentMessage}", options)
@@ -764,7 +771,7 @@ def call(String projectBranch = "",
     println "Test quality: ${testsQuality}"
     println "[INFO] Performance tests which will be executed: ${scenarios}"
 
-    Map successfulTests = ["unit": true, "perf": true]
+    Map successfulTests = ["unit": true, "perf": true, "cliff_detected": false, "unexpected_acceleration": false]
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [platforms:platforms,
