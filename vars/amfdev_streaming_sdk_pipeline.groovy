@@ -339,6 +339,12 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         }
     }
 
+    // regression.json suite in weekly
+    if (testsNames.contains("regression")) {
+        testsPackageName = options.parsedTests
+        testsNames = ""
+    }
+
     String collectTraces = "False"
 
     if ((executionType == "server" && options.serverCollectTraces) || (executionType == "client" && options.clientCollectTraces)) {
@@ -1200,7 +1206,7 @@ def executePreBuild(Map options) {
                         packageInfo = readJSON file: "jobs/regression-windows.json"
 
                         for (int i = 0; i < packageInfo["groups"].size(); i++) {
-                            tests << "regression.${i}.json-${engine}"
+                            tests << "regression.${i}.json~-${engine}"
                         }
                     } else {
                         options.tests.each() {
