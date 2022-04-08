@@ -55,9 +55,14 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                     def testerLabels
                     if (options.TESTER_TAG) {
-                        testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName}"
+                        if (options.TESTER_TAG.contains("PC-") || options.TESTER_TAG.contains("LC-")) {
+                            // possibility to test some disabled tester machine
+                            testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName}"
+                        } else {
+                            testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName} && !Disabled"
+                        }
                     } else {
-                        testerLabels = "${osName} && Tester && gpu${asicName}"
+                        testerLabels = "${osName} && Tester && gpu${asicName} && !Disabled"
                     }
 
                     Iterator testsIterator = options.testsList.iterator()
