@@ -573,7 +573,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                     prepareTool(osName, options)
                 }
 
-                if (options.multiconnectionConfiguration.android_client.any { options.parsedTests.contains(it) }) {
+                if (options.multiconnectionConfiguration.android_client.any { options.parsedTests.contains(it) } || options.parsedTests.contains("regression")) {
                     dir("StreamingSDKAndroid") {
                         prepareTool("Android", options)
                         installAndroidClient()
