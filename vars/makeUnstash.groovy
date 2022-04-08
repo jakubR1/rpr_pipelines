@@ -63,7 +63,7 @@ def call(Map params) {
                 if (isUnix()) {
                     stdout = sh(returnStdout: true, script: "unzip -o -u \"${zipName}\"")
                 } else {
-                    stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"${zipName}\"")
+                    stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"${zipName}\" -aoa")
                 }
             }
 
