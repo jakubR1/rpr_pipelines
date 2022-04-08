@@ -345,29 +345,24 @@ def executePerfTests(String osName, String asicName, Map options) {
             if (!options.updateRefsPerf) {
                 List reportsList = []
                 def reports = findFiles(glob: "*.json")
-                Boolean cliffDetected, unexpectedAcceleration
+                Boolean cliffDetected
                 loop: for (report in reports) {
                     def reportContent = readJSON file: report.name
                     for (metric in reportContent) {
                         if (metric.value["Cliff_detected"]) {
                             cliffDetected = true
-                        } else if (metric.value["Unexpected_acceleration"]) {
-                            unexpectedAcceleration = true
                         }
-                        if (cliffDetected && unexpectedAcceleration) {
+                        if (cliffDetected) {
                             break loop
                         }
                     }
                 }
-                if (cliffDetected || unexpectedAcceleration) {
+                if (cliffDetected) {
                     currentBuild.result = "UNSTABLE"
                     options.successfulTests["perf"] = false
                 }
                 if (cliffDetected) {
                     error_message += " Testing finished with 'cliff detected'."
-                }
-                if (unexpectedAcceleration) {
-                    error_message += " Testing finished with 'unexpected acceleration'."
                 }
 
                 error_message = error_message.trim()
