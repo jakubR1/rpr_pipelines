@@ -1412,7 +1412,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
 
-                        if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) } || testNameParts == "regression.1.json~") {
+                        if (options.multiconnectionConfiguration.second_win_client.any { testGroup -> it.contains(testGroup) } || testName == "regression.1.json~") {
                             dir(testName.replace("testResult-", "")) {
                                 try {
                                     makeUnstash(name: "${it}_sec_cl_j", storeOnNAS: options.storeOnNAS)
