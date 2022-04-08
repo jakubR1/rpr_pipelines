@@ -5,6 +5,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20Maya"
@@ -37,25 +38,46 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine)
 {
-    try {
-        dir("scripts") {
-            switch(osName) {
-                case 'Windows':
-                    bat "build_rpr_cache.bat ${toolVersion} ${engine} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
-                    break
-                case 'OSX':
-                    sh "./build_rpr_cache.sh ${toolVersion} ${engine} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"
-                    break
-                default:
-                    println "[WARNING] ${osName} is not supported"
+    def maxCBTries = 3
+    def currentCBTry = 0
+
+    while (currentCBTry < maxCBTries) {
+        try {
+            timeout(time: "7", unit: "MINUTES") {
+                dir("scripts") {
+                    switch(osName) {
+                        case 'Windows':
+                            bat "build_rpr_cache.bat ${toolVersion} ${engine} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                            break
+                        case 'OSX':
+                            sh "./build_rpr_cache.sh ${toolVersion} ${engine} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"
+                            break
+                        default:
+                            println "[WARNING] ${osName} is not supported"
+                    }
+                }
+            }
+
+            break
+        } catch (FlowInterruptedException e) {
+            e.getCauses().each() {
+                String causeClassName = it.getClass().toString()
+                
+                if (causeClassName.contains("UserInterruption")) {
+                    throw e
+                }
+            }
+        } catch (e) {
+            currentCBTry++
+
+            if (currentCBTry >= maxCBTries) {
+                String cacheBuildingLog = readFile("${log_name}_${currentTry}.cb.log")
+                if (cacheBuildingLog.contains("Cannot open renderer description file \"FireRenderRenderer.xml\"")) {
+                    throw new ExpectedExceptionWrapper(NotificationConfiguration.PLUGIN_NOT_FOUND, e)
+                }
+                throw e
             }
         }
-    } catch (e) {
-        String cacheBuildingLog = readFile("${log_name}_${currentTry}.cb.log")
-        if (cacheBuildingLog.contains("Cannot open renderer description file \"FireRenderRenderer.xml\"")) {
-            throw new ExpectedExceptionWrapper(NotificationConfiguration.PLUGIN_NOT_FOUND, e)
-        }
-        throw e
     }
 }
 

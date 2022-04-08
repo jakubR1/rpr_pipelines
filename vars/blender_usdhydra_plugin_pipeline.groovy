@@ -403,7 +403,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                 """
                 
                 if (options.updateDeps) {
-                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}-${pyVersion}/bin")
+                    uploadFiles("../bin/", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${pyVersion}/bin")
                 }
             } else {
                 sh """#!/bin/bash
@@ -457,13 +457,13 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
 
 def executeBuild(String osName, Map options) {
     try {
-        def pyVersions = ["3.9"]
-        options.toolVersion != "3.1" ?: pyVersions << "3.10"
+        def pyVersions = []
+        options.toolVersion != "3.1" ? pyVersions << "3.9" : pyVersions << "3.10"
 
         pyVersions.each() {
             cleanWS(osName)
             if (!options.rebuildDeps) {
-                downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin", ".")
+                downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}_${it}/bin", ".")
 
                 dir("bin") {
                     def files = findFiles()
@@ -564,14 +564,6 @@ def executePreBuild(Map options)
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
-    // TO DO: delete blender version changing after merge 3.1 support to master
-    print("[DEBUG] BRANCH NAME: ${options.projectBranch}")
-    if (options.projectBranch == "BLEN-42" || (env.BRANCH_NAME && env.BRANCH_NAME == "PR-230")){
-        print("[DEBUG] CHANGING DEFAULT BLENDER VERSION TO 3.1")
-        options.toolVersion = "3.1"
-        options.rebuildDeps = true
-    }
-
     if (!options['isPreBuilt']) {
         dir('BlenderUSDHydraAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -630,7 +622,7 @@ def executePreBuild(Map options)
                         if (possiblePRNumber.size() > 0) {
                             GithubApiProvider apiProvider = new GithubApiProvider(this)
 
-                            def prNumber = possiblePRNumber[possiblePRNumber.size() - 1].replace("#", "")
+                            def prNumber = possiblePRNumber[possiblePRNumber.size() - 1].replace("#", "").replace("(", "").replace(")", "")
                             def prInfo = apiProvider.getPullRequest(options["projectRepo"].replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "") + "/pull/${prNumber}")
 
                             if (prInfo["body"].contains("CIS:REBUILD_DEPS")) {
@@ -1015,7 +1007,7 @@ def call(String projectRepo = PROJECT_REPO,
     String customBuildLinkOSX = "",
     String enginesNames = "RPR,GL,Hybrid",
     String tester_tag = "Blender",
-    String toolVersion = "3.0",
+    String toolVersion = "3.1",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
     Integer testCaseRetries = 3
@@ -1110,7 +1102,7 @@ def call(String projectRepo = PROJECT_REPO,
             }
 
             options << [configuration: PIPELINE_CONFIGURATION,
-                        BUILD_TIMEOUT:60,
+                        BUILD_TIMEOUT:120,
                         projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_usdblender.git",

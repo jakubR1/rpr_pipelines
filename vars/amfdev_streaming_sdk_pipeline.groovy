@@ -11,6 +11,7 @@ import TestsExecutionType
 @Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
 @Field final String DRIVER_REPO = "git@github.com:amfdev/AMDVirtualDrivers.git"
 @Field final Map driverTestsExecuted = new ConcurrentHashMap()
+@Field final List WEEKLY_REGRESSION_CONFIGURATION = ["HeavenDX11", "HeavenOpenGL", "ValleyDX11", "ValleyOpenGL", "Dota2Vulkan"]
 
 
 String getClientLabels(Map options) {
@@ -19,17 +20,6 @@ String getClientLabels(Map options) {
 
 String getMulticonnectionClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.MULTICONNECTION_CLIENT_TAG}"
-}
-
-
-Boolean weeklyFilter(Map options, String asicName, String osName, String testName, String game) {
-    List reducedConfigurations = ["HeavenDX11", "HeavenOpenGL", "ValleyDX11", "ValleyOpenGL", "Dota2Vulkan"]
-    List testGroups = ["General"]
-    if (env.JOB_NAME.contains("Weekly")) {
-        return reducedConfigurations.contains(game) && !testGroups.contains(testName)
-    }
-
-    return false
 }
 
 
@@ -932,95 +922,75 @@ def executeTests(String osName, String asicName, Map options) {
 
 def executeBuildWindows(Map options) {
     options.winBuildConfiguration.each() { winBuildConf ->
-        options.winVisualStudioVersion.each() { winVSVersion ->
 
-            println "Current build configuration: ${winBuildConf}."
-            println "Current VS version: ${winVSVersion}."
+        println "Current build configuration: ${winBuildConf}."
 
-            String winBuildName = "${winBuildConf}_vs${winVSVersion}"
-            String logName = "${STAGE_NAME}.${winBuildName}.log"
-            String logNameDriver = "${STAGE_NAME}.${winBuildName}.driver.log"
+        String winBuildName = "${winBuildConf}_vs2019"
+        String logName = "${STAGE_NAME}.${winBuildName}.log"
+        String logNameDriver = "${STAGE_NAME}.${winBuildName}.driver.log"
 
-            String msBuildPath = ""
-            String buildSln = ""
-            String winArtifactsDir = "vs${winVSVersion}x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
-            String winDriverDir = "x64/${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+        String buildSln = "StreamingSDK_vs2019.sln"
+        String msBuildPath = bat(script: "echo %VS2019_PATH%",returnStdout: true).split('\r\n')[2].trim()
+        String winArtifactsDir = "vs2019x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+        String winDriverDir = "x64/${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
 
-            switch(winVSVersion) {
-                case "2017":
-                    buildSln = "StreamingSDK_vs2017.sln"
-
-                    msBuildPath = bat(script: "echo %VS2017_PATH%",returnStdout: true).split('\r\n')[2].trim()
-                    
-                    break
-                case "2019":
-                    buildSln = "StreamingSDK_vs2019.sln"
-
-                    msBuildPath = bat(script: "echo %VS2019_PATH%",returnStdout: true).split('\r\n')[2].trim()
-
-                    break
-                default:
-                    throw Exception("Unsupported VS version")
-            }
-
-            if (options.isDevelopBranch) {
-                dir("AMDVirtualDrivers") {
-                    withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                        checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
-                    }
-
-                    GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logNameDriver}")
-
-                    bat """
-                        set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
-                        set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
-                        set msbuild="${msBuildPath}"
-                        %msbuild% AMDVirtualDrivers.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\${logNameDriver} 2>&1
-                    """
-
-                    dir(winDriverDir) {
-                        String DRIVER_NAME = "Driver_Windows_${winBuildConf}.zip"
-
-                        bat("%CIS_TOOLS%\\7-Zip\\7z.exe a ${DRIVER_NAME} .")
-
-                        makeArchiveArtifacts(name: DRIVER_NAME, storeOnNAS: options.storeOnNAS)
-
-                        if (options.winTestingDriverName == winBuildConf) {
-                            utils.moveFiles(this, "Windows", DRIVER_NAME, "${options.winTestingDriverName}.zip")
-                            makeStash(includes: "${options.winTestingDriverName}.zip", name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
-                        }
-                    }
+        if (options.isDevelopBranch) {
+            dir("AMDVirtualDrivers") {
+                withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                    checkoutScm(branchName: "develop", repositoryUrl: DRIVER_REPO)
                 }
-            }
 
-            dir("StreamingSDK\\amf\\protected\\samples") {
-                GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
+                GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logNameDriver}")
 
                 bat """
                     set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
                     set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
                     set msbuild="${msBuildPath}"
-                    %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
+                    %msbuild% AMDVirtualDrivers.sln /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\${logNameDriver} 2>&1
                 """
-            }
 
-            String archiveUrl = ""
+                dir(winDriverDir) {
+                    String DRIVER_NAME = "Driver_Windows_${winBuildConf}.zip"
 
-            dir("StreamingSDK\\amf\\bin\\${winArtifactsDir}") {
-                String BUILD_NAME = "StreamingSDK_Windows_${winBuildName}.zip"
+                    bat("%CIS_TOOLS%\\7-Zip\\7z.exe a ${DRIVER_NAME} .")
 
-                zip archive: true, zipFile: BUILD_NAME
+                    makeArchiveArtifacts(name: DRIVER_NAME, storeOnNAS: options.storeOnNAS)
 
-                if (options.winTestingBuildName == winBuildName) {
-                    utils.moveFiles(this, "Windows", BUILD_NAME, "${options.winTestingBuildName}.zip")
-                    makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+                    if (options.winTestingDriverName == winBuildConf) {
+                        utils.moveFiles(this, "Windows", DRIVER_NAME, "${options.winTestingDriverName}.zip")
+                        makeStash(includes: "${options.winTestingDriverName}.zip", name: "DriverWindows", preZip: false, storeOnNAS: options.storeOnNAS)
+                    }
                 }
+            }
+        }
 
-                archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-                rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+        dir("StreamingSDK\\amf\\protected\\samples") {
+            GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
+
+            bat """
+                set AMD_VIRTUAL_DRIVER=${WORKSPACE}\\AMDVirtualDrivers
+                set STREAMING_SDK=${WORKSPACE}\\StreamingSDK
+                set msbuild="${msBuildPath}"
+                %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
+            """
+        }
+
+        String archiveUrl = ""
+
+        dir("StreamingSDK\\amf\\bin\\${winArtifactsDir}") {
+            String BUILD_NAME = "StreamingSDK_Windows_${winBuildName}.zip"
+
+            zip archive: true, zipFile: BUILD_NAME
+
+            if (options.winTestingBuildName == winBuildName) {
+                utils.moveFiles(this, "Windows", BUILD_NAME, "${options.winTestingBuildName}.zip")
+                makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows", preZip: false, storeOnNAS: options.storeOnNAS)
             }
 
+            archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+            rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
         }
+
     }
 
     GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
@@ -1224,9 +1194,18 @@ def executePreBuild(Map options) {
                     }
                 }
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests, collectTraces ? 90 : 70)
+
                 options.engines.each { engine ->
-                    options.tests.each() {
-                        tests << "${it}-${engine}"
+                    if (env.JOB_NAME.contains("Weekly") && WEEKLY_REGRESSION_CONFIGURATION.contains(engine)) {
+                        packageInfo = readJSON file: "jobs/regression-windows.json"
+
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                            tests << "regression.${i}.json-${engine}"
+                        }
+                    } else {
+                        options.tests.each() {
+                            tests << "${it}-${engine}"
+                        }
                     }
                 }
 
@@ -1326,10 +1305,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
 
-                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                            return
-                        }
-
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             if (it.contains("Android")) {
@@ -1409,10 +1384,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
 
-                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                            return
-                        }
-
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
@@ -1432,10 +1403,6 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                 testResultList.each {
                     if (it.endsWith(game)) {
                         List testNameParts = it.split("-") as List
-
-                        if (weeklyFilter(options, testNameParts.get(1), testNameParts.get(2), testNameParts.get(3), game)) {
-                            return
-                        }
 
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
 
@@ -1633,7 +1600,6 @@ def call(String projectBranch = "",
     String platforms = "Windows:AMD_RX5700XT;Android:AMD_RX5700XT",
     String clientTag = "PC-TESTER-VILNIUS-WIN10",
     String winBuildConfiguration = "release,debug",
-    String winVisualStudioVersion = "2019",
     String winTestingBuildName = "debug_vs2019",
     String testsPackage = "regression.json",
     String tests = "",
@@ -1662,7 +1628,6 @@ def call(String projectBranch = "",
                 platforms = platforms + ";Windows"
 
                 winBuildConfiguration = "debug"
-                winVisualStudioVersion = "2019"
                 winTestingBuildName = "debug_vs2019"
             }
 
@@ -1686,11 +1651,9 @@ def call(String projectBranch = "",
             """
 
             winBuildConfiguration = winBuildConfiguration.split(',')
-            winVisualStudioVersion = winVisualStudioVersion.split(',')
 
             println """
                 Win build configuration: ${winBuildConfiguration}"
-                Win visual studio version: ${winVisualStudioVersion}"
                 Win testing build name: ${winTestingBuildName}
                 Win driver build name: ${winTestingDriverName}
             """
@@ -1713,7 +1676,6 @@ def call(String projectBranch = "",
                         PRJ_NAME: "StreamingSDK",
                         splitTestsExecution: true,
                         winBuildConfiguration: winBuildConfiguration,
-                        winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
                         winTestingDriverName: winTestingDriverName,
                         androidBuildConfiguration: androidBuildConfiguration,
@@ -1741,8 +1703,7 @@ def call(String projectBranch = "",
                         collectTracesType:collectTracesType,
                         storeOnNAS: storeOnNAS,
                         finishedBuildStages: new ConcurrentHashMap(),
-                        isDevelopBranch: isDevelopBranch,
-                        skipCallback: this.&weeklyFilter
+                        isDevelopBranch: isDevelopBranch
                         ]
         }
 

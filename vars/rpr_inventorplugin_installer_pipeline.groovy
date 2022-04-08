@@ -1006,7 +1006,7 @@ def call(String projectBranch = "",
             if (tests.contains("Material_Library") || tests.contains("Inventor_Appearance") || testsPackage.contains("weekly")) {
                 testStageTimeout = 330
             } else {
-                testStageTimeout = 195
+                testStageTimeout = 240
             }
 
             println """
@@ -1037,7 +1037,7 @@ def call(String projectBranch = "",
                         BUILD_TIMEOUT: 120,
                         TEST_TIMEOUT: testStageTimeout,
                         ADDITIONAL_XML_TIMEOUT: 15,
-                        NON_SPLITTED_PACKAGE_TIMEOUT: 180,
+                        NON_SPLITTED_PACKAGE_TIMEOUT: 240,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
                         customBuildLinkWindows: customBuildLinkWindows,
