@@ -55,14 +55,9 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                     def testerLabels
                     if (options.TESTER_TAG) {
-                        if (options.TESTER_TAG.contains("PC-") || options.TESTER_TAG.contains("LC-")) {
-                            // possibility to test some disabled tester machine
-                            testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName}"
-                        } else {
-                            testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName} && !Disabled"
-                        }
+                        testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName}"
                     } else {
-                        testerLabels = "${osName} && Tester && gpu${asicName} && !Disabled"
+                        testerLabels = "${osName} && Tester && gpu${asicName}"
                     }
 
                     Iterator testsIterator = options.testsList.iterator()
@@ -339,7 +334,7 @@ def shouldExecuteDelpoyStage(Map options) {
             }
         }
     } else {
-        return false
+        return true
     }
 
     return true

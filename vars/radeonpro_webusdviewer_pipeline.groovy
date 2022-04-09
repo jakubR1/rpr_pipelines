@@ -14,15 +14,21 @@ def executeBuildWindows(Map options)
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
                 cmake --version >> ${STAGE_NAME}.log 2>&1
-                python --version >> ${STAGE_NAME}.log 2>&1
-                python -m pip install conan >> ${STAGE_NAME}.log 2>&1
+                python3--version >> ${STAGE_NAME}.log 2>&1
+                python3 -m pip install conan >> ${STAGE_NAME}.log 2>&1
                 mkdir Build
                 echo [WebRTC] >> Build\\LocalBuildConfig.txt
                 echo path = ${webrtcPath.replace("\\", "/")}/src >> Build\\LocalBuildConfig.txt
-                python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
+                python3.8.0 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
-
-            zip archive: true, dir: "Build/Install", glob: '', zipFile: "WebUsdViewer_Windows.zip"
+            println("[INFO] Start building & sending docker containers to repo")
+            bat """
+                python3.8.0 Tools/Docker.py -ba -da -v
+            """
+            println("[INFO] Finish building & sending docker containers to repo")
+            if (options.generateArtifact){
+                zip archive: true, dir: "Build/Install", glob: '', zipFile: "WebUsdViewer_Windows.zip"
+            }
         }
     } catch(e) {
         println("Error during build on Windows")
@@ -50,20 +56,32 @@ def executeBuildLinux(Map options)
     try {
        sh """
             cmake --version >> ${STAGE_NAME}.log 2>&1
-            python --version >> ${STAGE_NAME}.log 2>&1
-            python -m pip install conan >> ${STAGE_NAME}.log 2>&1
+            python3 --version >> ${STAGE_NAME}.log 2>&1
+            python3 -m pip install conan >> ${STAGE_NAME}.log 2>&1
             mkdir --parents Build
             echo "[WebRTC]" >> Build/LocalBuildConfig.txt
             echo "path = ${CIS_TOOLS}/../thirdparty/webrtc/src" >> Build/LocalBuildConfig.txt
             export OS=
-            python Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
+            python3 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
         """
-
+        println("[INFO] Start building & sending docker containers to repo")
         sh """
-            tar -C Build/Install -czvf "WebUsdViewer_Ubuntu20.tar.gz" .
+                export WEBUSD_BUILD_REMOTE_HOST=172.31.0.91
+                export WEBUSD_BUILD_LIVE_CONTAINER_NAME=172.31.0.91:5000/live
+                export WEBUSD_BUILD_ROUTE_CONTAINER_NAME=172.31.0.91:5000/route
+                export WEBUSD_BUILD_STORAGE_CONTAINER_NAME=172.31.0.91:5000/storage
+                export WEBUSD_BUILD_STREAM_CONTAINER_NAME=172.31.0.91:5000/stream
+                export WEBUSD_BUILD_WEB_CONTAINER_NAME=172.31.0.91:5000/web
+                python3 Tools/Docker.py -ba -da -v
         """
-        
-        archiveArtifacts "WebUsdViewer_Ubuntu20.tar.gz"
+        println("[INFO] Finish building & sending docker containers to repo")
+        if (options.generateArtifact){
+            sh """
+                tar -C Build/Install -czvf "WebUsdViewer_Ubuntu20.tar.gz" .
+            """
+            archiveArtifacts "WebUsdViewer_Ubuntu20.tar.gz"
+        }
+
     } catch(e) {
         println("Error during build on Linux")
         println(e.toString())
@@ -82,8 +100,8 @@ def executeBuildLinux(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        cleanWS(osName)
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        // cleanWS(osName)
+        // checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch(osName) {
@@ -120,19 +138,66 @@ def executePreBuild(Map options)
     }
 }
 
+def executeDeploy(Map options, List platformList, List testResultList)
+{
+    println "[INFO] Start deploying on $options.DEPLOY_TAG agent"
+    try{
+        println "[INFO] Pulling containers from repo"
+        sh """
+            python3 /var/lib/webusd/app/Docker.py -fa -v
+        """
+        println "[INFO] Successfully pulling from repo"
+        println "[INFO] Run containers"
+        dir ("/var/lib/webusd/app"){
+            sh """
+                docker-compose pull
+                docker-compose up -d
+            """
+        }
+        println "[INFO] Successfully ran containers"
+    }catch (e){
+        println "[ERROR] Error during pulling from repo"
+        println(e.toString())
+        failure = true
+    }
+    
+    if (failure){
+        currentBuild.result = "FAILED"
+        error "error during deploy"
+    }
+}
 
 def call(String projectBranch = "",
          String platforms = 'Windows;Ubuntu20',
-         Boolean enableNotifications = true) {
+         Boolean enableNotifications = true,
+         Boolean generateArtifact = true,
+         Boolean isDeploy = true) {
 
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
+    // multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
+    //                        [projectBranch:projectBranch,
+    //                         projectRepo:PROJECT_REPO,
+    //                         enableNotifications:enableNotifications,
+    //                         generateArtifact:generateArtifact,
+    //                         deploy:deploy, 
+    //                         PRJ_NAME:'WebUsdViewer',
+    //                         PRJ_ROOT:'radeon-pro',
+    //                         BUILDER_TAG: 'BuilderWebUsdViewer',
+    //                         executeBuild:true,
+    //                         executeTests:false,
+    //                         BUILD_TIMEOUT:'120'])
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                            [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             enableNotifications:enableNotifications,
+                            generateArtifact:generateArtifact,
+                            deploy:deploy, 
                             PRJ_NAME:'WebUsdViewer',
                             PRJ_ROOT:'radeon-pro',
                             BUILDER_TAG: 'BuilderWebUsdViewer',
                             executeBuild:true,
                             executeTests:false,
-                            BUILD_TIMEOUT:'120'])
+                            executeDeploy:true,
+                            BUILD_TIMEOUT:'120',
+                            DEPLOY_TAG: 'WebViewerDeployment'
+                            ])
 }
