@@ -19,11 +19,11 @@ def executeBuildWindows(Map options)
                 mkdir Build
                 echo [WebRTC] >> Build\\LocalBuildConfig.txt
                 echo path = ${webrtcPath.replace("\\", "/")}/src >> Build\\LocalBuildConfig.txt
-                python3.8.0 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
+                python3 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
             println("[INFO] Start building & sending docker containers to repo")
             bat """
-                python3.8.0 Tools/Docker.py -ba -da -v
+                python3 Tools/Docker.py -ba -da -v
             """
             println("[INFO] Finish building & sending docker containers to repo")
             if (options.generateArtifact){
@@ -142,21 +142,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     println "[INFO] Start deploying on $options.DEPLOY_TAG agent"
     try{
-        println "[INFO] Pulling containers from repo"
+        println "[INFO] Send deploy command"
         sh """
-            python3 /var/lib/webusd/app/Docker.py -fa -v
+            curl -X 'GET' 'http://172.31.0.91:5000/deploy?configuration=dev' -H 'accept: application/json' 
         """
-        println "[INFO] Successfully pulling from repo"
-        println "[INFO] Run containers"
-        dir ("/var/lib/webusd/app"){
-            sh """
-                docker-compose pull
-                docker-compose up -d
-            """
-        }
-        println "[INFO] Successfully ran containers"
+        println "[INFO] Successfully sended"
     }catch (e){
-        println "[ERROR] Error during pulling from repo"
+        println "[ERROR] Error during deploy"
         println(e.toString())
         failure = true
     }
@@ -198,6 +190,6 @@ def call(String projectBranch = "",
                             executeTests:false,
                             executeDeploy:true,
                             BUILD_TIMEOUT:'120',
-                            DEPLOY_TAG: 'WebViewerDeployment'
+                            DEPLOY_TAG: 'BuilderWebUsdViewer'
                             ])
 }
