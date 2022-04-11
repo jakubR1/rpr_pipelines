@@ -72,7 +72,7 @@ def executeBuildLinux(Map options)
                 export WEBUSD_BUILD_STORAGE_CONTAINER_NAME=172.31.0.91:5000/storage
                 export WEBUSD_BUILD_STREAM_CONTAINER_NAME=172.31.0.91:5000/stream
                 export WEBUSD_BUILD_WEB_CONTAINER_NAME=172.31.0.91:5000/web
-                python3 Tools/Docker.py -ba -da -v
+                python3 Tools/Docker.py -ba -da -v -c dev
         """
         println("[INFO] Finish building & sending docker containers to repo")
         if (options.generateArtifact){
@@ -190,6 +190,6 @@ def call(String projectBranch = "",
                             executeTests:false,
                             executeDeploy:true,
                             BUILD_TIMEOUT:'120',
-                            DEPLOY_TAG: 'BuilderWebUsdViewer'
+                            DEPLOY_TAG: 'WebViewerDeployment'
                             ])
 }
