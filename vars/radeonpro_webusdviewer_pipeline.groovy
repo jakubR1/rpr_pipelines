@@ -54,7 +54,7 @@ def executeBuildLinux(Map options)
     downloadFiles("/volume1/CIS/radeon-pro/webrtc-linux/", "${CIS_TOOLS}/../thirdparty/webrtc", "--quiet")
 
     try {
-       sh """
+        sh """
             cmake --version >> ${STAGE_NAME}.log 2>&1
             python3 --version >> ${STAGE_NAME}.log 2>&1
             python3 -m pip install conan >> ${STAGE_NAME}.log 2>&1
@@ -126,6 +126,7 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
+    println "$options.deployEnvironment"
     dir('WebUsdViewer') {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
@@ -144,7 +145,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try{
         println "[INFO] Send deploy command"
         sh """
-            curl -X 'GET' 'http://172.31.0.91:5000/deploy?configuration=dev' -H 'accept: application/json' 
+            curl -X 'GET' 'https://admin.webusd.luxoft.com/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json' 
         """
         println "[INFO] Successfully sended"
     }catch (e){
@@ -159,29 +160,21 @@ def executeDeploy(Map options, List platformList, List testResultList)
     }
 }
 
-def call(String projectBranch = "",
-         String platforms = 'Windows;Ubuntu20',
-         Boolean enableNotifications = true,
-         Boolean generateArtifact = true,
-         Boolean isDeploy = true) {
+def call(
+    String projectBranch = "",
+    String platforms = 'Windows;Ubuntu20',
+    Boolean enableNotifications = true,
+    Boolean generateArtifact = true,
+    Boolean isDeploy = true,
+    String deployEnvironment = 'test1;test2;test3'
+) {
 
-    // multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
-    //                        [projectBranch:projectBranch,
-    //                         projectRepo:PROJECT_REPO,
-    //                         enableNotifications:enableNotifications,
-    //                         generateArtifact:generateArtifact,
-    //                         deploy:deploy, 
-    //                         PRJ_NAME:'WebUsdViewer',
-    //                         PRJ_ROOT:'radeon-pro',
-    //                         BUILDER_TAG: 'BuilderWebUsdViewer',
-    //                         executeBuild:true,
-    //                         executeTests:false,
-    //                         BUILD_TIMEOUT:'120'])
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
-                           [projectBranch:projectBranch,
+                            [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             enableNotifications:enableNotifications,
                             generateArtifact:generateArtifact,
+                            deployEnvironment: deployEnvironment,
                             deploy:deploy, 
                             PRJ_NAME:'WebUsdViewer',
                             PRJ_ROOT:'radeon-pro',
