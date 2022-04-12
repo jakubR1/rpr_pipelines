@@ -72,7 +72,7 @@ def executeBuildLinux(Map options)
                 export WEBUSD_BUILD_STORAGE_CONTAINER_NAME=172.31.0.91:5000/storage
                 export WEBUSD_BUILD_STREAM_CONTAINER_NAME=172.31.0.91:5000/stream
                 export WEBUSD_BUILD_WEB_CONTAINER_NAME=172.31.0.91:5000/web
-                python3 Tools/Docker.py -ba -da -v -c dev
+                python3 Tools/Docker.py -ba -da -v -c $options.deployEnvironment
         """
         println("[INFO] Finish building & sending docker containers to repo")
         if (options.generateArtifact){
@@ -126,7 +126,6 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    println "$options.deployEnvironment"
     dir('WebUsdViewer') {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
@@ -141,7 +140,7 @@ def executePreBuild(Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    println "[INFO] Start deploying on $options.DEPLOY_TAG agent"
+    println "[INFO] Start deploying on $options.DEPLOY_TAG agent in $options.deployEnvironment environment"
     try{
         println "[INFO] Send deploy command"
         sh """
