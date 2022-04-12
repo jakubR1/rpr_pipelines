@@ -1090,7 +1090,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:120,
+                        TEST_TIMEOUT:300,
                         ADDITIONAL_XML_TIMEOUT:15,
                         NON_SPLITTED_PACKAGE_TIMEOUT:75,
                         DEPLOY_TIMEOUT:180,
