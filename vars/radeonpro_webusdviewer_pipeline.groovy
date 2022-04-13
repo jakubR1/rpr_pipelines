@@ -75,6 +75,7 @@ def executeBuildLinux(Map options)
                 python3 Tools/Docker.py -ba -da -v -c $options.deployEnvironment
         """
         println("[INFO] Finish building & sending docker containers to repo")
+        sh "rm WebUsdWebServer/.env.production"
         if (options.generateArtifact){
             sh """
                 tar -C Build/Install -czvf "WebUsdViewer_Ubuntu20.tar.gz" .
@@ -96,31 +97,55 @@ def executeBuildLinux(Map options)
     }
 }
 
+def setEnvFile(String deployEnvironment, String osName){
+    dir ('WebUsdWebServer') {
+        if (options.deployEnvironment.contains("test")) {
+            filename = ".env.test.local"
+        }else{
+            filename = ".env.${options.deployEnvironment}.local"
+        }
+        switch(osName) {
+            case 'Windows':
+                bat " "
+                break
+            case 'Ubuntu20':
+                sh "cp $filename .env.production"
+                break
+            default:
+                println "[WARNING] ${osName} is not supported"
+        }
+
+    }
+}
+
 
 def executeBuild(String osName, Map options)
 {   
     diffScm()
-    // try {
-    //     cleanWS(osName)
-    //     checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
-    //     outputEnvironmentInfo(osName)
-
-    //     switch(osName) {
-    //         case 'Windows':
-    //             executeBuildWindows(options)
-    //             break
-    //         case 'Ubuntu20':
-    //             executeBuildLinux(options)
-    //             break
-    //         default:
-    //             println "[WARNING] ${osName} is not supported"
-    //     }
-    // } catch (e) {
-    //     currentBuild.result = "FAILED"
-    //     throw e
-    // } finally {
-    //     archiveArtifacts "*.log"
-    // }
+    try {
+        cleanWS(osName)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        outputEnvironmentInfo(osName)
+        setEnvFile(
+            deployEnvironment: options.deployEnvironment,
+            osName: osName
+        )
+        switch(osName) {
+            case 'Windows':
+                executeBuildWindows(options)
+                break
+            case 'Ubuntu20':
+                executeBuildLinux(options)
+                break
+            default:
+                println "[WARNING] ${osName} is not supported"
+        }
+    } catch (e) {
+        currentBuild.result = "FAILED"
+        throw e
+    } finally {
+        archiveArtifacts "*.log"
+    }
 }
 
 
@@ -166,7 +191,7 @@ def call(
     Boolean enableNotifications = true,
     Boolean generateArtifact = true,
     Boolean isDeploy = true,
-    String deployEnvironment = 'test1;test2;test3'
+    String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
@@ -180,7 +205,7 @@ def call(
                             BUILDER_TAG: 'BuilderWebUsdViewer',
                             executeBuild:true,
                             executeTests:false,
-                            executeDeploy:false,
+                            executeDeploy:true,
                             BUILD_TIMEOUT:'120',
                             DEPLOY_TAG: 'WebViewerDeployment'
                             ])
