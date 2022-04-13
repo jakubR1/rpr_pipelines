@@ -287,9 +287,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
             try {
                 if (options['executeBuild'] && executeBuild) {
                     stage("Build-${osName}") {
-                        // DEBUG RETURN FIRST STRING BEFORE MERGE
-                        //def builderLabels = "${osName} && ${options.BUILDER_TAG}"
-                        def builderLabels = "${osName} && testBuilder"
+                        def builderLabels = "${osName} && ${options.BUILDER_TAG}"
                         def retringFunction = { nodesList, currentTry ->
                             executeBuild(osName, options)
                         }
