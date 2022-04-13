@@ -144,7 +144,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try{
         println "[INFO] Send deploy command"
         sh """
-            curl -X 'GET' 'https://admin.webusd.luxoft.com/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json' 
+            curl -X 'GET' --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json' 
         """
         println "[INFO] Successfully sended"
     }catch (e){
