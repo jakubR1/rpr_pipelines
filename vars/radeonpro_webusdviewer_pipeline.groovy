@@ -100,8 +100,8 @@ def executeBuildLinux(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        // cleanWS(osName)
-        // checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        cleanWS(osName)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch(osName) {
