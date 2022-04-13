@@ -9,7 +9,7 @@ def call(){
     dependencies.WebUsdStreamServer.abc = 'abc'
 
     String changedFiles = sh (
-        script: "git diff --dirstat=files,0 HEAD~1 | sed -E 's/^[ 0-9.]+% //g' | sed -E 's/\/.*$//g'",
+        script: "git diff --dirstat=files,0 HEAD | sed 's/^[ 0-9.]+% //g'",
         returnStdout: true
     ).trim()
     println changedFiles
