@@ -98,28 +98,29 @@ def executeBuildLinux(Map options)
 
 
 def executeBuild(String osName, Map options)
-{
-    try {
-        cleanWS(osName)
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
-        outputEnvironmentInfo(osName)
+{   
+    diffScm()
+    // try {
+    //     cleanWS(osName)
+    //     checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+    //     outputEnvironmentInfo(osName)
 
-        switch(osName) {
-            case 'Windows':
-                executeBuildWindows(options)
-                break
-            case 'Ubuntu20':
-                executeBuildLinux(options)
-                break
-            default:
-                println "[WARNING] ${osName} is not supported"
-        }
-    } catch (e) {
-        currentBuild.result = "FAILED"
-        throw e
-    } finally {
-        archiveArtifacts "*.log"
-    }
+    //     switch(osName) {
+    //         case 'Windows':
+    //             executeBuildWindows(options)
+    //             break
+    //         case 'Ubuntu20':
+    //             executeBuildLinux(options)
+    //             break
+    //         default:
+    //             println "[WARNING] ${osName} is not supported"
+    //     }
+    // } catch (e) {
+    //     currentBuild.result = "FAILED"
+    //     throw e
+    // } finally {
+    //     archiveArtifacts "*.log"
+    // }
 }
 
 
@@ -167,21 +168,20 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3'
 ) {
-    diffScm()
-    // multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
-    //                         [projectBranch:projectBranch,
-    //                         projectRepo:PROJECT_REPO,
-    //                         enableNotifications:enableNotifications,
-    //                         generateArtifact:generateArtifact,
-    //                         deployEnvironment: deployEnvironment,
-    //                         deploy:deploy, 
-    //                         PRJ_NAME:'WebUsdViewer',
-    //                         PRJ_ROOT:'radeon-pro',
-    //                         BUILDER_TAG: 'BuilderWebUsdViewer',
-    //                         executeBuild:true,
-    //                         executeTests:false,
-    //                         executeDeploy:true,
-    //                         BUILD_TIMEOUT:'120',
-    //                         DEPLOY_TAG: 'WebViewerDeployment'
-    //                         ])
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
+                            [projectBranch:projectBranch,
+                            projectRepo:PROJECT_REPO,
+                            enableNotifications:enableNotifications,
+                            generateArtifact:generateArtifact,
+                            deployEnvironment: deployEnvironment,
+                            deploy:deploy, 
+                            PRJ_NAME:'WebUsdViewer',
+                            PRJ_ROOT:'radeon-pro',
+                            BUILDER_TAG: 'BuilderWebUsdViewer',
+                            executeBuild:true,
+                            executeTests:false,
+                            executeDeploy:false,
+                            BUILD_TIMEOUT:'120',
+                            DEPLOY_TAG: 'WebViewerDeployment'
+                            ])
 }
