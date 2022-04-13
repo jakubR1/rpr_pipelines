@@ -167,21 +167,21 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3'
 ) {
-
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
-                            [projectBranch:projectBranch,
-                            projectRepo:PROJECT_REPO,
-                            enableNotifications:enableNotifications,
-                            generateArtifact:generateArtifact,
-                            deployEnvironment: deployEnvironment,
-                            deploy:deploy, 
-                            PRJ_NAME:'WebUsdViewer',
-                            PRJ_ROOT:'radeon-pro',
-                            BUILDER_TAG: 'BuilderWebUsdViewer',
-                            executeBuild:true,
-                            executeTests:false,
-                            executeDeploy:true,
-                            BUILD_TIMEOUT:'120',
-                            DEPLOY_TAG: 'WebViewerDeployment'
-                            ])
+    diffScm()
+    // multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
+    //                         [projectBranch:projectBranch,
+    //                         projectRepo:PROJECT_REPO,
+    //                         enableNotifications:enableNotifications,
+    //                         generateArtifact:generateArtifact,
+    //                         deployEnvironment: deployEnvironment,
+    //                         deploy:deploy, 
+    //                         PRJ_NAME:'WebUsdViewer',
+    //                         PRJ_ROOT:'radeon-pro',
+    //                         BUILDER_TAG: 'BuilderWebUsdViewer',
+    //                         executeBuild:true,
+    //                         executeTests:false,
+    //                         executeDeploy:true,
+    //                         BUILD_TIMEOUT:'120',
+    //                         DEPLOY_TAG: 'WebViewerDeployment'
+    //                         ])
 }
