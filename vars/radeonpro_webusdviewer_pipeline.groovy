@@ -117,7 +117,7 @@ def setEnvFile(String deployEnvironment, String osName){
             }
 
         }
-    catch(e){
+    }catch(e){
         currentBuild.result = "FAILED"
         throw e
     } finally {
