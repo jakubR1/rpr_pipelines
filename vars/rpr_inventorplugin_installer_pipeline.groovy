@@ -613,7 +613,7 @@ def executeBuild(String osName, Map options) {
 def getReportBuildArgs(Map options) {
     // [DEBUG] DELETE COMMENT BEFORE MERGE
     //boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFull") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
-    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFull") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json"))
+    boolean collectTrackedMetrics = (env.JOB_NAME.contains("WeeklyFull") || (env.JOB_NAME.contains("Manual") && options.testsPackageOriginal == "Full.json")) || true
 
     if (options["isPreBuilt"]) {
         return """USDViewer "PreBuilt" "PreBuilt" "PreBuilt" ${collectTrackedMetrics ? env.BUILD_NUMBER : ""}"""
