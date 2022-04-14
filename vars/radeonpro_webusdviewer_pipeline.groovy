@@ -97,35 +97,6 @@ def executeBuildLinux(Map options)
     }
 }
 
-def setEnvFile(String deployEnvironment, String osName){
-    try{
-        dir ('WebUsdWebServer') {
-            if (options.deployEnvironment.contains("test")) {
-                filename = ".env.test.local"
-            }else{
-                filename = ".env.${options.deployEnvironment}.local"
-            }
-            switch(osName) {
-                case 'Windows':
-                    bat " "
-                    break
-                case 'Ubuntu20':
-                    sh "cp $filename .env.production"
-                    break
-                default:
-                    println "[WARNING] ${osName} is not supported"
-            }
-
-        }
-    }catch(e){
-        currentBuild.result = "FAILED"
-        throw e
-    } finally {
-        archiveArtifacts "*.log"
-    }
-}
-
-
 def executeBuild(String osName, Map options)
 {   
     diffScm()
@@ -133,7 +104,7 @@ def executeBuild(String osName, Map options)
         cleanWS(osName)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
-        this.setEnvFile(
+        webusd_set_env(
             deployEnvironment: options.deployEnvironment,
             osName: osName
         )
