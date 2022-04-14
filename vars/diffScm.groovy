@@ -1,8 +1,8 @@
 import hudson.FilePath
 
 def call(){
-    def tree = { [:].withDefault{ owner.call() } }
-    dependencies = tree()
+    def tree = [:].withDefault{ owner.call() }
+    TreeMap dependencies = tree
     dependencies.WebUsdLiveServer.WebUsdAssetResolver = 'WebUsdAssetResolver/'
     dependencies.WebUsdLiveServer.bbc = 'abc'
     dependencies.WebUsdStreamServer.WebUsdAssetResolver = 'abc'
