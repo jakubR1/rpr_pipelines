@@ -98,23 +98,30 @@ def executeBuildLinux(Map options)
 }
 
 def setEnvFile(String deployEnvironment, String osName){
-    dir ('WebUsdWebServer') {
-        if (options.deployEnvironment.contains("test")) {
-            filename = ".env.test.local"
-        }else{
-            filename = ".env.${options.deployEnvironment}.local"
-        }
-        switch(osName) {
-            case 'Windows':
-                bat " "
-                break
-            case 'Ubuntu20':
-                sh "cp $filename .env.production"
-                break
-            default:
-                println "[WARNING] ${osName} is not supported"
-        }
+    try{
+        dir ('WebUsdWebServer') {
+            if (options.deployEnvironment.contains("test")) {
+                filename = ".env.test.local"
+            }else{
+                filename = ".env.${options.deployEnvironment}.local"
+            }
+            switch(osName) {
+                case 'Windows':
+                    bat " "
+                    break
+                case 'Ubuntu20':
+                    sh "cp $filename .env.production"
+                    break
+                default:
+                    println "[WARNING] ${osName} is not supported"
+            }
 
+        }
+    catch(e){
+        currentBuild.result = "FAILED"
+        throw e
+    } finally {
+        archiveArtifacts "*.log"
     }
 }
 
@@ -193,7 +200,7 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             enableNotifications:enableNotifications,
@@ -205,7 +212,7 @@ def call(
                             BUILDER_TAG: 'BuilderWebUsdViewer',
                             executeBuild:true,
                             executeTests:false,
-                            executeDeploy:true,
+                            executeDeploy:false,
                             BUILD_TIMEOUT:'120',
                             DEPLOY_TAG: 'WebViewerDeployment'
                             ])
