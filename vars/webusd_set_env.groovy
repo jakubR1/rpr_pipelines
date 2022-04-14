@@ -1,6 +1,6 @@
 
 
-def call(String deployEnvironment, String osName){
+def call(Map options){
     try{
         dir ('WebUsdWebServer') {
             if (options.deployEnvironment.contains("test")) {
@@ -8,7 +8,7 @@ def call(String deployEnvironment, String osName){
             }else{
                 filename = ".env.${options.deployEnvironment}.local"
             }
-            switch(osName) {
+            switch(options.osName) {
                 case 'Windows':
                     bat " "
                     break
