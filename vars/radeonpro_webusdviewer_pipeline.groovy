@@ -151,6 +151,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             script: "curl -X 'GET' --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json'"
             returnStdout: true
         )
+        println res
         println "[INFO] Successfully sended"
     }catch (e){
         println "[ERROR] Error during deploy"
