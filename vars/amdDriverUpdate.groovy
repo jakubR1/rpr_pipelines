@@ -6,6 +6,8 @@ def main(Map options) {
         println("---SELECTED NODES:")
         println(nodes)
 
+        def newerDriverInstalled = false
+
         nodes.each() {
             updateTasks["${it}"] = {
                 stage("Driver update ${it}") {
@@ -23,6 +25,9 @@ def main(Map options) {
                                     status = bat(returnStatus: true, script: "python ${CIS_TOOLS}\\driver_detection\\parse_driver.py --html_path ${env.WORKSPACE}\\page.html --installer_dst ${env.WORKSPACE}\\driver.exe --drivers_dir C:\\AMD >> parse_stage_${it}.log 2>&1")
                                     if (status == 404) {
                                         println("[INFO] Newer driver not found")
+                                    } else {
+                                        println("[INFO] Newer driver was installed")
+                                        newerDriverInstalled = true
                                     }
                                 }
                             } catch(e) {
@@ -39,6 +44,17 @@ def main(Map options) {
         }
 
         parallel updateTasks
+
+        if (newerDriverInstalled) {
+            withCredentials([string(credentialsId: "jobName", variable: "TAN_JOB_NAME"), string(credentialsId: "defaultBranch", variable: "TAN_DEFAULT_BRANCH")]) {
+                build(
+                    job: jobName + "/" + defaultBranch,
+                    quietPeriod: 0,
+                    wait: false
+                )
+            }
+        }
+
         return 0
     }
 }
