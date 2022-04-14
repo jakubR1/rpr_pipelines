@@ -147,9 +147,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
     println "[INFO] Start deploying on $options.DEPLOY_TAG agent in $options.deployEnvironment environment"
     try{
         println "[INFO] Send deploy command"
-        sh """
-            curl -X 'GET' --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json' 
-        """
+        res = sh(
+            script: "curl -X 'GET' --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json'"
+            returnStdout: true
+        )
         println "[INFO] Successfully sended"
     }catch (e){
         println "[ERROR] Error during deploy"
