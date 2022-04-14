@@ -105,8 +105,8 @@ def executeBuild(String osName, Map options)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
         webusd_set_env(
-            deployEnvironment: options.deployEnvironment,
-            osName: osName
+            options.deployEnvironment,
+            osName
         )
         switch(osName) {
             case 'Windows':
