@@ -1,21 +1,13 @@
 import hudson.FilePath
 
 def call(){
-    // def tree = [:].withDefault{ owner.call() }
-    // TreeMap dependencies = tree
-    // dependencies.WebUsdLiveServer.WebUsdAssetResolver = 'WebUsdAssetResolver/'
-    // dependencies.WebUsdLiveServer.bbc = 'abc'
-    // dependencies.WebUsdStreamServer.WebUsdAssetResolver = 'abc'
-    // dependencies.WebUsdStreamServer.abc = 'abc'
-
-    String changedFiles = sh (
+    String changedProjects = sh (
         script: "git diff --dirstat=files,0 HEAD | sed 's/^[ 0-9.]+% //g'",
         returnStdout: true
     ).trim()
-    for (f in changedFiles){
-        if (f == "")
-    }
-    println changedFiles
+    println "[INFO] Changed projects:"
+    println changedProjects
+    return changedProjects
 
 
 

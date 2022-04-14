@@ -54,16 +54,23 @@ def executeBuildLinux(Map options)
     downloadFiles("/volume1/CIS/radeon-pro/webrtc-linux/", "${CIS_TOOLS}/../thirdparty/webrtc", "--quiet")
 
     try {
-        sh """
-            cmake --version >> ${STAGE_NAME}.log 2>&1
-            python3 --version >> ${STAGE_NAME}.log 2>&1
-            python3 -m pip install conan >> ${STAGE_NAME}.log 2>&1
-            mkdir --parents Build
-            echo "[WebRTC]" >> Build/LocalBuildConfig.txt
-            echo "path = ${CIS_TOOLS}/../thirdparty/webrtc/src" >> Build/LocalBuildConfig.txt
-            export OS=
-            python3 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
-        """
+        if (options.doBuild){
+            println "[INFO] Start build" 
+            sh """
+                cmake --version >> ${STAGE_NAME}.log 2>&1
+                python3 --version >> ${STAGE_NAME}.log 2>&1
+                python3 -m pip install conan >> ${STAGE_NAME}.log 2>&1
+                mkdir --parents Build
+                echo "[WebRTC]" >> Build/LocalBuildConfig.txt
+                echo "path = ${CIS_TOOLS}/../thirdparty/webrtc/src" >> Build/LocalBuildConfig.txt
+                export OS=
+                python3 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
+            """
+        }else{
+            println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
+        }
+        changedProjects = options.changedProjects.join(' ')
+        println changedProjects
         println("[INFO] Start building & sending docker containers to repo")
         sh """
                 export WEBUSD_BUILD_REMOTE_HOST=172.31.0.91
@@ -99,15 +106,21 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {   
-    diffScm()
+    // diffScm(options.filesToBuild)
     try {
-        cleanWS(osName)
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        // cleanWS(osName)
+        // checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
-        webusd_set_env(
-            deployEnvironment: options.deployEnvironment,
-            osName: osName
-        )
+        webusd_set_env(deployEnvironment: options.deployEnvironment, osName: osName)
+
+        options.changedProjects = diffScm()
+        options.doBuild = false
+        for (f in changedProjects){
+            if (f in options.projectsToBuild){
+                options.doBuild = true
+            }
+        }
+
         switch(osName) {
             case 'Windows':
                 executeBuildWindows(options)
@@ -192,10 +205,12 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
+    projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
     this.$diffSCM()
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
+                            projectsToBuild: projectsToBuild
                             enableNotifications:enableNotifications,
                             generateArtifact:generateArtifact,
                             deployEnvironment: deployEnvironment,
