@@ -1,8 +1,8 @@
 import hudson.FilePath
 
-def call(){
+def call(Map options){
     String changedProjects = sh (
-        script: "git diff --dirstat=files,0 HEAD | sed 's/^[ 0-9.]+% //g'",
+        script: "git diff --name-only --right-only HEAD...$options.projectBranch | cut -d/ -f 1-1 | sort | uniq",
         returnStdout: true
     ).trim()
     println "[INFO] Changed projects:"
