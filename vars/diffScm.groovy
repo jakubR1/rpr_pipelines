@@ -12,6 +12,9 @@ def call(){
         script: "git diff --dirstat=files,0 HEAD | sed 's/^[ 0-9.]+% //g'",
         returnStdout: true
     ).trim()
+    for (f in changedFiles){
+        if (f == "")
+    }
     println changedFiles
 
 

@@ -126,7 +126,26 @@ def executeBuild(String osName, Map options)
     }
 }
 
+def diffSCM(){
+    // def tree = [:].withDefault{ owner.call() }
+    // TreeMap dependencies = tree
+    // dependencies.WebUsdLiveServer.WebUsdAssetResolver = 'WebUsdAssetResolver/'
+    // dependencies.WebUsdLiveServer.bbc = 'abc'
+    // dependencies.WebUsdStreamServer.WebUsdAssetResolver = 'abc'
+    // dependencies.WebUsdStreamServer.abc = 'abc'
 
+    String changedFiles = sh (
+        script: "git diff --dirstat=files,0 HEAD | sed 's/^[ 0-9.]+% //g'",
+        returnStdout: true
+    ).trim()
+    // for (f in changedFiles){
+    //     if (f == "")
+    // }
+    println changedFiles
+
+
+
+}
 
 def executePreBuild(Map options)
 {
@@ -173,6 +192,7 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
+    this.$diffSCM()
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
