@@ -113,7 +113,7 @@ def executeBuild(String osName, Map options)
         outputEnvironmentInfo(osName)
         webusd_set_env(deployEnvironment: options.deployEnvironment, osName: osName)
 
-        options.changedProjects = diffScm()
+        options.changedProjects = diffScm(options)
         options.doBuild = false
         for (f in options.changedProjects){
             if (f in options.projectsToBuild){
