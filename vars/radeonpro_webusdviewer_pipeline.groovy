@@ -101,7 +101,7 @@ def executeBuild(String osName, Map options)
 {   
     diffScm()
     try {
-        cleanWS(osName)
+        // cleanWS(osName)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
         webusd_set_env(

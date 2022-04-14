@@ -4,9 +4,9 @@ def call(Map options){
     try{
         dir ('WebUsdWebServer') {
             if (options.deployEnvironment.contains("test")) {
-                filename = ".env.test.local"
+                filename = "/home/user/JN/.envs/webusd.env.test"
             }else{
-                filename = ".env.${options.deployEnvironment}.local"
+                filename = "/home/user/JN/.envs/webusd.env.${options.deployEnvironment}"
             }
             switch(options.osName) {
                 case 'Windows':
