@@ -210,7 +210,7 @@ def call(
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
-                            projectsToBuild: projectsToBuild
+                            projectsToBuild: projectsToBuild,
                             enableNotifications:enableNotifications,
                             generateArtifact:generateArtifact,
                             deployEnvironment: deployEnvironment,
