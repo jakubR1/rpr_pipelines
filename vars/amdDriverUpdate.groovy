@@ -28,6 +28,7 @@ def main(Map options) {
                                     } else {
                                         println("[INFO] Newer driver was installed")
                                         newerDriverInstalled = true
+                                        utils.reboot(this, isUnix() ? "Unix" : "Windows")
                                     }
                                 }
                             } catch(e) {
