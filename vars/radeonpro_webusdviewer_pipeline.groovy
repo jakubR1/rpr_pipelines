@@ -104,7 +104,7 @@ def executeBuild(String osName, Map options)
         cleanWS(osName)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
-        web_usd_set_env(
+        webusd_set_env(
             deployEnvironment: options.deployEnvironment,
             osName: osName
         )
