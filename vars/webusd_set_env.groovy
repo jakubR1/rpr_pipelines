@@ -1,6 +1,6 @@
 
 
-def setEnvFile(String deployEnvironment, String osName){
+def call(String deployEnvironment, String osName){
     try{
         dir ('WebUsdWebServer') {
             if (options.deployEnvironment.contains("test")) {
