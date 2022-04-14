@@ -115,7 +115,7 @@ def executeBuild(String osName, Map options)
 
         options.changedProjects = diffScm()
         options.doBuild = false
-        for (f in changedProjects){
+        for (f in options.changedProjects){
             if (f in options.projectsToBuild){
                 options.doBuild = true
             }
