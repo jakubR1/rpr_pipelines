@@ -173,7 +173,7 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.$executeDeploy,
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             enableNotifications:enableNotifications,
