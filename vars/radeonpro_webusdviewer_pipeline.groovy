@@ -121,7 +121,7 @@ def setEnvFile(String deployEnvironment, String osName){
 
 def executeBuild(String osName, Map options)
 {   
-    // diffScm()
+    diffScm()
     try {
         cleanWS(osName)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
