@@ -133,7 +133,7 @@ def executeBuild(String osName, Map options)
         cleanWS(osName)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
-        setEnvFile(
+        this.setEnvFile(
             deployEnvironment: options.deployEnvironment,
             osName: osName
         )
