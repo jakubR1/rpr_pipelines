@@ -69,6 +69,18 @@ def executeBuildLinux(Map options)
         }else{
             println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
         }
+        if (options.changedProjects){
+            println 'it works'
+            args = "-bd " + $options.changedProjects.join(' ')
+        }else{
+            println dockerImages(options)
+            if(!dockerImages(options)){
+                
+                args = "-ba -da"
+            }else{
+                args = "-da"
+            }
+        }
         changedProjects = options.changedProjects.join(' ')
         println changedProjects
         println("[INFO] Start building & sending docker containers to repo")
@@ -79,7 +91,7 @@ def executeBuildLinux(Map options)
                 export WEBUSD_BUILD_STORAGE_CONTAINER_NAME=172.31.0.91:5000/storage
                 export WEBUSD_BUILD_STREAM_CONTAINER_NAME=172.31.0.91:5000/stream
                 export WEBUSD_BUILD_WEB_CONTAINER_NAME=172.31.0.91:5000/web
-                python3 Tools/Docker.py -ba -da -v -c $options.deployEnvironment
+                python3 Tools/Docker.py $args -v -c $options.deployEnvironment
         """
         println("[INFO] Finish building & sending docker containers to repo")
         sh "rm WebUsdWebServer/.env.production"
@@ -106,7 +118,6 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {   
-    // diffScm(options.filesToBuild)
     try {
         // cleanWS(osName)
         // checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
@@ -137,27 +148,6 @@ def executeBuild(String osName, Map options)
     } finally {
         archiveArtifacts "*.log"
     }
-}
-
-def diffSCM(){
-    // def tree = [:].withDefault{ owner.call() }
-    // TreeMap dependencies = tree
-    // dependencies.WebUsdLiveServer.WebUsdAssetResolver = 'WebUsdAssetResolver/'
-    // dependencies.WebUsdLiveServer.bbc = 'abc'
-    // dependencies.WebUsdStreamServer.WebUsdAssetResolver = 'abc'
-    // dependencies.WebUsdStreamServer.abc = 'abc'
-
-    String changedFiles = sh (
-        script: "git diff --dirstat=files,0 HEAD | sed 's/^[ 0-9.]+% //g'",
-        returnStdout: true
-    ).trim()
-    // for (f in changedFiles){
-    //     if (f == "")
-    // }
-    println changedFiles
-
-
-
 }
 
 def executePreBuild(Map options)
@@ -205,11 +195,13 @@ def call(
     Boolean isDeploy = true,
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
+    remoteHost = '172.31.0.91'
     projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             projectsToBuild: projectsToBuild,
+                            remoteHost: remoteHost,
                             enableNotifications:enableNotifications,
                             generateArtifact:generateArtifact,
                             deployEnvironment: deployEnvironment,
