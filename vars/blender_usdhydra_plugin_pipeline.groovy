@@ -562,6 +562,7 @@ def executePreBuild(Map options)
     if(options.projectBranch == "BLEN-44" || (env.BRANCH_NAME && env.BRANCH_NAME == "PR-234")){
         println("[DEBUG] Additional args has added")
         options.addArg = true
+        options.toolVersion = "3.0"
     }
 
     // branch postfix
