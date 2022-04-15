@@ -311,6 +311,7 @@ def executeTests(String osName, String asicName, Map options) {
 def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
     try {
         def addArg = options.addArg ? "--prman --prman-location \"%C:\\Program Files\\Pixar\\RenderManProServer-24.3%\"" : ""
+        println("[DEBUG] ${addArg}")
         dir('BlenderUSDHydraAddon') {
             GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
             def paths = ["c:\\python${pyVersion.replace(".","")}\\",
@@ -559,6 +560,7 @@ def executePreBuild(Map options)
 
     //Delete this code after BLEN-44 merge
     if(options.projectBranch == "BLEN-44" || (env.BRANCH_NAME && env.BRANCH_NAME == "PR-234")){
+        println("[DEBUG] Additional args has added")
         options.addArg = true
     }
 
