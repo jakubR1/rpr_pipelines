@@ -310,6 +310,7 @@ def executeTests(String osName, String asicName, Map options) {
 
 def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
     try {
+        def addArg = options.addArg ? "--prman --prman-location \"%RenderMan%\"" : ""
         dir('BlenderUSDHydraAddon') {
             GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
             def paths = ["c:\\python${pyVersion.replace(".","")}\\",
@@ -325,7 +326,7 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
                         python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log 2>&1
                         call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                         waitfor 1 /t 10 2>NUL || type nul>nul
-                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" --prman --prman-location %RenderMan% >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" ${addArg} >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                     """
                     
                     if (options.updateDeps) {
@@ -336,7 +337,7 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
                         python --version >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                         call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                         waitfor 1 /t 10 2>NUL || type nul>nul
-                        python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 16 2019" ${addArg} >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                     """
                 }
             }
@@ -554,6 +555,11 @@ def executePreBuild(Map options)
             options['executeTests'] = true
             options['testsPackage'] = "regression.json"
         }
+    }
+
+    //Delete this code after BLEN-44 merge
+    if(options.projectBranch == "BLEN-44" || (env.BRANCH_NAME && env.BRANCH_NAME == "PR-234")){
+        options.addArg = true
     }
 
     // branch postfix
