@@ -71,7 +71,7 @@ def executeBuildLinux(Map options)
         }
         if (options.changedProjects){
             println 'it works'
-            args = "-bd " + $options.changedProjects.join(' ')
+            args = "-bd " + options.changedProjects.join(' ')
         }else{
             println dockerImages(options)
             if(!dockerImages(options)){
