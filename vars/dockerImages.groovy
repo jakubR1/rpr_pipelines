@@ -8,7 +8,7 @@ def call(Map options){
             script: "docker images | grep $cName",
             returnStdout: true
         )
-        if (res?.trim()){
+        if (res.trim()){
             return false
         }
     }
