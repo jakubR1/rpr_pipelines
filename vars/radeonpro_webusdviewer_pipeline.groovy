@@ -69,17 +69,15 @@ def executeBuildLinux(Map options)
         }else{
             println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
         }
-        if (options.changedProjects){
-            println 'it works'
+        if(!dockerImages(options)){
+            println "[INFO] Docker containers doesn't exists. Creating and pushing them"
+            args = "-ba -da"
+        }else if(options.changedProjects){
+            println "[INFO] Creating containers for $options.changedProjects"
             args = "-bd " + options.changedProjects.join(' ')
         }else{
-            println dockerImages(options)
-            if(!dockerImages(options)){
-                
-                args = "-ba -da"
-            }else{
-                args = "-da"
-            }
+            println "[INFO] All data is up-to-date, just deploy all"
+            args = "-da"
         }
         changedProjects = options.changedProjects.join(' ')
         println changedProjects
