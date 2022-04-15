@@ -325,7 +325,7 @@ def executeBuildWindows(String osName, Map options, String pyVersion = "3.9") {
                         python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log 2>&1
                         call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                         waitfor 1 /t 10 2>NUL || type nul>nul
-                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
+                        python tools\\build.py -all -clean -bin-dir ..\\bin -G "Visual Studio 16 2019" --prman --prman-location %RenderMan% >> ..\\${STAGE_NAME}_${pyVersion}.log  2>&1
                     """
                     
                     if (options.updateDeps) {
