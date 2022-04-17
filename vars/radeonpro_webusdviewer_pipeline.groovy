@@ -72,17 +72,17 @@ def executeBuildLinux(Map options)
         images = dockerImages(options)
         buildContainers = []
         images.each{ k, v -> 
-            projName = options.projectsNameAssociation[k]
+            containerName = "$options.remoteHost:$options.remotePort/${k}.$options.deployEnvironment"
             if (v == false){
-                println "[INFO] Creating container for non-existing $projName/$options.deployEnvironment"
-                buildContainers.add(k)
+                println "[INFO] Creating container for non-existing $containerName"
+                buildContainers.add(containerName)
                 return
             }
             if (options.changedProjects){
-                if (options.changedProjects.contains(projName)){
-                    println "[INFO] Deleting existed container for $projName/$options.deployEnvironment node"
-                    sh "docker rmi $options.remoteHost:$options.remotePort/${k}.$options.deployEnvironment"
-                    buildContainers.add(k)
+                if (options.changedProjects.contains(k)){
+                    println "[INFO] Deleting existed container for $containerName"
+                    sh "docker rmi $containerName"
+                    buildContainers.add(containerName)
                 }
             }
         }
