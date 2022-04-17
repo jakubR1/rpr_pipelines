@@ -7,7 +7,7 @@ def call(Map options){
         'stream': false,
         'web': false
     ]
-    for (image in images){
+    images.each{k, v ->
         image_name = "$options.remoteHost:$options.remotePort/${image}.$options.deployEnvironment"
         res = sh(
             script: "docker images | grep $image_name",
@@ -16,9 +16,7 @@ def call(Map options){
         )
         println res
         if (res == 1){
-            images[image] = true
-        }else{
-            images[image] = false
+            images[k] = true
         }
     }
     return images.findAll{it.value == true}.collect{key, value -> key}

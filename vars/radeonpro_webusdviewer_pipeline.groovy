@@ -206,7 +206,7 @@ def call(
     remoteHost = '172.31.0.91'
     remotePort = '5000'
     projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             projectsToBuild: projectsToBuild,
@@ -221,7 +221,7 @@ def call(
                             BUILDER_TAG: 'BuilderWebUsdViewer',
                             executeBuild:true,
                             executeTests:false,
-                            executeDeploy:true,
+                            executeDeploy:false,
                             BUILD_TIMEOUT:'120',
                             DEPLOY_TAG: 'WebViewerDeployment'
                             ])
