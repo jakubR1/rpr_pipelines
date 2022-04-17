@@ -16,11 +16,11 @@ def call(Map options){
         )
         println res
         if (res == 1){
-            containers[image] = true
+            images[image] = true
         }else{
-            containers[image] = false
+            images[image] = false
         }
     }
-    return containers.findAll{it.value == true}.collect{key, value -> value}
+    return images.findAll{it.value == true}.collect{key, value -> key}
 }
 
