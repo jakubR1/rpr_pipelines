@@ -10,7 +10,7 @@ def call(Map options){
             returnStatus: true
         )
         println res
-        if (res == 0){
+        if (res == 1){
             return false
         }
     }
