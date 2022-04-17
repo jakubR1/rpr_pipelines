@@ -69,15 +69,16 @@ def executeBuildLinux(Map options)
         }else{
             println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
         }
-        existedImages = dockerImages(options)
-        println existedImages
+        nonExistedImages = dockerImages(options)
+        println nonExistedImages
         println options.changedProjects
         if(options.changedProjects){
-            // for (proj in options.changedProjects){
-            //     if (existedImages.contains(proj)){
-            //         sh "docker rmi $proj"
-            //     }
-            // }
+            for (proj in options.changedProjects){
+                if (existedImages.contains(proj)){
+                    println "[INFO] Deleting existed container $proj"
+                    sh "docker rmi $proj"
+                }
+            }
             println "[INFO] Creating containers for $options.changedProjects"
             args = "-bd " + options.changedProjects.join(' ')
         }else{
