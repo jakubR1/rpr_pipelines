@@ -8,7 +8,7 @@ def call(Map options){
         'web': false
     ]
     images.each{k, v ->
-        image_name = "$options.remoteHost:$options.remotePort/${image}.$options.deployEnvironment"
+        image_name = "$options.remoteHost:$options.remotePort/${k}.$options.deployEnvironment"
         res = sh(
             script: "docker images | grep $image_name",
             returnStdout: true,
