@@ -19,6 +19,7 @@ def call(Map options){
             images[k] = true
         }
     }
-    return images.findAll{it.value == true}.collect{key, value -> key}
+    // return images.findAll{it.value == true}.collect{key, value -> key}
+    return images
 }
 

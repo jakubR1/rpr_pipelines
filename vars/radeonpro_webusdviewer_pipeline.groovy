@@ -69,24 +69,24 @@ def executeBuildLinux(Map options)
         }else{
             println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
         }
-        nonExistedImages = dockerImages(options)
-        println nonExistedImages
-        println options.changedProjects
-        if(options.changedProjects){
-            for (proj in options.changedProjects){
-                if (existedImages.contains(proj)){
-                    println "[INFO] Deleting existed container $proj"
-                    sh "docker rmi $proj"
+        images = dockerImages(options)
+        buildContainers = []
+        images.each{ k, v -> 
+            projName = options.projectsNameAssociation[k]
+            if (v == false){
+                println "[INFO] Creating container for non-existing $projName/$options.deployEnvironment"
+                buildContainers.add(projName)
+                return
+            }
+            if (options.changedProjects){
+                if (options.changedProjects.contains(projName)){
+                    println "[INFO] Deleting existed container for $projName/$options.deployEnvironment node"
+                    sh "docker rmi $options.remoteHost:$options.remotePort/${k}.$options.deployEnvironment"
+                    buildContainers.add(projName)
                 }
             }
-            println "[INFO] Creating containers for $options.changedProjects"
-            args = "-bd " + options.changedProjects.join(' ')
-        }else{
-            println "[INFO] All data is up-to-date, just deploy all"
-            args = "-da"
         }
-        changedProjects = options.changedProjects.join(' ')
-        println changedProjects
+        args = "-bd " + buildContainers.join(' ')
         println("[INFO] Start building & sending docker containers to repo")
         sh """
                 export WEBUSD_BUILD_REMOTE_HOST=172.31.0.91
@@ -206,11 +206,19 @@ def call(
 ) {
     remoteHost = '172.31.0.91'
     remotePort = '5000'
+    projectsNameAssociation = [
+        "live": "WebUsdLiveServer",
+        "route": "WebUsdRouteServer",
+        "storage": "WebUsdStorageServer",
+        "stream": "WebUsdStreamServer",
+        "web": "WebUsdWebServer"
+    ]
     projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             projectsToBuild: projectsToBuild,
+                            projectsNameAssociation: projectsNameAssociation,
                             remoteHost: remoteHost,
                             remotePort: remotePort,
                             enableNotifications:enableNotifications,
