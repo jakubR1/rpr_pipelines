@@ -1,11 +1,11 @@
 
 def call(Map options){
     images = [
-        'live': false,
-        'route': false,
-        'storage': false,
-        'stream': false,
-        'web': false
+        'live': true,
+        'route': true,
+        'storage': true,
+        'stream': true,
+        'web': true
     ]
     images.each{k, v ->
         image_name = "$options.remoteHost:$options.remotePort/${k}.$options.deployEnvironment"
@@ -16,7 +16,7 @@ def call(Map options){
         )
         println res
         if (res == 1){
-            images[k] = true
+            images[k] = false
         }
     }
     // return images.findAll{it.value == true}.collect{key, value -> key}
