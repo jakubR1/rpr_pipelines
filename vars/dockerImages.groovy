@@ -21,6 +21,6 @@ def call(Map options){
             containers[image] = false
         }
     }
-    return [containers.findAll{it.value == true}.collect{key, value -> value}]
+    return containers.findAll{it.value == true}.collect{key, value -> value}
 }
 
