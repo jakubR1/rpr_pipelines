@@ -386,6 +386,8 @@ def executeBuildOSX(String osName, Map options) {
 
 def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
     try {
+        def addArg = options.addArg ? "--prman --prman-location \"/opt/pixar/RenderManProServer-24.3\"" : ""
+        println("[DEBUG] ${addArg}")
         dir('BlenderUSDHydraAddon') {
             GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
             if (options.rebuildDeps) {
@@ -401,7 +403,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                     python --version >> ../${STAGE_NAME}_${pyVersion}.log 
                     python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log  
                     pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log  
-                    python tools/build.py -all -clean -bin-dir ../bin >> ../${STAGE_NAME}_${pyVersion}.log
+                    python tools/build.py -all -clean -bin-dir ../bin ${addArg} >> ../${STAGE_NAME}_${pyVersion}.log
                 """
                 
                 if (options.updateDeps) {
@@ -417,7 +419,7 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                     python --version >> ../${STAGE_NAME}_${pyVersion}.log 
                     python -m pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log  
                     pip install -r requirements.txt >> ../${STAGE_NAME}_${pyVersion}.log 
-                    python${pyVersion} tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}_${pyVersion}.log 
+                    python${pyVersion} tools/build.py -libs -mx-classes -addon -bin-dir ../bin ${addArg} >> ../${STAGE_NAME}_${pyVersion}.log 
                 """
             }
 
