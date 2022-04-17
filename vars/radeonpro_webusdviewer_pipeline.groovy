@@ -71,12 +71,12 @@ def executeBuildLinux(Map options)
         }
         images = dockerImages(options)
         buildContainers = []
-        images.each{ k, v -> 
-            projName = options.projectsNameAssociation[k]
-            if (v == false){
+        for (entry in images)
+            projName = options.projectsNameAssociation[entry.key]
+            if (entry.value == false){
                 println "[INFO] Creating container for non-existing $projName/$options.deployEnvironment"
                 buildContainers.add(projName)
-                return
+                continue
             }
             if (options.changedProjects){
                 if (options.changedProjects.contains(projName)){
