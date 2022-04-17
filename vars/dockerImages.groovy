@@ -6,7 +6,8 @@ def call(Map options){
         cName = "$options.remoteHost/${name}.$options.deployEnvironment"
         res = sh(
             script: "docker images | grep $cName",
-            returnStdout: true
+            returnStdout: true,
+            returnStatus: true
         )
         println res
         if (res.trim()){
