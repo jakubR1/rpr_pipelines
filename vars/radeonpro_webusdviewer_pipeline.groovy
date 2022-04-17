@@ -204,7 +204,7 @@ def call(
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
     remoteHost = '172.31.0.91'
-    reomtePort = '5000'
+    remotePort = '5000'
     projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
