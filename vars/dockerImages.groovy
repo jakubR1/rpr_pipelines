@@ -1,19 +1,26 @@
 
 def call(Map options){
-    containersName = ['live', 'route', 'storage', 'stream', 'web']
-    containersToBuild = []
-    for (name in containersName){
-        cName = "$options.remoteHost:5000/${name}.$options.deployEnvironment"
+    images = [
+        'live': false,
+        'route': false,
+        'storage': false,
+        'stream': false,
+        'web': false
+    ]
+    for (image in images){
+        image_name = "$options.remoteHost:$options.remotePort/${image}.$options.deployEnvironment"
         res = sh(
-            script: "docker images | grep $cName",
+            script: "docker images | grep $image_name",
             returnStdout: true,
             returnStatus: true
         )
         println res
         if (res == 1){
-            return false
+            containers[image] = true
+        }else{
+            containers[image] = false
         }
     }
-    return true
+    return [containers.findAll{it.value == true}.collect{key, value -> value}]
 }
 

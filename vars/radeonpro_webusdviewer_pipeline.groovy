@@ -69,10 +69,15 @@ def executeBuildLinux(Map options)
         }else{
             println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
         }
-        if(!dockerImages(options)){
-            println "[INFO] Docker containers doesn't exists. Creating and pushing them"
-            args = "-ba -da"
-        }else if(options.changedProjects){
+        existedImages = dockerImages(options)
+        println existedImages
+        println options.changedProjects
+        if(options.changedProjects){
+            // for (proj in options.changedProjects){
+            //     if (existedImages.contains(proj)){
+            //         sh "docker rmi $proj"
+            //     }
+            // }
             println "[INFO] Creating containers for $options.changedProjects"
             args = "-bd " + options.changedProjects.join(' ')
         }else{
@@ -169,10 +174,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
         println "[INFO] Send deploy command"
         res = sh(
             script: "curl -X 'GET' --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json'",
-            returnStdout: true
+            returnStdout: true,
+            returnStatus: true
         )
-        println res
-        println "[INFO] Successfully sended"
+        if (res == 0){
+            println "[INFO] Successfully sended"
+        }else{
+            println "[ERRIR] Host not available"
+            throw new Exception()
+        }
     }catch (e){
         println "[ERROR] Error during deploy"
         println(e.toString())
@@ -194,12 +204,14 @@ def call(
     String deployEnvironment = 'test1;test2;test3;dev;prod;'
 ) {
     remoteHost = '172.31.0.91'
+    reomtePort = '5000'
     projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             projectsToBuild: projectsToBuild,
                             remoteHost: remoteHost,
+                            remotePort: remotePort,
                             enableNotifications:enableNotifications,
                             generateArtifact:generateArtifact,
                             deployEnvironment: deployEnvironment,
