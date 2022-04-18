@@ -189,8 +189,19 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
 def executeBuildUnix(String cmakeKeys, String osName, Map options, String compilerName="gcc")
 {
-    String EXPORT_CXX = compilerName == "clang-9.0" ? "export CXX=clang-9.0" : ""
-    String SRC_BUILD = compilerName == "clang-9.0" ? "RadeonImageFilters" : "all"
+    String EXPORT_CXX
+    String SRC_BUILD
+
+    if (compilerName == "clang-9.0") {
+        EXPORT_CXX = "export CXX=clang-9.0"
+        SRC_BUILD = "RadeonImageFilters"
+    } else if (compilerName == "clang-5.0") {
+        EXPORT_CXX = "export CXX=clang-5.0"
+        SRC_BUILD = "RadeonImageFilters"
+    } else {
+        EXPORT_CXX = ""
+        SRC_BUILD = "all"
+    }
 
     sh """
         ${EXPORT_CXX}
@@ -209,7 +220,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         cd ..
     """
     
-    if (compilerName == "clang-5.0") {
+    if (compilerName == "clang-5.0" || compilerName == "clang-9.0") {
         sh """
             export CXX=clang++-9
             cd build-${options.packageName}-${osName}-dynamic
@@ -306,8 +317,11 @@ def executeBuild(String osName, Map options)
             case 'MacOS_ARM':
                 executeBuildUnix(options.cmakeKeys, osName, options, 'clang')
                 break
-            case 'Ubuntu20-Clang':
+            case 'Ubuntu18-Clang':
                 executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DRIF_ADL_INCLUDE=ON -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
+                break
+            case 'Ubuntu20-Clang':
+                executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DRIF_ADL_INCLUDE=ON -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-9.0')
                 break
             default:
                 executeBuildUnix(options.cmakeKeys, osName, options)
@@ -393,7 +407,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu20-Clang;Ubuntu20;OSX;CentOS7;MacOS_ARM;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu18-Clang;Ubuntu20-Clang;Ubuntu20;OSX;CentOS7;MacOS_ARM;" : platforms
 
     def nodeRetry = []
 
