@@ -193,7 +193,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     String SRC_BUILD
 
     if (compilerName == "clang-9.0") {
-        EXPORT_CXX = "export CXX=clang-9.0"
+        EXPORT_CXX = "export CXX=clang-9"
         SRC_BUILD = "RadeonImageFilters"
     } else if (compilerName == "clang-5.0") {
         EXPORT_CXX = "export CXX=clang-5.0"
@@ -246,7 +246,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     sh """
         rm ${options.packageName}-${osName}-dynamic/bin/UnitTest*
     """
-    if (compilerName != "clang-5.0") {
+    if (compilerName != "clang-5.0" && compilerName != "clang-9.0") {
         sh """
             rm ${options.packageName}-${osName}-static-runtime/bin/UnitTest*
         """
