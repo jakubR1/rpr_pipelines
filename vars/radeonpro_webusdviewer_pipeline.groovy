@@ -123,8 +123,8 @@ def executeBuildLinux(Map options)
 def executeBuild(String osName, Map options)
 {   
     try {
-        // cleanWS(osName)
-        // checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        cleanWS(osName)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
         webusd_set_env(deployEnvironment: options.deployEnvironment, osName: osName)
 
@@ -214,7 +214,7 @@ def call(
         "web": "WebUsdWebServer"
     ]
     projectsToBuild = ['USD', 'WebUsdAssetResolver', 'WebUsdLiveServer', 'WebUsdStreamServer']
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                             [projectBranch:projectBranch,
                             projectRepo:PROJECT_REPO,
                             projectsToBuild: projectsToBuild,
@@ -230,7 +230,7 @@ def call(
                             BUILDER_TAG: 'BuilderWebUsdViewer',
                             executeBuild:true,
                             executeTests:false,
-                            executeDeploy:false,
+                            executeDeploy:true,
                             BUILD_TIMEOUT:'120',
                             DEPLOY_TAG: 'WebViewerDeployment'
                             ])
