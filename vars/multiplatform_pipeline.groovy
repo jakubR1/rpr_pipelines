@@ -482,7 +482,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
             try {
                 if (executePreBuild) {
-                    node("Windows && PreBuild") {
+                    node("Windows") {
                         ws("WS/${options.PRJ_NAME}_Build") {
                             stage("PreBuild") {
                                 try {
