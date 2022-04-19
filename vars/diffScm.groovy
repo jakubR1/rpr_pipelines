@@ -9,10 +9,8 @@ def call(Map options){
         script: "git diff --name-only --right-only HEAD...$options.projectBranch | cut -d/ -f 1-1 | sort | uniq",
         returnStdout: true
     ).split("\n")
-    println "[INFO] Changed projects:"
-    println changedProjects
     for (f in changedProjects){
-        println f
+        println "[INFO] Changed project: $f"
     }
     return changedProjects
 }

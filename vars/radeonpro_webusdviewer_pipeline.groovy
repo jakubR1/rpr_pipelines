@@ -72,7 +72,7 @@ def executeBuildLinux(Map options)
         images = dockerImages(options)
         buildContainers = []
         skip_build_deploy = ! images.values().contains(false)
-        if (skip_build_deploy){
+        if (skip_build_deploy && !options.changedProjects){
             println "[INFO] Skip build/deploy containers cause of them up-to-date"
             return 
         }
