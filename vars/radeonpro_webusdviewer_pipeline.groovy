@@ -176,6 +176,7 @@ def executePreBuild(Map options)
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     println "[INFO] Start deploying on $options.DEPLOY_TAG agent in $options.deployEnvironment environment"
+    failure = false
     try{
         println "[INFO] Send deploy command"
         res = sh(
