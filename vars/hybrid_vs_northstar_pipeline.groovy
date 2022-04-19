@@ -550,7 +550,7 @@ def call(String projectBranch = "",
     String testsPackage = "",
     String tests = "",
     Boolean splitTestsExecution = true,
-    String tester_tag = "HybridVsNs",
+    String tester_tag = "Tester",
     String parallelExecutionTypeString = "TakeAllNodes"
     )
 {
