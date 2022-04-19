@@ -3,11 +3,7 @@
 def call(Map options){
     try{
         dir ('WebUsdWebServer') {
-            if (options.deployEnvironment.contains("test")) {
-                filename = "/home/user/JN/.envs/webusd.env.test"
-            }else{
-                filename = "/home/user/JN/.envs/webusd.env.${options.deployEnvironment}"
-            }
+            filename = "/home/user/JN/.envs/webusd.env.${options.deployEnvironment}"
             switch(options.osName) {
                 case 'Windows':
                     bat " "
