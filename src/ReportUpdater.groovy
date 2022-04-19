@@ -46,10 +46,17 @@ public class ReportUpdater {
                 String engineName = options.enginesNames[options.engines.indexOf(engine)]
                 String reportName = "Test Report ${engineName}"
 
-                // publish, but do not create links to reports (they'll be accessible through overview report)
-                context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    reportName, "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
-                    ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName, "updatable": true])
+                if (options.engines.size() > 1) {
+                    // publish, but do not create links to reports (they'll be accessible through overview report)
+                    context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                        reportName, "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                        ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName, "updatable": true])
+                } else {
+                    // pass links for builds with only one engine
+                    context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                        reportName, "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                        ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
+                }
 
                 String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_report_template.sh")
 
@@ -75,33 +82,36 @@ public class ReportUpdater {
                 reportFilesNames += ",Summary Report (${engineName})"
             }
 
-            context.println("[INFO] Publish overview report")
+            // do not build an overview report for builds with only one engine
+            if (options.engines.size() > 1) {
+                context.println("[INFO] Publish overview report")
 
-            // add overview report
-            String reportName = "Test Report"
+                // add overview report
+                String reportName = "Test Report"
 
-            context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", reportFiles, \
-                reportName, reportFilesNames, options.storeOnNAS, \
-                ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
+                context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", reportFiles, \
+                    reportName, reportFilesNames, options.storeOnNAS, \
+                    ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
 
-            String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_overview_report_template.sh")
-            // take only first 4 arguments: tool name, commit sha, project branch name and commit message
-            String buildScriptArgs = (buildArgsFunc("", options ).split() as List).subList(0, 4).join(" ")
+                String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_overview_report_template.sh")
+                // take only first 4 arguments: tool name, commit sha, project branch name and commit message
+                String buildScriptArgs = (buildArgsFunc("", options ).split() as List).subList(0, 4).join(" ")
 
-            rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
-                .replace("<report_name>", reportName.replace(" ", "_")).replace("<locations>", locations).replace("<build_script_args>", buildScriptArgs) \
-                .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL).replace("<credentials>", "none")
+                rebuiltScript = rebuiltScript.replace("<jobs_started_time>", options.JOB_STARTED_TIME).replace("<build_name>", options.baseBuildName) \
+                    .replace("<report_name>", reportName.replace(" ", "_")).replace("<locations>", locations).replace("<build_script_args>", buildScriptArgs) \
+                    .replace("<build_id>", env.BUILD_ID).replace("<job_name>", env.JOB_NAME).replace("<jenkins_url>", env.JENKINS_URL).replace("<credentials>", "none")
 
-            // replace DOS EOF by Unix EOF
-            rebuiltScript = rebuiltScript.replaceAll("\r\n", "\n")
+                // replace DOS EOF by Unix EOF
+                rebuiltScript = rebuiltScript.replaceAll("\r\n", "\n")
 
-            context.writeFile(file: "update_report.sh", text: rebuiltScript)
+                context.writeFile(file: "update_report.sh", text: rebuiltScript)
 
-            context.uploadFiles("update_report.sh", "${remotePath}/jobs_test_repo/jobs_launcher")
+                context.uploadFiles("update_report.sh", "${remotePath}/jobs_test_repo/jobs_launcher")
 
-            locks["default"] = new AtomicBoolean(false)
+                locks["default"] = new AtomicBoolean(false)
 
-            updateReport()
+                updateReport()
+            }
         } else {
             String reportName = "Test Report"
 
@@ -132,7 +142,7 @@ public class ReportUpdater {
      * Function to update report
      * 
      * @param engine (optional) engine of the target report (if project supports splitting by engines)
-     * @param updateOverviewReport (options) specify should overview report be updated or not (default - true)
+     * @param updateOverviewReport (optional) specify should overview report be updated or not (default - true). For builds with only one engine this param is ignored
      */
     def updateReport(String engine = "", Boolean updateOverviewReport = true) {
         String lockKey = engine ?: "default"
@@ -162,7 +172,7 @@ public class ReportUpdater {
             locks[lockKey].getAndSet(false)
         }
 
-        if (engine && updateOverviewReport) {
+        if (engine && options.engines.size() > 1 && updateOverviewReport) {
             // update overview report
             updateReport()
         }

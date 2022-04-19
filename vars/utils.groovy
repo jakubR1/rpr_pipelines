@@ -604,7 +604,8 @@ class utils {
     }
 
     static def generateOverviewReport(Object self, def buildArgsFunc, Map options) {
-        if (options.engines) {
+        // do not build an overview report for builds with only one engine
+        if (options.engines && options.engines.size() > 1) {
             self.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
                 try {
                     String publishedReportName = getPublishedReportName("Test_Report")
