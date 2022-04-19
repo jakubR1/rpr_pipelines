@@ -60,6 +60,7 @@ def executeBuildLinux(Map options)
         images.each{ k, v -> 
             projName = options.projectsNameAssociation[k]
             if (projName in options.projectsToBuild && v == false){
+                println "Project $f required build from source"
                 options.doBuild = true
             }
         }
