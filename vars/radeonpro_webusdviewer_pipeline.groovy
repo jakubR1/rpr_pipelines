@@ -128,12 +128,11 @@ def executeBuildLinux(Map options)
 def executeBuild(String osName, Map options)
 {   
     try {
+        options.changedProjects = diffScm(options)
         cleanWS(osName)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
         webusd_set_env(deployEnvironment: options.deployEnvironment, osName: osName)
-
-        options.changedProjects = diffScm(options)
         options.doBuild = false
         for (f in options.changedProjects){
             if (f in options.projectsToBuild){
