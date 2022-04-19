@@ -105,6 +105,10 @@ def executeBuildLinux(Map options)
         println("[INFO] Finish building & sending docker containers to repo")
         sh "rm WebUsdWebServer/.env.production"
         if (options.generateArtifact){
+            if (options.doBuild){
+                println "Can't create archive because build process doesn't triggered"
+                return
+            }
             sh """
                 tar -C Build/Install -czvf "WebUsdViewer_Ubuntu20.tar.gz" .
             """
@@ -135,9 +139,8 @@ def executeBuild(String osName, Map options)
         webusd_set_env(deployEnvironment: options.deployEnvironment, osName: osName)
         options.doBuild = false
         for (f in options.changedProjects){
-            println "Prj ex ${f} 1"
             if (f in options.projectsToBuild){
-                println 'd build'
+                println "Project $f required build from source"
                 options.doBuild = true
             }
         }
