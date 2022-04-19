@@ -11,8 +11,8 @@ def call(Map options){
     ).split("\n")
     println "[INFO] Changed projects:"
     println changedProjects
+    for (f in changedProjects){
+        println f
+    }
     return changedProjects
-
-
-
 }
