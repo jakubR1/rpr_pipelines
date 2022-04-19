@@ -135,7 +135,9 @@ def executeBuild(String osName, Map options)
         webusd_set_env(deployEnvironment: options.deployEnvironment, osName: osName)
         options.doBuild = false
         for (f in options.changedProjects){
+            println 'Prj ex'
             if (f in options.projectsToBuild){
+                println 'd build'
                 options.doBuild = true
             }
         }
