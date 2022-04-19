@@ -376,7 +376,7 @@ def makeDeploy(Map options, String engine = "") {
                     executeDeploy(options, platformList, testResultList)
                 }
 
-                if (engine && options.reportUpdater) {
+                if (engine && options.engines.size() > 1 && options.reportUpdater) {
                     options.reportUpdater.updateReport()
                 }
 
