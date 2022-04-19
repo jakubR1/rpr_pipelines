@@ -5,7 +5,7 @@ def call(Map options){
         script: "git fetch",
         returnStdout: false
     )
-    String changedProjects = sh (
+    changedProjects = sh (
         script: "git diff --name-only --right-only HEAD...$options.projectBranch | cut -d/ -f 1-1 | sort | uniq",
         returnStdout: true
     ).trim()
