@@ -184,7 +184,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try{
         println "[INFO] Send deploy command"
         res = sh(
-            script: "curl -X 'GET' --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json'",
+            script: "curl -X 'GET' -I --insecure 'https://172.31.0.91/deploy?configuration=${options.deployEnvironment}' -H 'accept: application/json'",
             returnStdout: true,
             returnStatus: true
         )
