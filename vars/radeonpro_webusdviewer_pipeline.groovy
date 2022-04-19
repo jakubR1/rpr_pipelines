@@ -54,6 +54,15 @@ def executeBuildLinux(Map options)
     downloadFiles("/volume1/CIS/radeon-pro/webrtc-linux/", "${CIS_TOOLS}/../thirdparty/webrtc", "--quiet")
 
     try {
+        images = dockerImages(options)
+        buildContainers = []
+        skip_build_deploy = ! images.values().contains(false)
+        images.each{ k, v -> 
+            projName = options.projectsNameAssociation[k]
+            if (projName in options.projectsToBuild and v == false){
+                options.doBuild = true
+            }
+        }
         if (options.doBuild){
             println "[INFO] Start build" 
             sh """
@@ -69,9 +78,6 @@ def executeBuildLinux(Map options)
         }else{
             println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
         }
-        images = dockerImages(options)
-        buildContainers = []
-        skip_build_deploy = ! images.values().contains(false)
         if (skip_build_deploy && !options.changedProjects){
             println "[INFO] Skip build/deploy containers cause of them up-to-date"
             return 
