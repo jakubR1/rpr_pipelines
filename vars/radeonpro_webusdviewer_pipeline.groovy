@@ -105,7 +105,7 @@ def executeBuildLinux(Map options)
         println("[INFO] Finish building & sending docker containers to repo")
         sh "rm WebUsdWebServer/.env.production"
         if (options.generateArtifact){
-            if (options.doBuild){
+            if (!options.doBuild){
                 println "Can't create archive because build process doesn't triggered"
                 return
             }
