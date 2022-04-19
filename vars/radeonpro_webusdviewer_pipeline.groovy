@@ -59,7 +59,7 @@ def executeBuildLinux(Map options)
         skip_build_deploy = ! images.values().contains(false)
         images.each{ k, v -> 
             projName = options.projectsNameAssociation[k]
-            if (projName in options.projectsToBuild and v == false){
+            if (projName in options.projectsToBuild && v == false){
                 options.doBuild = true
             }
         }
