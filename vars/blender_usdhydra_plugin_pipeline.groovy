@@ -442,7 +442,6 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
                     GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
-            
         }
     } catch(e) {
         println "[ERROR] Python ${pyVersion} build was failed"
@@ -457,8 +456,8 @@ def executeBuildLinux(String osName, Map options, String pyVersion = "3.9") {
 
 def executeBuild(String osName, Map options) {
     try {
-        def pyVersions = []
-        options.toolVersion != "3.1" ? pyVersions << "3.9" : pyVersions << "3.10"
+        def pyVersions = ["3.9"]
+        options.toolVersion != "3.1" ?: pyVersions << "3.10"
 
         pyVersions.each() {
             cleanWS(osName)
@@ -509,7 +508,6 @@ def executeBuild(String osName, Map options) {
             }
             options[getProduct.getIdentificatorKey(osName)] = options.commitSHA
         }
-        
     } catch (e) {
         throw e
     }
