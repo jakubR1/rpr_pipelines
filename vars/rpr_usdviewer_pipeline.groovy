@@ -171,6 +171,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                 case "Windows":
                     dir('scripts') {
                         bat """
+                            set TOOL_VERSION=${options.pluginVersion}
                             run.bat \"${testsPackageName}\" \"${testsNames}\" RPRViewer 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                         """
                     }
