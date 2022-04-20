@@ -184,17 +184,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         String enginePostfix = ""
-        String REF_PATH_PROFILE
-
-        if (osName == "Windows") {
-            REF_PATH_PROFILE = "/volume1/Baselines/rpr_blender_autotests/AMD_RX5700XT-Windows"
-        } else if (osName == "OSX") {
-            REF_PATH_PROFILE = "/volume1/Baselines/rpr_blender_autotests/AMD_RX5700XT-OSX"
-        } else if (osName == "MacOS_ARM") {
-            REF_PATH_PROFILE = "/volume1/Baselines/rpr_blender_autotests/AppleM1-OSX"
-        } else {
-            REF_PATH_PROFILE = "/volume1/Baselines/rpr_blender_autotests/AMD_RadeonVII-Ubuntu20"
-        }
+        String REF_PATH_PROFILE = "/volume1/Baselines/rpr_blender_autotests/AMD_RX5700XT-Windows"
 
         switch(options.engine) {
             case 'FULL2':
