@@ -89,26 +89,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             }
 
             node(labels) {
-                if (stageName == 'Build') {
-                    try{
-                        println("[INFO] Cleaning WS directory on cloud builder")
-                        switch(env.NODE_NAME){
-                            case "LC-WINDOWS-BUILDER":
-                                bat """
-                                    C:\\JN\\cleanWS.bat
-                                """
-                                break;
-                            case "LC-UBUNTU20-BUILDER":
-                                sh """
-                                    rm -rf /home/admin/JN/WS/*
-                                """
-                                break
-                        }
-                    } catch(e){
-                        println("[ERROR] Failed directory cleaning ")
-                    }
-                }
-
                 timeout(time: "${stageTimeout}", unit: 'MINUTES') {
                     ws("WS/${options.PRJ_NAME}_${stageName}") {
                         abortOldBuilds(options)
