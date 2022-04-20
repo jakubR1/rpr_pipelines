@@ -184,7 +184,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         String enginePostfix = ""
-        String REF_PATH_PROFILE="/volume1/Baselines/rpr_blender_autotests/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_maya_autotests/AMD_RX6800-Windows"
         switch(options.engine) {
             case 'FULL2':
                 enginePostfix = "NorthStar"

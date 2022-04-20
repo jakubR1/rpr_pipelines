@@ -217,7 +217,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         String enginePostfix = ""
-        String REF_PATH_PROFILE="/volume1/Baselines/rpr_maya_autotests/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_maya_autotests/Windows-AMD_RX6800"
         switch(options.engine) {
             case 'Northstar':
                 enginePostfix = "NorthStar"
