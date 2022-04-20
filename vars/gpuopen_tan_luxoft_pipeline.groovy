@@ -53,8 +53,7 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                mkdir FilesToCheck
-                tar -zxvf binMacOS.tar.gz --directory FilesToCheck/
+                tar -zxvf binMacOS.tar.gz
             """
             
             break
@@ -82,36 +81,33 @@ def getTanTool(String osName, Map options) {
             }
 
             sh """
-                mkdir FilesToCheck
-                tar -zxvf binUbuntu.tar.gz --directory FilesToCheck/
+                tar -zxvf binUbuntu.tar.gz
             """
     }
 }
 
-
-
+// todo need to add switch between tests
+// ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
 def executeTestCommand(String osName, Map options) {
     switch(osName) {
         case 'Windows':
             dir('Launcher') {
                 bat """
-                    run.bat "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
+                    run.bat "Correlation" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         case 'OSX':
             dir('Launcher') {
                 sh """
-                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "Correlation" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break
         default:
             dir('Launcher') {
-                // todo need to add switch between tests
-                // ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
                 sh """
-                    ./run.sh "RoomAcousticQT" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh "Correlation" >> ../${STAGE_NAME}.log 2>&1
                 """
             }
     }
@@ -537,7 +533,7 @@ def executeBuildLinux(String osName, Map options) {
                     // cp -rf cmake-TALibDopplerTest-bin binUbuntu/cmake-TALibDopplerTest-bin
                     // cp -rf cmake-RoomAcousticQT-bin binUbuntu/cmake-RoomAcousticQT-bin
                     sh """
-                        mkdir binUbuntu
+                        mkdir FilesToCheck
                         cp -rf ../../../../bin FilesToCheck/bin
                         cp -rf ../../../../scenes FilesToCheck/scenes
                     """
@@ -732,8 +728,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
-    String testsBranch = "master",
-    String platforms = 'Windows:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII',
+    String testsBranch = "RA_testing",
+    String platforms = 'Windows:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String buildConfiguration = "release",
     String IPP = "off",
     String OMP = "off",
