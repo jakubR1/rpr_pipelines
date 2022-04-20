@@ -77,7 +77,7 @@ def executeBuildLinux(Map options)
                 python3 Tools/Build.py -v >> ${STAGE_NAME}.log 2>&1
             """
         }else{
-            println "[INFO] Skip build because changes changes do not affect projects $options.changedProjects" 
+            println "[INFO] Skip build because changes changes do not affect projects $options.projectsToBuild" 
         }
         if (skip_build_deploy && !options.changedProjects){
             println "[INFO] Skip build/deploy containers cause of them up-to-date"
