@@ -43,7 +43,7 @@ def executeTestCommand(String osName, String asicName, Map options)
     switch(osName) {
         case 'Windows':
             dir('scripts') {
-                if (useHIP) {
+                if (options.useHIP) {
                     bat """
                         set TH_FORCE_HIP=1
                         run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
@@ -58,7 +58,7 @@ def executeTestCommand(String osName, String asicName, Map options)
         case 'OSX':
             dir('scripts') {
                 withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
-                    if (useHIP) {
+                    if (options.useHIP) {
                         sh """
                             export TH_FORCE_HIP=1
                             ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
@@ -74,7 +74,7 @@ def executeTestCommand(String osName, String asicName, Map options)
         default:
             dir('scripts') {
                 withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
-                    if (useHIP) {
+                    if (options.useHIP) {
                         sh """
                             export TH_FORCE_HIP=1
                             ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} ${options.engine} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
