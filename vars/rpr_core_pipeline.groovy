@@ -671,7 +671,7 @@ def call(String projectBranch = "",
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
          String enginesNames = "Northstar64,HybridPro,Hybrid",
-         Boolean useHIP = False,
+         Boolean useHIP = false,
          Boolean collectTrackedMetrics = false)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
