@@ -154,7 +154,7 @@ class GithubApiProvider {
     def getPullRequest(String repositoryUrl) {
         def response = context.httpRequest(
             url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos').replace('/pull/', '/pulls/')}",
-            authentication: 'radeonprorender',
+            authentication: 'jenkins_robot',
             httpMode: "GET",
         )
 
@@ -267,7 +267,7 @@ class GithubApiProvider {
      * @param assetName name of the asset which should be uploaded
      */
     def addAsset(String repositoryUrl, String releaseId, String assetName) {
-        context.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'radeonprorender', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD']]) {
+        context.withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins_robot', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD']]) {
             context.bat """
                 curl -X POST --retry 5 -H "Content-Type: application/octet-stream" --data-binary @${assetName} -u %GITHUB_USERNAME%:%GITHUB_PASSWORD% "${repositoryUrl.replace('https://github.com', 'https://uploads.github.com/repos')}/releases/${releaseId}/assets?name=${assetName}"
             """

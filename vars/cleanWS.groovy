@@ -50,7 +50,7 @@ def call(String osName = "Windows") {
                         break
                     default:
                         sh '''
-                            rm -rf *
+                            sudo rm -rf *
                         '''
                 }
 
