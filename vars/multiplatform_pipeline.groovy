@@ -53,17 +53,15 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     // TODO: replace testsList check to splitExecution var
                     options.testsList = options.testsList ?: ['']
 
-                    def testerLabels
+                    def testerTag = "Tester"
                     if (options.TESTER_TAG) {
-                        if (options.TESTER_TAG.contains("PC-") || options.TESTER_TAG.contains("LC-")) {
-                            // possibility to test some disabled tester machine
-                            testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName}"
+                        if (options.TESTER_TAG.indexOf(' ') > -1){
+                            testerTag = options.TESTER_TAG
                         } else {
-                            testerLabels = "${osName} && ${options.TESTER_TAG} && gpu${asicName} && !Disabled"
+                            testerTag = "${options.TESTER_TAG} && Tester"
                         }
-                    } else {
-                        testerLabels = "${osName} && Tester && gpu${asicName} && !Disabled"
-                    }
+                    } 
+                    def testerLabels = "${osName} && OpenCL_Denoiser && gpu${asicName}"
 
                     Iterator testsIterator = options.testsList.iterator()
                     Integer launchingGroupsNumber = 1
@@ -196,8 +194,8 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         if (newOptions['splitTestsExecution']) {
                                             testsOrTestPackage = newOptions['tests']
                                         } else {
-                                            //all non splitTestsExecution builds (e.g. any build of core)
-                                            if (testName && !testName.startsWith("-")) {
+                                            //all non splitTestsExecution and non regression builds (e.g. any build of core)
+                                            if (testName) {
                                                 testsOrTestPackage = testName
                                             } else {
                                                 testsOrTestPackage = 'DefaultExecution'
@@ -360,12 +358,10 @@ def makeDeploy(Map options, String engine = "") {
         stage(stageName) {
             def reportBuilderLabels = ""
 
-            if (options.DEPLOY_TAG) {
-                reportBuilderLabels = options.DEPLOY_TAG
-            } else if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
+            if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
                 reportBuilderLabels = "Windows && GitPublisher && !NoDeploy"
             } else {
-                reportBuilderLabels = "Windows && Tester && !NoDeploy"
+                reportBuilderLabels = "Ubuntu20_04 && Denoiser_Tester"
             }
 
             options["stage"] = "Deploy"
@@ -376,7 +372,7 @@ def makeDeploy(Map options, String engine = "") {
                     executeDeploy(options, platformList, testResultList)
                 }
 
-                if (engine && options.engines.size() > 1 && options.reportUpdater) {
+                if (engine && options.reportUpdater) {
                     options.reportUpdater.updateReport()
                 }
 
@@ -476,10 +472,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 options['BUILDER_TAG'] = 'Builder'
 
             // if timeout doesn't set - use default (value in minutes)
-            options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 20
-            options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 40
-            options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 20
-            options['DEPLOY_TIMEOUT'] = options['DEPLOY_TIMEOUT'] ?: 20
+            options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 120
+            options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 120
+            options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 120
+            options['DEPLOY_TIMEOUT'] = options['DEPLOY_TIMEOUT'] ?: 120
 
             options['FAILED_STAGES'] = []
 
@@ -487,7 +483,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
             try {
                 if (executePreBuild) {
-                    node("Windows && PreBuild") {
+                    node("Linux20_04 && PreFormed && Denoiser") {
                         ws("WS/${options.PRJ_NAME}_Build") {
                             stage("PreBuild") {
                                 try {
