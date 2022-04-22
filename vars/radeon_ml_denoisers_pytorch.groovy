@@ -87,8 +87,12 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 
             dir("tests/sh"){
-            def list = new File("additional_tests.txt").collect {it}
-            options.tests = list
+                    sh"""
+
+                    ls
+                    """
+                def list = new File("./additional_tests.txt").collect {it}
+                options.tests = list
             }
 
            
