@@ -91,8 +91,8 @@ def executeTestCommand(String osName, String asicName, Map options)
 
                     ls
                     """
-                def list = (readFile("./additional_tests.txt")).collect {it}
-                options.tests = list
+                def array = (readFile("./additional_tests.txt")).collect {it}
+                options.tests = array
             }
 
            
