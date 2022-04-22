@@ -92,9 +92,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                     """
                 options.tests = []
                 println " [INFO] Tests to be executed: ${options.tests}"
-                def array = (readFile("./additional_tests.txt")).collect {it}
-                println " [INFO] ARRAY: ${array}"
-                options.tests = array
+                def list = (readFile("./additional_tests.txt")).collect {it}
+                println " [INFO] LIST: ${list}"
+                options.tests = list
                 println " [INFO] Tests to be executed: ${options.tests}"
             }
 
