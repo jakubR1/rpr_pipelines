@@ -88,11 +88,14 @@ def executeTestCommand(String osName, String asicName, Map options)
 
             dir("tests/sh"){
                     sh"""
-
                     ls
                     """
+                options.tests = []
+                println " [INFO] Tests to be executed: ${options.tests}"
                 def array = (readFile("./additional_tests.txt")).collect {it}
+                println " [INFO] ARRAY: ${array}"
                 options.tests = array
+                println " [INFO] Tests to be executed: ${options.tests}"
             }
 
            
