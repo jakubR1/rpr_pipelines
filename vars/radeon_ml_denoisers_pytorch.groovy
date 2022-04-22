@@ -90,45 +90,42 @@ def executeTestCommand(String osName, String asicName, Map options)
             def list = new File("additional_tests.txt").collect {it}
             options.tests = list
             }
-            println "[INFO] Tests to be executed: ${options.tests}"
 
            
+            for(test in options.tests){   
+                def (test_name, path) = test.split("-")
+                dir (path) {
+                    try {
+                        if (fileExists("${test_name}.py")) {
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
+                            println "[INFO] Current test: ${test_name}.py"
 
-            
-                
-            dir ("exported_models") {
-                try {
-                    test = "run_QualityAssessment"
-                    if (fileExists("${test}.py")) {
-                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
-                        println "[INFO] Current test: ${test}.py"
+                            sh """
+                                ls
+                                expect  sh/start_test_docker.exp ${test_name} >> ../${STAGE_NAME}_${test_name}.log 2>&1
+                            """
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
 
-                        sh """
-                            ls
-                            expect ../tests/sh/start_test_docker.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
-                        """
+                        } else {
+                            currentBuild.result = "FAILURE"
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
 
+                            println "[WARNING] ${test_name}.py wasn't found"
+                            }
+                    } catch (FlowInterruptedException error) {
+                        println("[INFO] Job was aborted during executing tests.")
+                        throw error
+                    } 
 
-                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
-                    } else {
+                    if ((readFile("../${STAGE_NAME}_${test_name}.log")).contains('ERROR')) { 
                         currentBuild.result = "FAILURE"
-                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
-                        
-                        println "[WARNING] ${test}.py wasn't found"
-                        }
-                } catch (FlowInterruptedException error) {
-                    println("[INFO] Job was aborted during executing tests.")
-                    throw error
-                } 
+                        archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
+                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test_name}.log")
+                        options.problemMessageManager.saveUnstableReason("Failed to execute ${test_name}\n")
+                        println "[ERROR] Failed to execute ${test_name}"
+                    }
 
-                if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR')) { 
-                    currentBuild.result = "FAILURE"
-                    archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
-                    GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
-                    options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
-                    println "[ERROR] Failed to execute ${test}"
                 }
-
             }
           
         break
