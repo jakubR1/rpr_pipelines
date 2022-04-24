@@ -99,6 +99,8 @@ def executeTestCommand(String osName, String asicName, Map options)
            
             for(test in options.tests){   
                 println "After for"
+                println test
+                
                 def (test_name, path) = test.split("-")
                 println "Split"
                 dir (path) {
