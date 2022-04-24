@@ -107,7 +107,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         ls
                         """
                     println test_name
-                    println dir
+                    println path
                     try {
                         if (fileExists("${test_name}.py")) {
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
