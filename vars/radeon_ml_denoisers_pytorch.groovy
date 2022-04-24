@@ -117,8 +117,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                             println "[INFO] Current test: ${test_name}.py"
 
                             sh """
-                                cd ~/WS/denoiser_pytorch_Test
-                                expect  tests/sh/start_test_docker.exp ${test_name} >> ../${STAGE_NAME}_${test_name}.log 2>&1
+                                cd ~/WS/denoiser_pytorch_Test/tests
+                                ls
+                                expect  sh/start_test_docker.exp ${test_name} >> ../${STAGE_NAME}_${test_name}.log 2>&1
                             """
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
 
