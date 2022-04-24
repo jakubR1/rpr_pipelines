@@ -98,8 +98,16 @@ def executeTestCommand(String osName, String asicName, Map options)
 
            
             for(test in options.tests){   
+                println "After for"
                 def (test_name, path) = test.split("-")
+                println "Split"
                 dir (path) {
+                    println "Dir"
+                    sh """
+                        ls
+                        """
+                    println test_name
+                    println dir
                     try {
                         if (fileExists("${test_name}.py")) {
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
