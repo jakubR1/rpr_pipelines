@@ -104,7 +104,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 
                 def (test_name, path) = test.split("-")
                 println "Split"
-                if(path == ""){
+                if(path == "denoiser_pytorch_Test"){
                     path = pwd()
                 }
 
