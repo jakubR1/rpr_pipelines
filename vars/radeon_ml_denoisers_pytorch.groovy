@@ -18,13 +18,10 @@ def executeTestCommand(String osName, String asicName, Map options)
             try { 
 
                 sh"""
-                    echo $PATH
-                    ls
                     mkdir data
                     cd tests
                     cd sh
                     ./add_data.sh
-                    sudo chmod 666 /var/run/docker.sock
                     ./remove_container.sh
                     ./build_docker.sh
                     ./run_docker.sh
@@ -53,10 +50,9 @@ def executeTestCommand(String osName, String asicName, Map options)
             }
             println "[INFO] Tests to be executed: ${options.tests}"}
 
-            for(test in options.tests){
+            for (test in options.tests){
                 dir("tests"){
                     try {
-
                         if (fileExists("${test}.py")) {
                         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                         println "[INFO] Current test: ${test}.py"
@@ -90,31 +86,20 @@ def executeTestCommand(String osName, String asicName, Map options)
                 options.tests = []
                 def FilePath = readFile("./additional_tests.txt")
                 def lines = FilePath.readLines()
-                for(line in lines){
+                for (line in lines){
                     options.tests << line
                 }
-                
                 println " [INFO] Tests to be executed: ${options.tests}"
             }
 
            
-            for(test in options.tests){   
-                println "After for"
-                println test
-                
+            for (test in options.tests){   
                 def (test_name, path) = test.split("-")
-                println "Split"
                 if(path == "denoiser_pytorch_Test"){
                     path = pwd()
                 }
 
-                dir (path) {
-                    println "Dir"
-                    sh """
-                        ls
-                        """
-                    println test_name
-                    println path
+                dir (path) {    
                     try {
                         if (fileExists("${test_name}.py")) {
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
@@ -122,7 +107,6 @@ def executeTestCommand(String osName, String asicName, Map options)
 
                             sh """
                                 cd ~/WS/denoiser_pytorch_Test/tests
-                                ls
                                 expect  sh/start_test_docker.exp ${test_name} >> /home/jakub/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
                             """
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
@@ -138,7 +122,6 @@ def executeTestCommand(String osName, String asicName, Map options)
                         throw error
                     } 
                 
-                
                     if ((readFile("/home/jakub/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ERROR')) { 
                         currentBuild.result = "FAILURE"
                         archiveArtifacts artifacts: "/home/jakub/WS/denoiser_pytorch_Test/*.log", allowEmptyArchive: true
@@ -147,11 +130,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                         println "[ERROR] Failed to execute ${test_name}"
                     }
                 }
-                
             }
-          
-        break
 
+        break
     }
 }
 

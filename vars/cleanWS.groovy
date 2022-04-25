@@ -51,6 +51,7 @@ def call(String osName = "Windows") {
                     default:
                         sh '''
                             sudo rm -rf *
+                            sudo rm -rf .hydra/
                         '''
                 }
 
