@@ -104,6 +104,10 @@ def executeTestCommand(String osName, String asicName, Map options)
                 
                 def (test_name, path) = test.split("-")
                 println "Split"
+                if(path == ""){
+                    path = pwd()
+                }
+
                 dir (path) {
                     println "Dir"
                     sh """
