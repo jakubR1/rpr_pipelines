@@ -107,7 +107,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
                             sh """
                                 cd ~/WS/denoiser_pytorch_Test/tests
-                                expect  sh/start_test_docker.exp ${test_name} >> /home/jakub/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
+                                expect  sh/start_test_docker.exp ${test_name} >> ~/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
                             """
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
 
@@ -122,9 +122,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                         throw error
                     } 
                 
-                    if ((readFile("/home/jakub/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ERROR')) { 
+                    if ((readFile("~/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ERROR')) { 
                         currentBuild.result = "FAILURE"
-                        archiveArtifacts artifacts: "/home/jakub/WS/denoiser_pytorch_Test/*.log", allowEmptyArchive: true
+                        archiveArtifacts artifacts: "~/WS/denoiser_pytorch_Test/*.log", allowEmptyArchive: true
                         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test_name}.log")
                         options.problemMessageManager.saveUnstableReason("Failed to execute ${test_name}\n")
                         println "[ERROR] Failed to execute ${test_name}"
