@@ -38,14 +38,14 @@ class GithubApiProvider {
 
     private String receiveInstallationToken(String organization_name) {
         try {
-            println("In recviceTK")
+            context.println("In recviceTK")
             context.withCredentials([context.string(credentialsId: "githubNotificationAppKey", variable: "GITHUB_APP_KEY"),
                 context.string(credentialsId: "githubNotificationAppId", variable: "GITHUB_APP_ID")]) {
                 context.withEnv(["GITHUB_APP_KEY=${context.GITHUB_APP_KEY}"]) {
                     if (context.isUnix()) {
                         
                         installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name} --duration 540").split("\n")[-1]
-                        println("after token")
+                        context.println("after token")
                     } else {
                         installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name} --duration 540").split("\n")[-1]
                     }
