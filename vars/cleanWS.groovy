@@ -12,12 +12,13 @@ def call(String osName = "Windows") {
         println("[ERROR] WS cleaning via cleanWs command failed. Try to kill processes and restart.")
         // kill blender, maya and max processes on Windows for prevent locks
         try {
-            if (osName == "Windows") {
-                bat '''
-                    taskkill /f /im "blender.exe"
-                    taskkill /f /im "maya.exe"
-                    taskkill /f /im "3dsmax.exe"
-                '''
+            if (osName == "Linux") {
+                sh '''
+                        chown jenkinsci *
+                        sudo chown jenkinsci .*
+                        rm -rf *
+                        rm -rf .*
+                   '''
             }
         } catch (FlowInterruptedException e2) {
             throw e2
