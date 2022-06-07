@@ -263,8 +263,8 @@ def executePreBuild(Map options)
                 }
             }
             dir("tests/sh"){
-                temporary =[]
-                options.customTests=[]
+                temporary = []
+                options.customTests = []
                 def FilePath = readFile("./additional_tests.txt")
                 def lines = FilePath.readLines()
                 for (line in lines){
@@ -280,8 +280,6 @@ def executePreBuild(Map options)
             options.tests = options.tests.split(" ")
         }
         println "[INFO] Tests to be executed: ${options.tests}"
-
-
 
     }
 
@@ -324,6 +322,7 @@ def call(String projectBranch = "",
                         platforms:platforms,
                         executeAllTests:executeAllTests,
                         tests:tests,
+                        customTests:customTests,
                         notebooksTimeout:notebooksTimeout,
                         executeBuild:false,
                         executeTests:true,
