@@ -14,7 +14,7 @@ def call(String osName = "Windows") {
         try {
             if (osName == "Ubuntu20") {
                 sh '''
-                        chown jenkinsci *
+                        sudo chown jenkinsci *
                         sudo chown jenkinsci .*
                         rm -rf *
                         rm -rf .*
