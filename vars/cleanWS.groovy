@@ -12,7 +12,7 @@ def call(String osName = "Windows") {
         println("[ERROR] WS cleaning via cleanWs command failed. Try to kill processes and restart.")
         // kill blender, maya and max processes on Windows for prevent locks
         try {
-            if (osName == "Ubuntu") {
+            if (osName == "Ubuntu20") {
                 sh '''
                         chown jenkinsci *
                         sudo chown jenkinsci .*
