@@ -262,10 +262,27 @@ def executePreBuild(Map options)
                     options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
                 }
             }
+            dir("tests/sh"){
+                temporary =[]
+                options.customTests=[]
+                def FilePath = readFile("./additional_tests.txt")
+                def lines = FilePath.readLines()
+                for (line in lines){
+                    temporary << line
+                }
+                for (test in temporary){   
+                def (test_name, path) = test.split("-")
+                options.customTests << test_name
+                }
+            }
+
         } else {
             options.tests = options.tests.split(" ")
         }
         println "[INFO] Tests to be executed: ${options.tests}"
+
+
+
     }
 
     if (env.BRANCH_NAME && options.githubNotificator) {
