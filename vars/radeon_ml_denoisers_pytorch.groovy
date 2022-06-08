@@ -37,50 +37,50 @@ def executeTestCommand(String osName, String asicName, Map options)
             }
 
             
-            // withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-            // if (options.executeAllTests) {
-            //     dir ("tests") {
-            //         options.tests = []
-            //         def py_files = findFiles(glob: "*.py")
-            //         for (file in py_files) {
-            //             options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
-            //         }
-            //     }
-            // } else {
-            //     options.tests = options.tests.split(" ")
-            // }
-            // println "[INFO] Tests to be executed: ${options.tests}"}
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+            if (options.executeAllTests) {
+                dir ("tests") {
+                    options.tests = []
+                    def py_files = findFiles(glob: "*.py")
+                    for (file in py_files) {
+                        options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
+                    }
+                }
+            } else {
+                options.tests = options.tests.split(" ")
+            }
+            println "[INFO] Tests to be executed: ${options.tests}"}
 
-            // for (test in options.tests){
-            //     dir("tests"){
-            //         try {
-            //             if (fileExists("${test}.py")) {
-            //             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
-            //             println "[INFO] Current test: ${test}.py"
+            for (test in options.tests){
+                dir("tests"){
+                    try {
+                        if (fileExists("${test}.py")) {
+                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
+                        println "[INFO] Current test: ${test}.py"
 
-            //             sh  """
-            //                     expect  sh/start_functional_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
-            //                 """
-            //                 GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
-            //             } else {
-            //                 currentBuild.result = "FAILURE"
-            //                 GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
-            //                 println "[WARNING] ${test}.py wasn't found"
-            //                 }
-            //         } catch (FlowInterruptedException error) {
-            //             println("[INFO] Job was aborted during executing tests.")
-            //             throw error
-            //         } 
+                        sh  """
+                                expect  sh/start_functional_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
+                            """
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
+                        } else {
+                            currentBuild.result = "FAILURE"
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
+                            println "[WARNING] ${test}.py wasn't found"
+                            }
+                    } catch (FlowInterruptedException error) {
+                        println("[INFO] Job was aborted during executing tests.")
+                        throw error
+                    } 
 
-            //         if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR')) { 
-            //             currentBuild.result = "FAILURE"
-            //             archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
-            //             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
-            //             options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
-            //             println "[ERROR] Failed to execute ${test}"
-            //         }
-            //     }
-            // }
+                    if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR')) { 
+                        currentBuild.result = "FAILURE"
+                        archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
+                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
+                        options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
+                        println "[ERROR] Failed to execute ${test}"
+                    }
+                }
+            }
 
 
 
@@ -132,53 +132,6 @@ def executeTestCommand(String osName, String asicName, Map options)
                 }
             }
 
-
-
-
-            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-            if (options.executeAllTests) {
-                dir ("tests") {
-                    options.tests = []
-                    def py_files = findFiles(glob: "*.py")
-                    for (file in py_files) {
-                        options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
-                    }
-                }
-            } else {
-                options.tests = options.tests.split(" ")
-            }
-            println "[INFO] Tests to be executed: ${options.tests}"}
-
-            for (test in options.tests){
-                dir("tests"){
-                    try {
-                        if (fileExists("${test}.py")) {
-                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
-                        println "[INFO] Current test: ${test}.py"
-
-                        sh  """
-                                expect  sh/start_functional_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
-                            """
-                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
-                        } else {
-                            currentBuild.result = "FAILURE"
-                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
-                            println "[WARNING] ${test}.py wasn't found"
-                            }
-                    } catch (FlowInterruptedException error) {
-                        println("[INFO] Job was aborted during executing tests.")
-                        throw error
-                    } 
-
-                    if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR')) { 
-                        currentBuild.result = "FAILURE"
-                        archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
-                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
-                        options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
-                        println "[ERROR] Failed to execute ${test}"
-                    }
-                }
-            }
 
         break
     }
@@ -272,7 +225,7 @@ def executePreBuild(Map options)
                 }
                 for (test in temporary){   
                 def (test_name, path) = test.split("-")
-                options.customTests << test_name
+                options.tests << test_name
                 }
             }
 
