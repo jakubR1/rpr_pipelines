@@ -59,7 +59,8 @@ def executeTestCommand(String osName, String asicName, Map options)
                         println "[INFO] Current test: ${test}.py"
 
                         sh  """
-                                expect  sh/start_functional_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
+                                python3 -m unittest tests.${test} >> ../${STAGE_NAME}_${test}.log 2>&1
+                                #expect  sh/start_functional_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
                             """
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                         } else {
