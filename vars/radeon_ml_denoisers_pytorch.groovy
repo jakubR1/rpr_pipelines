@@ -122,8 +122,8 @@ def executeTestCommand(String osName, String asicName, Map options)
                         println("[INFO] Job was aborted during executing tests.")
                         throw error
                     } 
-                    file = readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log"
-                    if (file.contains('ERROR') || file.contains('AssertionError') || file.contains('ModuleNotFoundError')) { 
+                    if (readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log".contains('ERROR') || readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log".contains('AssertionError') || 
+                        readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log".contains('ModuleNotFoundError')) { 
                         currentBuild.result = "FAILURE"
                         archiveArtifacts artifacts: "/home/jenkinsci/WS/denoiser_pytorch_Test/*.log", allowEmptyArchive: true
                         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test_name}.log")
