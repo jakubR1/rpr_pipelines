@@ -18,11 +18,9 @@ def executeTestCommand(String osName, String asicName, Map options)
             try { 
 
                 sh"""
-                    mkdir data
                     cd tests
                     cd sh
                     chmod 755 *
-                    ./add_data.sh
                     ./remove_container.sh
                     ./build_docker.sh
                     ./run_docker.sh
