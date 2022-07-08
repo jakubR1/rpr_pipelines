@@ -113,7 +113,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                                         expect  sh/start_test_docker.exp ${test_name + suffix} >> /home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
                                     """
                                     GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name + suffix}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")}
-                                    }
+                                    
                             }
                             else{
                             sh """
