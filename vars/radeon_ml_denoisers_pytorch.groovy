@@ -105,12 +105,22 @@ def executeTestCommand(String osName, String asicName, Map options)
                         if (fileExists("${test_name}.py")) {
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current test: ${test_name}.py"
-
+                            if(("${test_name}.py")=="train.py"){
+                                for(int i=0; i<=2; i++){
+                                    suffix = i.toString()
+                                    sh """
+                                        cd ~/WS/denoiser_pytorch_Test/tests
+                                        expect  sh/start_test_docker.exp ${test_name + suffix} >> /home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
+                                    """
+                                    GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name + suffix}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")}
+                                    }
+                            }
+                            else{
                             sh """
                                 cd ~/WS/denoiser_pytorch_Test/tests
                                 expect  sh/start_test_docker.exp ${test_name} >> /home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
                             """
-                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")}
                         } else {
                             currentBuild.result = "FAILURE"
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
