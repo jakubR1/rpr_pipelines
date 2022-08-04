@@ -140,7 +140,7 @@ def executeTests(String osName, String asicName, Map options)
 {
     try {
    
-        timeout(time: "20", unit: "MINUTES") {
+        timeout(time: "300", unit: "MINUTES") {
             cleanWS(osName)
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
@@ -278,7 +278,7 @@ def call(String projectBranch = "",
                         notebooksTimeout:notebooksTimeout,
                         executeBuild:false,
                         executeTests:true,
-                        TEST_TIMEOUT:90,
+                        TEST_TIMEOUT:300,
                         retriesForTestStage:1,
                         abortOldAutoBuilds:true]             
         }
