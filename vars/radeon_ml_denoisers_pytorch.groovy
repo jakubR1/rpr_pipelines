@@ -43,10 +43,14 @@ def executeTestCommand(String osName, String asicName, Map options)
                         sh  """
                                 docker exec jenkinsci_container bash -c "cd /home/ci_denoiser && python3 -m unittest tests.${test}" >> ../${STAGE_NAME}_${test}.log 2>&1
                             """
+                            println("HERE")
                             utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
+                            println("HERE2")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
+                            println("HERE3")
                         } else {
                             currentBuild.result = "FAILURE"
+                            println("HERE4")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
                             println "[WARNING] ${test}.py wasn't found"
                             }
@@ -54,8 +58,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                         println("[INFO] Job was aborted during executing tests.")
                         throw error
                     } 
-
+                   
                     if ((readFile("../${STAGE_NAME}_${test}.log")).contains('ERROR') || (readFile("../${STAGE_NAME}_${test}.log")).contains('AssertionError') || (readFile("../${STAGE_NAME}_${test}.log")).contains('FAIL')) { 
+                        println("HERE5")
                         currentBuild.result = "FAILURE"
                         archiveArtifacts artifacts: "../*.log", allowEmptyArchive: true
                         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
