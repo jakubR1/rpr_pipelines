@@ -83,53 +83,53 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 
 
-            dir("tests/sh"){
-                options.tests = []
-                def FilePath = readFile("./additional_tests.txt")
-                def lines = FilePath.readLines()
-                for (line in lines){
-                    options.tests << line
-                }
-                println " [INFO] Tests to be executed: ${options.tests}"
-            }
+            // dir("tests/sh"){
+            //     options.tests = []
+            //     def FilePath = readFile("./additional_tests.txt")
+            //     def lines = FilePath.readLines()
+            //     for (line in lines){
+            //         options.tests << line
+            //     }
+            //     println " [INFO] Tests to be executed: ${options.tests}"
+            // }
 
            
-            for (test in options.tests){   
-                def (test_name, path) = test.split("-")
-                if(path == "denoiser_pytorch_Test"){
-                    path = pwd()
-                }
+            // for (test in options.tests){   
+            //     def (test_name, path) = test.split("-")
+            //     if(path == "denoiser_pytorch_Test"){
+            //         path = pwd()
+            //     }
 
-                dir (path) {    
-                    try {
-                        if (fileExists("${test_name}.py")) {
-                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
-                            println "[INFO] Current test: ${test_name}.py"
+            //     dir (path) {    
+            //         try {
+            //             if (fileExists("${test_name}.py")) {
+            //                 GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
+            //                 println "[INFO] Current test: ${test_name}.py"
 
-                            sh """
-                                cd ~/WS/denoiser_pytorch_Test/tests
-                                expect  sh/start_test_docker.exp ${test_name} >> /home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
-                            """
-                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
-                        } else {
-                            currentBuild.result = "FAILURE"
-                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
-                            println "[WARNING] ${test_name}.py wasn't found"
-                            }
-                    } catch (FlowInterruptedException error) {
-                        println("[INFO] Job was aborted during executing tests.")
-                        throw error
-                    } 
-                    if ((readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ERROR') || (readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('AssertionError') || 
-                        (readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ModuleNotFoundError')) { 
-                        currentBuild.result = "FAILURE"
-                        archiveArtifacts artifacts: "/home/jenkinsci/WS/denoiser_pytorch_Test/*.log", allowEmptyArchive: true
-                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test_name}.log")
-                        options.problemMessageManager.saveUnstableReason("Failed to execute ${test_name}\n")
-                        println "[ERROR] Failed to execute ${test_name}"
-                    }
-                }
-            }
+            //                 sh """
+            //                     cd ~/WS/denoiser_pytorch_Test/tests
+            //                     expect  sh/start_test_docker.exp ${test_name} >> /home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log 2>&1
+            //                 """
+            //                 GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test_name.replace("_", "_5f")}_20report")
+            //             } else {
+            //                 currentBuild.result = "FAILURE"
+            //                 GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
+            //                 println "[WARNING] ${test_name}.py wasn't found"
+            //                 }
+            //         } catch (FlowInterruptedException error) {
+            //             println("[INFO] Job was aborted during executing tests.")
+            //             throw error
+            //         } 
+            //         if ((readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ERROR') || (readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('AssertionError') || 
+            //             (readFile("/home/jenkinsci/WS/denoiser_pytorch_Test/${STAGE_NAME}_${test_name}.log")).contains('ModuleNotFoundError')) { 
+            //             currentBuild.result = "FAILURE"
+            //             archiveArtifacts artifacts: "/home/jenkinsci/WS/denoiser_pytorch_Test/*.log", allowEmptyArchive: true
+            //             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test_name}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test_name}.log")
+            //             options.problemMessageManager.saveUnstableReason("Failed to execute ${test_name}\n")
+            //             println "[ERROR] Failed to execute ${test_name}"
+            //         }
+            //     }
+            // }
 
 
         break
