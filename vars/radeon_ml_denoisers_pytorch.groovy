@@ -43,6 +43,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         sh  """
                                 docker exec jenkinsci_container bash -c "cd /home/ci_denoiser && python3 -m unittest tests.${test}" >> ../${STAGE_NAME}_${test}.log 2>&1
                             """
+                            utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                         } else {
                             currentBuild.result = "FAILURE"
