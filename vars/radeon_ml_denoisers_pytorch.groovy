@@ -22,7 +22,6 @@ def executeTestCommand(String osName, String asicName, Map options)
                     cd sh
                     chmod 755 *
                     ./remove_container.sh
-                    ./build_docker.sh
                     ./run_docker.sh
                 """
 
