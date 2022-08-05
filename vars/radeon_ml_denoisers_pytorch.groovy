@@ -32,22 +32,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 println(e.toString())
                 println(e.getMessage())
             }
-
             
-            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-            if (options.executeAllTests) {
-                dir ("tests") {
-                    options.tests = []
-                    def py_files = findFiles(glob: "*.py")
-                    for (file in py_files) {
-                        options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
-                    }
-                }
-            } else {
-                options.tests = options.tests.split(" ")
-            }
-            println "[INFO] Tests to be executed: ${options.tests}"}
-
             for (test in options.tests){
                 dir("tests"){
                     try {
