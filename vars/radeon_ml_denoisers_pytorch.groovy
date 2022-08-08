@@ -13,6 +13,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
+
+    def call(command) {return sh(script: command, returnStdout: true).trim()}
     switch (osName) {
         case 'Ubuntu20':
             try { 
@@ -39,11 +41,11 @@ def executeTestCommand(String osName, String asicName, Map options)
                         if (fileExists("${test}.py")) {
                         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                         println "[INFO] Current test: ${test}.py"
-
-                        sh  """
-                                expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
-                            """
-                            sleep(900)
+                        callSh("expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1")
+                        // sh  """
+                        //         expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
+                        //     """
+                        //     sleep(900)
                             //utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                             
