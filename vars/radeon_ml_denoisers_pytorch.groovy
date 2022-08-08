@@ -42,8 +42,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
                         sh  """
                                 expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
-                                pid=$!
-                                wait $pid
+                                wait -f
                             """
                             //utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report ${osName}", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
