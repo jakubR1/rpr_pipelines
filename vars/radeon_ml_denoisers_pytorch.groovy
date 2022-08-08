@@ -9,12 +9,12 @@ import TestsExecutionType
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
-
+def call(command) {return sh(script: command, returnStdout: true).trim()}
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
 
-    def call(command) {return sh(script: command, returnStdout: true).trim()}
+    
     switch (osName) {
         case 'Ubuntu20':
             try { 
