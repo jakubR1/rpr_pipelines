@@ -10,7 +10,7 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
 
-def call(command) {return sh(script: command, returnStdout: true).trim()}
+
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
@@ -43,7 +43,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current test: ${test}.py"
                        
-                            p = "expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1".execute()
+                            p =  sh"""expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1"""
                             p.waitfor()
 
                         //  sh  """
