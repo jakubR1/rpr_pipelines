@@ -42,15 +42,11 @@ def executeTestCommand(String osName, String asicName, Map options)
                         if (fileExists("${test}.py")) {
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current test: ${test}.py"
-                       
-                            p =  sh"""expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1"""
-                            p.waitfor()
-
-                        //  sh  """
-                        //         expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
-                        //     """
-                        //      sleep(900)
-                         
+                
+                            sh """
+                                expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
+                               """
+                             
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                             
                         } else {
