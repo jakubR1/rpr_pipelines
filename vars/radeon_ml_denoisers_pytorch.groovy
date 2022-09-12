@@ -47,7 +47,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                                 expect sh/start_test.exp ${test} >> ../${STAGE_NAME}_${test}.log 2>&1
                                """
                             if(test == "test_qa")
-                                sleep(900)
+                                sleep(1800)
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                             
                         } else {
